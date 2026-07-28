@@ -53,7 +53,9 @@ class AuthService {
       return false;
     } on DioException catch (e) {
       print('Login error [${e.response?.statusCode}]: ${e.response?.data ?? e.message}');
-      rethrow;
+      print('Exact error: ${e.error}');
+      print('Type: ${e.type}');
+      return false;
     } catch (e) {
       print('Unexpected login error: $e');
       rethrow;

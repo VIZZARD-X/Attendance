@@ -34,27 +34,39 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage>
   final List<Map<String, dynamic>> dashboardCards = [
     {
       'title': 'My Classes',
-      'subtitle': 'Manage and monitor classes',
+      'subtitle': 'Manage and Monitor classes',
       'icon': Icons.people_alt_rounded,
-      'color': Colors.green,
+      'gradientColors': [const Color(0xFF6DE899), const Color(0xFFD4F7DF)],
     },
     {
       'title': 'Create Session',
-      'subtitle': 'Start new attendance session',
-      'icon': Icons.timer_rounded,
-      'color': Colors.orange,
+      'subtitle': 'Start new Attendance Session',
+      'icon': Icons.qr_code_scanner_rounded,
+      'gradientColors': [const Color(0xFFFDBB49), const Color(0xFFFEF3DE)],
     },
     {
       'title': 'Attendance History',
-      'subtitle': 'View and edit attendance',
-      'icon': Icons.check_circle_rounded,
-      'color': Colors.teal,
+      'subtitle': 'View and Edit Attendance',
+      'icon': Icons.show_chart_rounded,
+      'gradientColors': [const Color(0xFF2DC1A5), const Color(0xFFCBF0E8)],
     },
     {
       'title': 'Profile',
-      'subtitle': 'View your profile',
+      'subtitle': 'View your Profile',
       'icon': Icons.person_rounded,
-      'color': Colors.blueGrey,
+      'gradientColors': [const Color(0xFF8F939A), const Color(0xFFE2E4E7)],
+    },
+    {
+      'title': 'Announcements',
+      'subtitle': 'Announce to class',
+      'icon': Icons.person_add_alt_1_rounded,
+      'gradientColors': [const Color(0xFFEF8AF6), const Color(0xFFFAEEFD)],
+    },
+    {
+      'title': 'Analytics',
+      'subtitle': 'Reports and Highlights',
+      'icon': Icons.bar_chart_rounded,
+      'gradientColors': [const Color(0xFFABF46A), const Color(0xFFE7FBD0)],
     },
   ];
 
@@ -403,8 +415,8 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage>
           child: _buildStatCard(
             'Total Classes',
             totalClasses.toString(),
-            Icons.class_rounded,
-            const Color(0xFF0097A7),
+            Icons.menu_book_rounded,
+            [const Color(0xFF6DE899), const Color(0xFFD4F7DF)], // Figma gradient
             isMobile,
           ),
         ),
@@ -414,7 +426,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage>
             'Active Sessions',
             activeSessions.toString(),
             Icons.timer_rounded,
-            const Color(0xFFFF6B6B),
+            [const Color(0xFFF27572), const Color(0xFFFCDEDD)], // Figma gradient
             isMobile,
           ),
         ),
@@ -426,23 +438,25 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage>
     String label,
     String value,
     IconData icon,
-    Color color,
+    List<Color> gradientColors,
     bool isMobile,
   ) {
+    final primaryColor = gradientColors.first;
+
     return Container(
-      padding: EdgeInsets.all(isMobile ? 16 : 20),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [color.withOpacity(0.1), Colors.white],
+          colors: gradientColors,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: primaryColor.withOpacity(0.3)),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 10,
+            color: primaryColor.withOpacity(0.15),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -452,10 +466,10 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: Colors.black.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: isMobile ? 24 : 28),
+            child: Icon(icon, color: Colors.black87, size: isMobile ? 24 : 28),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -545,7 +559,7 @@ class _TeacherDashboardPageState extends State<TeacherDashboardPage>
               title: card['title'] as String,
               subtitle: card['subtitle'] as String,
               icon: card['icon'] as IconData,
-              color: card['color'] as Color,
+              gradientColors: card['gradientColors'] as List<Color>,
               onTap: () => _handleCardTap(card['title'] as String),
             ),
           ),

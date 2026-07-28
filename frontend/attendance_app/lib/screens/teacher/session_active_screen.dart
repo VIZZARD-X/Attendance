@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../services/session_service.dart';
 
@@ -27,6 +28,10 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
   List<Map<String, dynamic>> students = [];
   Map<String, dynamic> statistics = {};
   bool isLoading = true;
+  bool isUploadingReference = false;
+  String? referenceImagePath;
+
+  static const _channel = MethodChannel('attendance_app/camera');
 
   @override
   void initState() {
@@ -382,7 +387,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Active Session: ${widget.sessionData['class_code']}',
+              'Active Session: ${widget.sessionData['class_code']}${widget.sessionData['class_type'] == 'offline' ? ' (Offline Mode)' : ''}',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             Text(
@@ -391,8 +396,9 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF007C91),
+        backgroundColor: const Color(0xFF00838f),
         foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -426,7 +432,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
             const SizedBox(height: 16),
             _buildStatisticsCard(),
             const SizedBox(height: 16),
-            _buildStudentsList(),
+            _buildStudentsList(isMobile: true),
           ],
         ),
       ),
@@ -465,7 +471,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
         // RIGHT SIDE - Students List
         Expanded(
           flex: isDesktop ? 3 : 4,
-          child: _buildStudentsList(),
+          child: _buildStudentsList(isMobile: false),
         ),
       ],
     );
@@ -473,36 +479,35 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
 
   Widget _buildTimerCard() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: remainingSeconds > 60
-              ? [const Color(0xFF007C91), const Color(0xFF0097A7)]
-              : [Colors.orange.shade600, Colors.deepOrange.shade700],
-        ),
-        borderRadius: BorderRadius.circular(16),
+        color: remainingSeconds > 60
+            ? const Color(0xFF00838f)
+            : Colors.orange.shade700,
+        borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
             color: (remainingSeconds > 60
-                    ? const Color(0xFF007C91)
+                    ? const Color(0xFF00838f)
                     : Colors.orange)
                 .withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.timer, color: Colors.white, size: 32),
-          const SizedBox(width: 16),
+          const Icon(Icons.timer, color: Colors.white, size: 24),
+          const SizedBox(width: 12),
           Text(
             _formatTime(remainingSeconds),
             style: const TextStyle(
-              fontSize: 48,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Colors.white,
+              letterSpacing: 1,
             ),
           ),
         ],
@@ -510,7 +515,44 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
     );
   }
 
+  Future<void> _uploadReferenceImage() async {
+    String? imagePath;
+    try {
+      imagePath = await _channel.invokeMethod<String>('captureImage');
+    } on MissingPluginException {
+      imagePath = null;
+    } catch (e) {
+      _showErrorSnackBar('Camera error: $e');
+      return;
+    }
+
+    if (imagePath == null) return;
+    
+    setState(() => isUploadingReference = true);
+    
+    try {
+      final result = await _sessionService.uploadReferenceImage(
+        widget.sessionData['session_id'],
+        imagePath,
+      );
+      
+      if (result['success'] == true) {
+        setState(() => referenceImagePath = imagePath);
+        _showSuccessSnackBar('Reference image uploaded successfully');
+      } else {
+        _showErrorSnackBar(result['message'] ?? 'Upload failed');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Upload error: $e');
+    } finally {
+      setState(() => isUploadingReference = false);
+    }
+  }
+
   Widget _buildQRSection({required double size}) {
+    final isOffline = widget.sessionData['class_type'] == 'offline';
+    final patternCode = widget.sessionData['pattern_code'] ?? '??';
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -527,30 +569,84 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
       ),
       child: Column(
         children: [
-          QrImageView(
-            data: widget.qrCodeData,
-            version: QrVersions.auto,
-            size: size,
-            backgroundColor: Colors.white,
-            foregroundColor: const Color(0xFF007C91),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            "Scan to Mark Attendance",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1F2937),
+          if (isOffline) ...[
+            _buildPatternVisual(patternCode, size),
+            const SizedBox(height: 24),
+            InkWell(
+              onTap: isUploadingReference ? null : _uploadReferenceImage,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF007C91),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF007C91).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: isUploadingReference
+                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Icon(referenceImagePath != null ? Icons.check : Icons.upload, color: Colors.white, size: 28),
+              ),
             ),
-          ),
+            const SizedBox(height: 16),
+            const Text(
+              "Please draw this and upload",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+          ] else ...[
+            QrImageView(
+              data: widget.qrCodeData,
+              version: QrVersions.auto,
+              size: size,
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF00838f),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "Scan to Mark Attendance",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Text(
-            "Session ID: ${widget.sessionData['session_id'].toString().substring(0, 8)}...",
+            "Session ID: ${widget.sessionData['session_id'].toString().substring(0, 8)}......",
             style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
+              fontSize: 13,
+              color: Colors.grey[500],
             ),
           ),
+          if (isOffline) ...[
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 32),
+                  color: const Color(0xFF007C91),
+                  onPressed: () => _fetchAttendanceData(),
+                ),
+                const SizedBox(width: 48),
+                IconButton(
+                  icon: const Icon(Icons.stop_circle, size: 32),
+                  color: const Color(0xFF007C91),
+                  onPressed: _endSession,
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -638,7 +734,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
     );
   }
 
-  Widget _buildStudentsList() {
+  Widget _buildStudentsList({bool isMobile = false}) {
     if (students.isEmpty) {
       return const Center(
         child: Text('No students enrolled in this class'),
@@ -646,6 +742,8 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
     }
 
     return ListView.builder(
+      shrinkWrap: isMobile,
+      physics: isMobile ? const NeverScrollableScrollPhysics() : null,
       padding: const EdgeInsets.all(16),
       itemCount: students.length,
       itemBuilder: (context, index) {
@@ -654,23 +752,24 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
         final hasRecord = student['has_record'] == true;
 
         return Card(
+          color: isPresent ? Colors.white : const Color(0xFFFFF0F0),
           margin: const EdgeInsets.only(bottom: 12),
-          elevation: 2,
+          elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: BorderSide(
-              color: isPresent ? Colors.green : Colors.red.shade200,
-              width: 2,
+              color: isPresent ? Colors.grey.shade200 : const Color(0xFFFFCDCD),
+              width: 1,
             ),
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             leading: CircleAvatar(
               radius: 24,
-              backgroundColor: isPresent ? Colors.green : Colors.red,
+              backgroundColor: isPresent ? Colors.green.shade100 : Colors.red.shade100,
               child: Icon(
-                isPresent ? Icons.check_circle : Icons.cancel,
-                color: Colors.white,
+                isPresent ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                color: isPresent ? Colors.green : Colors.red,
                 size: 28,
               ),
             ),
@@ -711,7 +810,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
                             student['id'],
                             'present',
                           ),
-                  icon: const Icon(Icons.check_circle),
+                  icon: const Icon(Icons.check_circle_rounded),
                   color: Colors.green,
                   tooltip: 'Mark Present',
                   style: IconButton.styleFrom(
@@ -729,7 +828,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
                             student['id'],
                             'absent',
                           ),
-                  icon: const Icon(Icons.cancel),
+                  icon: const Icon(Icons.cancel_rounded),
                   color: Colors.red,
                   tooltip: 'Mark Absent',
                   style: IconButton.styleFrom(
@@ -745,4 +844,178 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
       },
     );
   }
+
+  Widget _buildPatternVisual(String patternString, double size) {
+    final parts = patternString.split('_');
+    if (parts.length < 2) {
+      return _buildSquareCircle(patternString, size);
+    }
+    
+    final numberIdx = parts.length - 1;
+    final typeStr = parts.sublist(0, numberIdx).join('_');
+    final numStr = parts[numberIdx];
+
+    switch (typeStr) {
+      case 'TRIANGLE':
+        return _buildTriangle(numStr, size);
+      case 'DIAMOND':
+        return _buildDiamond(numStr, size);
+      case 'DOUBLE_CIRCLE':
+        return _buildDoubleCircle(numStr, size);
+      case 'SQUARE_CIRCLE':
+      default:
+        return _buildSquareCircle(numStr, size);
+    }
+  }
+
+  Widget _buildSquareCircle(String number, double size) {
+    return Container(
+      width: size * 0.9,
+      height: size * 0.65,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.black, width: 4),
+      ),
+      child: Center(
+        child: Container(
+          width: size * 0.45,
+          height: size * 0.45,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.black, width: 3),
+          ),
+          child: Center(
+            child: Text(
+              number,
+              style: TextStyle(
+                fontSize: size * 0.2,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTriangle(String number, double size) {
+    return Container(
+      width: size * 0.9,
+      height: size * 0.65,
+      alignment: Alignment.center,
+      child: CustomPaint(
+        size: Size(size * 0.6, size * 0.5),
+        painter: _TrianglePainter(),
+        child: SizedBox(
+          width: size * 0.6,
+          height: size * 0.5,
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.only(top: size * 0.15),
+              child: Text(
+                number,
+                style: TextStyle(
+                  fontSize: size * 0.18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDiamond(String number, double size) {
+    return Container(
+      width: size * 0.9,
+      height: size * 0.65,
+      alignment: Alignment.center,
+      child: Transform.rotate(
+        angle: 3.14159 / 4,
+        child: Container(
+          width: size * 0.45,
+          height: size * 0.45,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.black, width: 4),
+          ),
+          child: Transform.rotate(
+            angle: -3.14159 / 4,
+            child: Center(
+              child: Text(
+                number,
+                style: TextStyle(
+                  fontSize: size * 0.2,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDoubleCircle(String number, double size) {
+    return Container(
+      width: size * 0.9,
+      height: size * 0.65,
+      alignment: Alignment.center,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: size * 0.55,
+            height: size * 0.55,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.black, width: 2),
+            ),
+          ),
+          Container(
+            width: size * 0.4,
+            height: size * 0.4,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.black, width: 4),
+            ),
+            child: Center(
+              child: Text(
+                number,
+                style: TextStyle(
+                  fontSize: size * 0.2,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrianglePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4;
+      
+    final path = Path();
+    path.moveTo(size.width / 2, 0);
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+    
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

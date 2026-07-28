@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 from django.conf import settings
+from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from django.contrib.staticfiles.views import serve
 import os
@@ -27,6 +28,9 @@ from attendance.views import (
     get_session_attendance_details,
     update_attendance_status,
     manual_mark_attendance,
+    verify_image,
+    upload_reference_image,
+    get_student_active_sessions,
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 from django.views.static import serve as static_serve
@@ -66,7 +70,10 @@ urlpatterns = [
 
     # Session management
     path('api/v1/sessions/create/', create_session, name='create_session'),
+    path('api/v1/sessions/verify-image/', verify_image, name='verify_image'),
+    path('api/v1/sessions/<uuid:session_id>/upload-reference/', upload_reference_image, name='upload_reference_image'),
     path('api/v1/sessions/active/', get_active_sessions, name='active_sessions'),
+    path('api/v1/sessions/student-active/', get_student_active_sessions, name='student_active_sessions'),
     path('api/v1/sessions/<uuid:session_id>/', get_session_details, name='session_details'),
     path('api/v1/sessions/<uuid:session_id>/mark/', mark_attendance, name='mark_attendance'),
     path('api/v1/sessions/<uuid:session_id>/end/', end_session, name='end_session'),
@@ -85,3 +92,6 @@ urlpatterns = [
     # Flutter Web — must be last
     re_path(r'^(?P<path>.*)$', serve_flutter, name='flutter_web'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

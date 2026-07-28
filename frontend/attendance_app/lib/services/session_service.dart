@@ -22,6 +22,7 @@ class SessionService {
   Future<Map<String, dynamic>> createSession({
     required int classId,
     required int durationMinutes,
+    String classType = 'online',
   }) async {
     try {
       final token = await _getToken();
@@ -31,6 +32,7 @@ class SessionService {
         data: {
           'class_id': classId,
           'duration_minutes': durationMinutes,
+          'class_type': classType,
         },
         options: Options(
           headers: {'Authorization': 'Bearer $token'},
@@ -72,6 +74,29 @@ class SessionService {
       return [];
     } catch (e) {
       print('Error fetching active sessions: $e');
+      return [];
+    }
+  }
+
+  /// Get student active sessions
+  Future<List<Map<String, dynamic>>> getStudentActiveSessions() async {
+    try {
+      final token = await _getToken();
+      
+      final response = await _dio.get(
+        '/sessions/student-active/',
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+      
+      if (response.statusCode == 200) {
+        return List<Map<String, dynamic>>.from(response.data['sessions']);
+      }
+      
+      return [];
+    } catch (e) {
+      print('Error fetching student active sessions: $e');
       return [];
     }
   }
@@ -229,6 +254,36 @@ class SessionService {
       return {
         'success': false,
         'message': e.response?.data['error'] ?? 'Failed to mark attendance',
+      };
+    }
+  }
+
+  /// Upload reference image for offline session
+  Future<Map<String, dynamic>> uploadReferenceImage(String sessionId, String imagePath) async {
+    try {
+      final token = await _getToken();
+      
+      final formData = FormData.fromMap({
+        'reference_image': await MultipartFile.fromFile(imagePath),
+      });
+
+      final response = await _dio.post(
+        '/sessions/$sessionId/upload-reference/',
+        data: formData,
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+      
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': 'Reference image uploaded successfully'};
+      }
+      
+      return {'success': false, 'message': 'Failed to upload image'};
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message': e.response?.data['error'] ?? 'Failed to upload image',
       };
     }
   }

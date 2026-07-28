@@ -82,8 +82,19 @@ class ClassService {
 
       if (e.response != null) {
         final data = e.response!.data;
-        if (data is Map && data.containsKey('error')) {
-          errorMessage = data['error'];
+        if (data is Map) {
+          if (data.containsKey('error')) {
+            errorMessage = data['error'];
+          } else if (data.isNotEmpty) {
+            // DRF Validation errors come back as dict of lists e.g. {"code": ["Class code CS101 already exists."]}
+            final firstKey = data.keys.first;
+            final firstError = data[firstKey];
+            if (firstError is List && firstError.isNotEmpty) {
+              errorMessage = firstError.first.toString();
+            } else {
+              errorMessage = firstError.toString();
+            }
+          }
         }
       }
 

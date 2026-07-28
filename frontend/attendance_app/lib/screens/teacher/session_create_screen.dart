@@ -21,6 +21,7 @@ class _SessionPageState extends State<SessionPage>
   String? selectedSubjectCode;
   String? selectedSubjectName;
   String? selectedSemester;
+  String selectedClassType = 'online'; // Default to online
   final TextEditingController durationController = TextEditingController();
 
   Timer? countdownTimer;
@@ -81,6 +82,7 @@ class _SessionPageState extends State<SessionPage>
       final result = await _sessionService.createSession(
         classId: int.parse(selectedSubjectId!),
         durationMinutes: durationMinutes,
+        classType: selectedClassType, // Pass class type
       );
 
       if (!mounted) return;
@@ -185,13 +187,7 @@ class _SessionPageState extends State<SessionPage>
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF007C91), Color(0xFF0097A7)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        color: const Color(0xFF00838f), // Solid Teal background
         child: SafeArea(
           child: Column(
             children: [
@@ -202,16 +198,7 @@ class _SessionPageState extends State<SessionPage>
                   horizontal: isMobile ? 12 : 20,
                   vertical: isMobile ? 10 : 14,
                 ),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF007C91), Color(0xFF0097A7)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4)),
-                  ],
-                ),
+                color: const Color(0xFF00838f), // Solid Teal app bar
                 child: Row(
                   children: [
                     IconButton(
@@ -282,54 +269,21 @@ class _SessionPageState extends State<SessionPage>
                                   // Icon Header
                                   Center(
                                     child: Container(
-                                      padding: EdgeInsets.all(isMobile ? 12 : 16),
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [Color(0xFF007C91), Color(0xFF0097A7)],
-                                        ),
+                                      padding: EdgeInsets.all(isMobile ? 16 : 24),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF00838f),
                                         shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: const Color(0xFF007C91).withOpacity(0.3),
-                                            blurRadius: 20,
-                                            offset: const Offset(0, 10),
-                                          ),
-                                        ],
                                       ),
                                       child: Icon(
-                                        Icons.timer_rounded,
-                                        size: isMobile ? 40 : 50,
+                                        Icons.qr_code_2_rounded,
+                                        size: isMobile ? 50 : 70,
                                         color: Colors.white,
                                       ),
                                     ),
                                   ),
-                                  SizedBox(height: isMobile ? 16 : 24),
+                                  SizedBox(height: isMobile ? 24 : 32),
 
-                                  // Title
-                                  Text(
-                                    "Start a New Session",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: isMobile ? 20 : 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: const Color(0xFF1F2937),
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    widget.subjects.isEmpty
-                                        ? 'No classes available'
-                                        : 'Select class and duration',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: isMobile ? 14 : 15,
-                                      color: widget.subjects.isEmpty
-                                          ? Colors.red[600]
-                                          : Colors.grey[600],
-                                    ),
-                                  ),
-                                  SizedBox(height: isMobile ? 20 : 32),
+
 
                                   // Select Class Dropdown
                                   Text(
@@ -368,33 +322,14 @@ class _SessionPageState extends State<SessionPage>
                                       items: widget.subjects.map((subject) {
                                         return DropdownMenuItem<String>(
                                           value: subject['id'],
-                                          child: Padding( //  WRAP IN PADDING
-                                            padding: const EdgeInsets.symmetric(vertical: 12), // ✅ ADD VERTICAL PADDING
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text(
-                                                  "${subject['code']} - ${subject['name']}",
-                                                  style: TextStyle(
-                                                    fontSize: isMobile ? 14 : 16,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                  overflow: TextOverflow.ellipsis, // ✅ ADD THIS
-                                                  maxLines: 1, // ✅ ADD THIS
-                                                ),
-                                                const SizedBox(height: 4), // ✅ ADD SPACING
-                                                Text(
-                                                  subject['semester'] ?? '',
-                                                  style: TextStyle(
-                                                    fontSize: isMobile ? 11 : 12,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                  overflow: TextOverflow.ellipsis, // ✅ ADD THIS
-                                                  maxLines: 1, // ✅ ADD THIS
-                                                ),
-                                              ],
+                                          child: Text(
+                                            "${subject['code']} - ${subject['name']} (${subject['semester'] ?? ''})",
+                                            style: TextStyle(
+                                              fontSize: isMobile ? 14 : 16,
+                                              fontWeight: FontWeight.w500,
                                             ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
                                           ),
                                         );
                                       }).toList(),
@@ -421,6 +356,59 @@ class _SessionPageState extends State<SessionPage>
                                               : Colors.grey[600],
                                         ),
                                       ),
+                                    ),
+                                  ),
+                                  SizedBox(height: isMobile ? 16 : 24),
+
+                                  // Class Type Dropdown
+                                  Text(
+                                    "Class Type",
+                                    style: TextStyle(
+                                      fontSize: isMobile ? 14 : 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.05),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                    child: DropdownButtonFormField<String>(
+                                      decoration: const InputDecoration(
+                                        border: InputBorder.none,
+                                        prefixIcon: Icon(Icons.class_rounded, color: Color(0xFF007C91)),
+                                        contentPadding: EdgeInsets.symmetric(vertical: 18),
+                                      ),
+                                      dropdownColor: Colors.white,
+                                      isExpanded: true,
+                                      value: selectedClassType,
+                                      items: const [
+                                        DropdownMenuItem(
+                                          value: 'online',
+                                          child: Text('Online'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'offline',
+                                          child: Text('Offline'),
+                                        ),
+                                      ],
+                                      onChanged: (value) {
+                                        if (value != null) {
+                                          setState(() {
+                                            selectedClassType = value;
+                                          });
+                                        }
+                                      },
                                     ),
                                   ),
                                   SizedBox(height: isMobile ? 16 : 24),

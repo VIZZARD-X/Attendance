@@ -257,6 +257,7 @@ class CreateSessionSerializer(serializers.Serializer):
     """Serializer for creating attendance session"""
     class_id = serializers.IntegerField()
     duration_minutes = serializers.IntegerField(min_value=1, max_value=300)
+    class_type = serializers.ChoiceField(choices=['online', 'offline'], default='online')
     
     def validate_class_id(self, value):
         """Check if class exists and belongs to teacher"""
@@ -281,8 +282,9 @@ class SessionSerializer(serializers.ModelSerializer):
         model = AttendanceSession
         fields = [
             'id', 'session_id', 'class_code', 'class_name', 'semester',
-            'teacher_name', 'start_time', 'end_time',  # ✅ REMOVE start_time_ist, end_time_ist
-            'duration_minutes', 'status', 'is_active', 'qr_data', 'created_at'
+            'teacher_name', 'start_time', 'end_time',
+            'duration_minutes', 'status', 'is_active', 'qr_data', 'created_at',
+            'class_type', 'pattern_code'
         ]
     
     def get_qr_data(self, obj):

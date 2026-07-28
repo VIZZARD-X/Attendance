@@ -4,8 +4,10 @@ import '../../services/profile_service.dart';
 import '../../widgets/enhanced_dashboard_card.dart';
 import '../student/my_classes_screen.dart';
 import '../student/qr_scanner_screen.dart';
+import '../student/qr_scanner_screen.dart';
 import '../student/attendance_history_screen.dart';
 import '../student/student_profile_screen.dart';
+import '../student/offline_sessions_screen.dart';
 
 class StudentDashboardPage extends StatefulWidget {
   const StudentDashboardPage({super.key});
@@ -32,27 +34,27 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
   final List<Map<String, dynamic>> dashboardCards = [
     {
       'title': 'My Classes',
-      'subtitle': 'View enrolled courses',
+      'subtitle': 'View enrolled classes',
       'icon': Icons.school_rounded,
-      'color': Colors.blue,
+      'gradientColors': [const Color(0xFF3B82F6), Colors.white],
     },
     {
       'title': 'Scan QR',
-      'subtitle': 'Mark attendance',
+      'subtitle': 'Start new Attendance Session',
       'icon': Icons.qr_code_scanner_rounded,
-      'color': Colors.green,
+      'gradientColors': [const Color(0xFFA6FF39), Colors.white],
     },
     {
       'title': 'Attendance History',
       'subtitle': 'View past records',
       'icon': Icons.history_rounded,
-      'color': Colors.purple,
+      'gradientColors': [const Color(0xFFC26BDF), Colors.white],
     },
     {
       'title': 'Profile',
       'subtitle': 'Manage your account',
       'icon': Icons.person_rounded,
-      'color': Colors.orange,
+      'gradientColors': [const Color(0xFFE9609D), Colors.white],
     },
   ];
 
@@ -156,6 +158,17 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
           context,
           MaterialPageRoute(
             builder: (context) => const QRScannerScreen(),
+          ),
+        ).then((_) {
+          _loadUserData(forceRefresh: true);  
+        });
+        break;
+
+      case 'Offline Attendance':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const OfflineSessionsScreen(),
           ),
         ).then((_) {
           _loadUserData(forceRefresh: true);  
@@ -367,6 +380,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
             'Enrolled Classes',
             totalClasses.toString(),
             Icons.class_rounded,
+            [const Color(0xFF66E9E1), Colors.white],
             const Color(0xFF0097A7),
             isMobile,
           ),
@@ -377,7 +391,8 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
             'Attendance Rate',
             '${attendanceRate.toStringAsFixed(1)}%',  
             Icons.check_circle_rounded,
-            const Color(0xFF4CAF50),
+            [const Color(0xFFA8E6A7), Colors.white],
+            const Color(0xFF1EBA57),
             isMobile,
           ),
         ),
@@ -389,22 +404,23 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     String label,
     String value,
     IconData icon,
-    Color color,
+    List<Color> gradientColors,
+    Color borderColor,
     bool isMobile,
   ) {
     return Container(
       padding: EdgeInsets.all(isMobile ? 16 : 20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [color.withOpacity(0.1), Colors.white],
+          colors: gradientColors,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(23), // Matched to Figma 23px
+        border: Border.all(color: borderColor, width: 2), // Matched to Figma 2px
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
+            color: borderColor.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -415,10 +431,10 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: borderColor.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: isMobile ? 24 : 28),
+            child: Icon(icon, color: borderColor, size: isMobile ? 24 : 28),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -508,7 +524,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
               title: card['title'] as String,
               subtitle: card['subtitle'] as String,
               icon: card['icon'] as IconData,
-              color: card['color'] as Color,
+              gradientColors: card['gradientColors'] as List<Color>,
               onTap: () => _handleCardTap(card['title'] as String),
             ),
           ),

@@ -200,4 +200,47 @@ class AttendanceService {
       return {'success': false};
     }
   }
+
+  /// Verify student image for offline attendance
+  Future<Map<String, dynamic>> verifyImage({
+    required String sessionId,
+    required String imagePath,
+    required double focalDistance,
+  }) async {
+    try {
+      final token = await _getToken();
+      
+      final formData = FormData.fromMap({
+        'session_id': sessionId,
+        'focal_distance': focalDistance,
+        'student_image': await MultipartFile.fromFile(imagePath),
+      });
+
+      final response = await _dio.post(
+        '/sessions/verify-image/',
+        data: formData,
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {
+          'success': true,
+          'message': response.data['message'] ?? 'Attendance marked successfully',
+          'score': response.data['score'],
+          'status': response.data['status'],
+        };
+      }
+      
+      return {'success': false, 'message': 'Verification failed'};
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message': e.response?.data['error'] ?? 'Verification failed',
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Unexpected error: $e'};
+    }
+  }
 }

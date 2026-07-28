@@ -3,6 +3,10 @@
 import os
 import sys
 
+from project_env import isolate_from_external_pythonpath
+
+isolate_from_external_pythonpath()
+
 
 def main():
     """Run administrative tasks."""

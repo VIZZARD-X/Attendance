@@ -4,7 +4,7 @@ class EnhancedDashboardCard extends StatefulWidget {
   final String title;
   final String subtitle;
   final IconData icon;
-  final Color color;
+  final List<Color> gradientColors;
   final VoidCallback? onTap;
 
   const EnhancedDashboardCard({
@@ -12,7 +12,7 @@ class EnhancedDashboardCard extends StatefulWidget {
     required this.title,
     required this.subtitle,
     required this.icon,
-    required this.color,
+    required this.gradientColors,
     this.onTap,
   });
 
@@ -110,7 +110,9 @@ class _EnhancedDashboardCardState extends State<EnhancedDashboardCard>
         ? (isMobile ? 1.015 : 1.04)
         : 1.0;
     final double lift = (_hover || _pressed) ? -8 : 0;
-    final double radius = isMobile ? 12 : 18;
+    final double radius = isMobile ? 12 : 24; // Increased radius to match design
+
+    final primaryColor = widget.gradientColors.first;
 
     Widget cardWidget = GestureDetector(
       onTap: widget.onTap,
@@ -121,7 +123,6 @@ class _EnhancedDashboardCardState extends State<EnhancedDashboardCard>
       onTapUp: (_) {
         setState(() => _pressed = false);
         if (isMobile) _stopShimmer();
-        widget.onTap?.call();
       },
       onTapCancel: () {
         setState(() => _pressed = false);
@@ -136,30 +137,27 @@ class _EnhancedDashboardCardState extends State<EnhancedDashboardCard>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(radius),
           gradient: LinearGradient(
-            colors: [
-              widget.color.withOpacity((_hover || _pressed) ? 0.96 : 0.88),
-              Colors.white,
-            ],
+            colors: widget.gradientColors.map((c) => 
+              c.withOpacity((_hover || _pressed) ? 1.0 : 0.9)
+            ).toList(),
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           boxShadow: [
             BoxShadow(
               color: (_hover || _pressed)
-                  ? widget.color.withOpacity(0.32)
-                  : Colors.black12,
-              blurRadius: (_hover || _pressed) ? 20 : 8,
+                  ? primaryColor.withOpacity(0.4)
+                  : primaryColor.withOpacity(0.15),
+              blurRadius: (_hover || _pressed) ? 20 : 12,
               offset: const Offset(0, 8),
             ),
           ],
           border: Border.all(
-            color: (_hover || _pressed)
-                ? widget.color.withOpacity(0.9)
-                : Colors.white,
-            width: (_hover || _pressed) ? 1.3 : 0.8,
+            color: Colors.white.withOpacity(0.2),
+            width: 1,
           ),
         ),
-        padding: EdgeInsets.all(isMobile ? 12 : 16),
+        padding: EdgeInsets.all(isMobile ? 16 : 24),
         child: Stack(
           children: [
             // Shimmer overlay
@@ -203,17 +201,17 @@ class _EnhancedDashboardCardState extends State<EnhancedDashboardCard>
                   child: Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: widget.color.withOpacity(0.18),
+                      color: Colors.black.withOpacity(0.15),
                     ),
-                    padding: EdgeInsets.all(isMobile ? 8 : 12),
+                    padding: EdgeInsets.all(isMobile ? 10 : 16),
                     child: Icon(
                       widget.icon,
-                      color: Colors.white,
-                      size: isMobile ? 20 : 26,
+                      color: Colors.black87,
+                      size: isMobile ? 24 : 32,
                     ),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 16),
 
                 Expanded(
                   child: Column(
@@ -223,19 +221,20 @@ class _EnhancedDashboardCardState extends State<EnhancedDashboardCard>
                       Text(
                         widget.title,
                         style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: isMobile ? 14 : 16,
-                          color: const Color(0xFF0F1724),
+                          fontWeight: FontWeight.w800,
+                          fontSize: isMobile ? 16 : 18,
+                          color: Colors.black87,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         widget.subtitle,
                         style: TextStyle(
-                          fontSize: isMobile ? 11.5 : 13,
-                          color: Colors.grey[700],
+                          fontSize: isMobile ? 12 : 13,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w600,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
