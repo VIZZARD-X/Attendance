@@ -266,7 +266,16 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       await _cameraController!.pausePreview();
 
       // Fetch active sessions
-      final sessions = await _sessionService.getStudentActiveSessions();
+      List<Map<String, dynamic>> sessions = [];
+      try {
+        sessions = await _sessionService.getStudentActiveSessions();
+      } catch (e) {
+        _showError('Network/API Error: $e');
+        setState(() => isProcessing = false);
+        await _cameraController!.resumePreview();
+        return;
+      }
+      
       final offlineSessions = sessions.where((s) => s['class_type'] == 'offline').toList();
 
       if (offlineSessions.isEmpty) {

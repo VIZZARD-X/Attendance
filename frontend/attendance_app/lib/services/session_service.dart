@@ -95,13 +95,14 @@ class SessionService {
       );
       
       if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(response.data['sessions']);
+        final List<dynamic> rawSessions = response.data['sessions'] ?? [];
+        return rawSessions.map((s) => Map<String, dynamic>.from(s)).toList();
       }
       
-      return [];
+      throw Exception('Failed to fetch sessions: ${response.statusCode}');
     } catch (e) {
       print('Error fetching student active sessions: $e');
-      return [];
+      rethrow;
     }
   }
 
