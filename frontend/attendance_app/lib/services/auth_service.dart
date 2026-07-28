@@ -9,8 +9,6 @@ import 'storage_service.dart';
 class AuthService {
   final String baseUrl = ApiConfig.baseUrl;
   final Dio _dio = Dio();
-  
-  late SharedPreferences _prefs;
 
   AuthService() {
     _dio.options.baseUrl = baseUrl;
@@ -126,9 +124,5 @@ class AuthService {
   Future<bool> isLoggedIn() async {
     final token = await StorageService.read(key: 'access_token');
     return token != null;
-  }
-
-  Future<void> init() async {
-    _prefs = await SharedPreferences.getInstance();
   }
 }

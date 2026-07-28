@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
@@ -5,13 +6,34 @@ import 'screens/dashboard/student_dashboard.dart';
 import 'screens/dashboard/teacher_dashboard.dart';
 import 'screens/teacher/session_create_screen.dart';
 import 'screens/teacher/my_classes_screen.dart';
+import 'services/storage_service.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await StorageService.init();
+
+  String initialRoute = '/login';
+  final userJson = await StorageService.read(key: 'user');
+  if (userJson != null && userJson.isNotEmpty) {
+    try {
+      final user = jsonDecode(userJson);
+      if (user['role'] == 'student') {
+        initialRoute = '/student';
+      } else if (user['role'] == 'teacher') {
+        initialRoute = '/teacher';
+      }
+    } catch (e) {
+      debugPrint('Error parsing saved user: $e');
+    }
+  }
+
+  runApp(MyApp(initialRoute: initialRoute));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String initialRoute;
+
+  const MyApp({super.key, required this.initialRoute});
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +44,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
-      initialRoute: '/login',
+      initialRoute: initialRoute,
       routes: {
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignUpPage(),

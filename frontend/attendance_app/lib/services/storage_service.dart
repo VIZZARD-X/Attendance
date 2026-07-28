@@ -1,17 +1,21 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 class StorageService {
-  static final Map<String, String> _memoryStorage = {};
+  static late SharedPreferences _prefs;
+
+  static Future<void> init() async {
+    _prefs = await SharedPreferences.getInstance();
+  }
 
   static Future<void> write({required String key, required String value}) async {
-    _memoryStorage[key] = value;
+    await _prefs.setString(key, value);
   }
 
   static Future<String?> read({required String key}) async {
-    return _memoryStorage[key];
+    return _prefs.getString(key);
   }
 
   static Future<void> delete({required String key}) async {
-    _memoryStorage.remove(key);
+    await _prefs.remove(key);
   }
 }
