@@ -254,26 +254,39 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     setState(() => isProcessing = true);
 
     try {
-      // Ensure flash fires on capture
-      await _cameraController!.setFlashMode(FlashMode.torch);
+      // Force flash on before taking the picture
+      try {
+        await _cameraController!.setFlashMode(FlashMode.torch);
+      } catch (_) {}
+      
       final XFile picture = await _cameraController!.takePicture();
       final String imagePath = picture.path;
       
-      // Pause preview immediately so the user knows the photo was taken 
-      // and doesn't have to hold the phone steady while it uploads!
+      // Pause preview immediately so the user knows photo was taken
       await _cameraController!.pausePreview();
 
+      // Fetch active sessions
       final sessions = await _sessionService.getStudentActiveSessions();
-      final offlineSessions =
-          sessions.where((s) => s['class_type'] == 'offline').toList();
+      final offlineSessions = sessions.where((s) => s['class_type'] == 'offline').toList();
 
       if (offlineSessions.isEmpty) {
-        _showError('No active offline sessions found.');
+        _showError('No active offline session found. Ask your teacher to start an offline session.');
         setState(() => isProcessing = false);
+        await _cameraController!.resumePreview();
         return;
       }
 
-      final String sessionId = offlineSessions.first['session_id'].toString();
+      final session = offlineSessions.first;
+      
+      // Check if teacher has uploaded the reference image yet
+      if (session['has_reference_image'] != true) {
+        _showError('Teacher has not uploaded the board photo yet. Please wait and try again.');
+        setState(() => isProcessing = false);
+        await _cameraController!.resumePreview();
+        return;
+      }
+
+      final String sessionId = session['session_id'].toString();
 
       final result = await _attendanceService.verifyImage(
         sessionId: sessionId,
@@ -284,18 +297,16 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       if (mounted) {
         if (result['success']) {
           setState(() => hasScanned = true);
-          _showSuccessDialog(
-              result['message'] ?? 'Attendance marked successfully');
+          _showSuccessDialog(result['message'] ?? 'Attendance marked successfully');
         } else {
           _showError(result['message'] ?? 'Verification failed');
           setState(() => isProcessing = false);
-          // Resume preview so they can try again
           await _cameraController!.resumePreview();
         }
       }
     } catch (e) {
       if (mounted) {
-        _showError('Error capturing or verifying image: $e');
+        _showError('Error: $e');
         setState(() => isProcessing = false);
         if (_cameraController != null && _cameraController!.value.isInitialized) {
           _cameraController!.resumePreview();
