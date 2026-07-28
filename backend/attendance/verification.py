@@ -37,20 +37,21 @@ def compare_patterns(reference_image, student_image):
         model = genai.GenerativeModel('gemini-1.5-flash')
         
         prompt = """
-        You are an advanced AI proctor for a university attendance system. 
+        You are an AI proctor for a university attendance system. 
         You are provided with two images:
-        Image 1 (Reference): The teacher's drawing of a shape containing a 2-digit number.
-        Image 2 (Student Scan): The student's photo of the classroom board.
+        Image 1 (Reference): The teacher's photo of a pattern/number drawn on the board.
+        Image 2 (Student Scan): The student's photo of that same board.
         
-        Your task is to verify TWO things to prevent cheating:
-        1. Pattern Match: Does Image 2 clearly contain the exact same shape and 2-digit number as Image 1?
-        2. Anti-Cheat Context: Does Image 2 appear to be a photo of a large classroom whiteboard, blackboard, or projector screen? 
-           If Image 2 looks like a photo of a piece of paper (e.g. A4 sheet), a digital screen (like another phone), or a small drawing held by hand, you MUST flag it as cheating.
+        Verify the following:
+        1. Do both images show the exact same handwritten shape and 2-digit number? 
+           (Note: Image 2 might be taken from a different angle, under different lighting, or zoomed in. Be forgiving of perspective distortion as long as the drawn symbol and number fundamentally match).
+        2. Does Image 2 appear to be a legitimate photo of a classroom board/wall? 
+           (Flag as cheating ONLY if Image 2 is OBVIOUSLY a digital screen, like a phone/laptop, or a small piece of paper held in a hand).
         
-        Respond ONLY in the following JSON format:
+        Respond ONLY in this exact JSON format:
         {
             "matched": boolean,
-            "reason": "String explaining why it matched or failed (keep it brief and friendly for the student)."
+            "reason": "Short, friendly explanation of your decision."
         }
         """
         
