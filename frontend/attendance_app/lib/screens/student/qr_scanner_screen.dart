@@ -258,6 +258,10 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       await _cameraController!.setFlashMode(FlashMode.torch);
       final XFile picture = await _cameraController!.takePicture();
       final String imagePath = picture.path;
+      
+      // Pause preview immediately so the user knows the photo was taken 
+      // and doesn't have to hold the phone steady while it uploads!
+      await _cameraController!.pausePreview();
 
       final sessions = await _sessionService.getStudentActiveSessions();
       final offlineSessions =
@@ -285,12 +289,17 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         } else {
           _showError(result['message'] ?? 'Verification failed');
           setState(() => isProcessing = false);
+          // Resume preview so they can try again
+          await _cameraController!.resumePreview();
         }
       }
     } catch (e) {
       if (mounted) {
         _showError('Error capturing or verifying image: $e');
         setState(() => isProcessing = false);
+        if (_cameraController != null && _cameraController!.value.isInitialized) {
+          _cameraController!.resumePreview();
+        }
       }
     }
   }
