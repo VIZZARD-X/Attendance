@@ -279,7 +279,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       final session = offlineSessions.first;
       
       // Check if teacher has uploaded the reference image yet
-      if (session['has_reference_image'] != true) {
+      // has_reference_image is null on older backends - only block if explicitly false
+      if (session['has_reference_image'] == false) {
         _showError('Teacher has not uploaded the board photo yet. Please wait and try again.');
         setState(() => isProcessing = false);
         await _cameraController!.resumePreview();
