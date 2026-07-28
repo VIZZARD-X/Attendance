@@ -106,10 +106,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         orElse: () => cameras.first,
       );
 
-      // Using max resolution for native OS app clarity!
+      // Using veryHigh (1080p) instead of max. 'max' pushes 4K/50MP raw frames into 
+      // Flutter's rendering engine, which absolutely destroys the framerate and aspect ratio!
       _cameraController = CameraController(
         backCamera,
-        ResolutionPreset.max,
+        ResolutionPreset.veryHigh,
         enableAudio: false,
       );
 
@@ -128,16 +129,26 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           _isCameraInitializing = false;
         });
         
-        // Force flash ON after a tiny delay to ensure hardware readiness after initialization
+        // Force flash ON using a robust retry loop
         if (_cameraController != null && _cameraController!.value.isInitialized) {
-          Future.delayed(const Duration(milliseconds: 300), () {
-            if (mounted && isOfflineMode) {
-              _cameraController!.setFlashMode(FlashMode.torch).catchError((e) {
-                debugPrint('Flash mode toggle failed: $e');
-              });
-            }
-          });
+          _enforceTorch(_cameraController!);
         }
+      }
+    }
+  }
+
+  Future<void> _enforceTorch(CameraController controller) async {
+    // Retry up to 5 times (2.5 seconds total) because Android camera 
+    // hardware takes progressively longer to wake up after rapid toggles
+    for (int i = 0; i < 5; i++) {
+      if (!mounted || !isOfflineMode || _cameraController == null) return;
+      try {
+        await controller.setFlashMode(FlashMode.torch);
+        debugPrint('Flash torch enforced successfully on attempt ${i + 1}');
+        return;
+      } catch (e) {
+        debugPrint('Flash torch enforcement failed on attempt ${i + 1}: $e');
+        await Future.delayed(const Duration(milliseconds: 500));
       }
     }
   }
