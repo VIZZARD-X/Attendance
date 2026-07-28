@@ -18,8 +18,8 @@ import google.generativeai as genai
 import PIL.Image
 import io
 
-def compare_patterns(reference_image, student_image):
-    """Compare patterns and context using Gemini Vision API. Returns (matched, detail)."""
+def verify_offline_code(expected_code, student_image):
+    """Verify alphanumeric code and context using Gemini Vision API. Returns (matched, detail)."""
     api_key = getattr(settings, 'GEMINI_API_KEY', '')
     if not api_key:
         return False, 'GEMINI_API_KEY is not configured on the server.'
@@ -27,35 +27,29 @@ def compare_patterns(reference_image, student_image):
     try:
         genai.configure(api_key=api_key)
         
-        # Load images for Gemini
-        reference_image.seek(0)
-        ref_img = PIL.Image.open(io.BytesIO(reference_image.read()))
-        
+        # Load image for Gemini
         student_image.seek(0)
         stu_img = PIL.Image.open(io.BytesIO(student_image.read()))
         
         model = genai.GenerativeModel('gemini-1.5-flash')
         
-        prompt = """
+        prompt = f"""
         You are an AI proctor for a university attendance system. 
-        You are provided with two images:
-        Image 1 (Reference): The teacher's photo of a pattern/number drawn on the board.
-        Image 2 (Student Scan): The student's photo of that same board.
+        You are provided with a photo of a classroom board taken by a student.
         
         Verify the following:
-        1. Do both images show the exact same handwritten shape and 2-digit number? 
-           (Note: Image 2 might be taken from a different angle, under different lighting, or zoomed in. Be forgiving of perspective distortion as long as the drawn symbol and number fundamentally match).
-        2. Does Image 2 appear to be a legitimate photo of a classroom board/wall? 
-           (Flag as cheating ONLY if Image 2 is OBVIOUSLY a digital screen, like a phone/laptop, or a small piece of paper held in a hand).
+        1. Code Verification: Read the handwritten text in the image. Does it clearly contain the exact 6-character code "{expected_code}"? (Ignore case, spaces, or other text around it).
+        2. Anti-Cheat Context: Does this appear to be a legitimate photo of a physical classroom board (whiteboard, chalkboard, projector screen) or a classroom wall? 
+           (Flag as cheating ONLY if the image is OBVIOUSLY a digital screen like a phone/laptop/monitor, or a small piece of paper held in a hand).
         
         Respond ONLY in this exact JSON format:
-        {
+        {{
             "matched": boolean,
             "reason": "Short, friendly explanation of your decision."
-        }
+        }}
         """
         
-        response = model.generate_content([prompt, ref_img, stu_img])
+        response = model.generate_content([prompt, stu_img])
         
         # Parse JSON
         response_text = response.text.strip()

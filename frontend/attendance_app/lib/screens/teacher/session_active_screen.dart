@@ -28,8 +28,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
   List<Map<String, dynamic>> students = [];
   Map<String, dynamic> statistics = {};
   bool isLoading = true;
-  bool isUploadingReference = false;
-  String? referenceImagePath;
+
 
   static const _channel = MethodChannel('attendance_app/camera');
 
@@ -515,39 +514,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
     );
   }
 
-  Future<void> _uploadReferenceImage() async {
-    String? imagePath;
-    try {
-      imagePath = await _channel.invokeMethod<String>('captureImage');
-    } on MissingPluginException {
-      imagePath = null;
-    } catch (e) {
-      _showErrorSnackBar('Camera error: $e');
-      return;
-    }
-
-    if (imagePath == null) return;
-    
-    setState(() => isUploadingReference = true);
-    
-    try {
-      final result = await _sessionService.uploadReferenceImage(
-        widget.sessionData['session_id'],
-        imagePath,
-      );
-      
-      if (result['success'] == true) {
-        setState(() => referenceImagePath = imagePath);
-        _showSuccessSnackBar('Reference image uploaded successfully');
-      } else {
-        _showErrorSnackBar(result['message'] ?? 'Upload failed');
-      }
-    } catch (e) {
-      _showErrorSnackBar('Upload error: $e');
-    } finally {
-      setState(() => isUploadingReference = false);
-    }
-  }
+  // Removed _uploadReferenceImage for OCR update
 
   Widget _buildQRSection({required double size}) {
     final isOffline = widget.sessionData['class_type'] == 'offline';
@@ -570,36 +537,39 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
       child: Column(
         children: [
           if (isOffline) ...[
-            _buildPatternVisual(patternCode, size),
-            const SizedBox(height: 24),
-            InkWell(
-              onTap: isUploadingReference ? null : _uploadReferenceImage,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF007C91),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF007C91).withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF22C55E), width: 2),
+              ),
+              child: Text(
+                patternCode,
+                style: const TextStyle(
+                  fontSize: 42,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 8,
+                  color: Color(0xFF166534),
                 ),
-                child: isUploadingReference
-                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : Icon(referenceImagePath != null ? Icons.check : Icons.upload, color: Colors.white, size: 28),
               ),
             ),
             const SizedBox(height: 16),
             const Text(
-              "Please draw this and upload",
+              "Write this code on the board",
               style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF1F2937),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.redAccent,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "(No reference image upload required)",
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+                fontStyle: FontStyle.italic,
               ),
             ),
           ] else ...[
@@ -845,177 +815,4 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
     );
   }
 
-  Widget _buildPatternVisual(String patternString, double size) {
-    final parts = patternString.split('_');
-    if (parts.length < 2) {
-      return _buildSquareCircle(patternString, size);
-    }
-    
-    final numberIdx = parts.length - 1;
-    final typeStr = parts.sublist(0, numberIdx).join('_');
-    final numStr = parts[numberIdx];
-
-    switch (typeStr) {
-      case 'TRIANGLE':
-        return _buildTriangle(numStr, size);
-      case 'DIAMOND':
-        return _buildDiamond(numStr, size);
-      case 'DOUBLE_CIRCLE':
-        return _buildDoubleCircle(numStr, size);
-      case 'SQUARE_CIRCLE':
-      default:
-        return _buildSquareCircle(numStr, size);
-    }
-  }
-
-  Widget _buildSquareCircle(String number, double size) {
-    return Container(
-      width: size * 0.9,
-      height: size * 0.65,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.black, width: 4),
-      ),
-      child: Center(
-        child: Container(
-          width: size * 0.45,
-          height: size * 0.45,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.black, width: 3),
-          ),
-          child: Center(
-            child: Text(
-              number,
-              style: TextStyle(
-                fontSize: size * 0.2,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTriangle(String number, double size) {
-    return Container(
-      width: size * 0.9,
-      height: size * 0.65,
-      alignment: Alignment.center,
-      child: CustomPaint(
-        size: Size(size * 0.6, size * 0.5),
-        painter: _TrianglePainter(),
-        child: SizedBox(
-          width: size * 0.6,
-          height: size * 0.5,
-          child: Center(
-            child: Padding(
-              padding: EdgeInsets.only(top: size * 0.15),
-              child: Text(
-                number,
-                style: TextStyle(
-                  fontSize: size * 0.18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDiamond(String number, double size) {
-    return Container(
-      width: size * 0.9,
-      height: size * 0.65,
-      alignment: Alignment.center,
-      child: Transform.rotate(
-        angle: 3.14159 / 4,
-        child: Container(
-          width: size * 0.45,
-          height: size * 0.45,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.black, width: 4),
-          ),
-          child: Transform.rotate(
-            angle: -3.14159 / 4,
-            child: Center(
-              child: Text(
-                number,
-                style: TextStyle(
-                  fontSize: size * 0.2,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDoubleCircle(String number, double size) {
-    return Container(
-      width: size * 0.9,
-      height: size * 0.65,
-      alignment: Alignment.center,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: size * 0.55,
-            height: size * 0.55,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.black, width: 2),
-            ),
-          ),
-          Container(
-            width: size * 0.4,
-            height: size * 0.4,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.black, width: 4),
-            ),
-            child: Center(
-              child: Text(
-                number,
-                style: TextStyle(
-                  fontSize: size * 0.2,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TrianglePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.black
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4;
-      
-    final path = Path();
-    path.moveTo(size.width / 2, 0);
-    path.lineTo(size.width, size.height);
-    path.lineTo(0, size.height);
-    path.close();
-    
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

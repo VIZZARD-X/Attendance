@@ -448,11 +448,9 @@ def create_session(request):
     session_uuid = uuid.uuid4()
     
     import random
+    import string
     if class_type == 'offline':
-        shapes = ['SQUARE_CIRCLE', 'TRIANGLE', 'DIAMOND', 'DOUBLE_CIRCLE']
-        pattern_shape = random.choice(shapes)
-        pattern_num = random.randint(10, 99)
-        pattern_code = f"{pattern_shape}_{pattern_num}"
+        pattern_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
     else:
         pattern_code = None
     
@@ -721,9 +719,11 @@ def verify_image(request):
             status=status.HTTP_403_FORBIDDEN
         )
 
-    if not session.reference_image:
+    # Reference image is no longer strictly required for OCR approach, 
+    # but the session must have a pattern code.
+    if class_type == 'offline' and not session.pattern_code:
         return Response(
-            {'error': 'Session has no reference image for verification'},
+            {'error': 'Session has no pattern code for verification'},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -735,13 +735,13 @@ def verify_image(request):
             'status': existing_record.status
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    from attendance.verification import compare_patterns, validate_focal_distance
+    from attendance.verification import verify_offline_code, validate_focal_distance
     
     is_valid_distance, distance_result = validate_focal_distance(focal_distance)
     if not is_valid_distance:
         return Response({'error': distance_result}, status=status.HTTP_400_BAD_REQUEST)
 
-    matched, detail = compare_patterns(session.reference_image, student_image)
+    matched, detail = verify_offline_code(session.pattern_code, student_image)
     if not matched:
         return Response({
             'error': f'AI Verification Failed: {detail}',
