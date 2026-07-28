@@ -44,8 +44,6 @@ def verify_offline_code(expected_code, reference_image, student_image):
         
         Verify the following:
         1. Code Verification: Read the handwritten text in the student's photo (Image 2). Does it clearly contain the exact 6-character code "{expected_code}"? (Ignore case, spaces, or other text around it).
-        2. Environment Match: Does the physical environment in Image 2 (the board texture, wall, lighting, markers) match the environment shown in Image 1? 
-           (This prevents a student from writing the code on a piece of paper at home. If Image 2 looks like a different environment, or is a photo of a phone screen/laptop/small piece of paper, flag it as cheating!).
         
         Respond ONLY in this exact JSON format:
         {{
