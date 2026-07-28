@@ -6,9 +6,28 @@ from django.conf import settings
 
 
 def _load_image(image_file):
-    """Load image file into OpenCV format."""
-    image_file.seek(0)
-    image_bytes = image_file.read()
+    """Load image file into OpenCV format. Handles both local files and Cloudinary FieldFile."""
+    try:
+        # Django FieldFile (local or Cloudinary) - open and read
+        if hasattr(image_file, 'open'):
+            image_file.open('rb')
+            image_bytes = image_file.read()
+            image_file.close()
+        else:
+            # Raw uploaded file
+            image_file.seek(0)
+            image_bytes = image_file.read()
+    except Exception:
+        # Fallback: try reading URL if it's a Cloudinary file
+        try:
+            import requests
+            url = image_file.url
+            resp = requests.get(url, timeout=15)
+            resp.raise_for_status()
+            image_bytes = resp.content
+        except Exception as e:
+            raise ValueError(f'Cannot read image: {e}')
+
     image_array = np.frombuffer(image_bytes, dtype=np.uint8)
     image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
     if image is None:
