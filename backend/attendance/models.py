@@ -97,7 +97,7 @@ class AttendanceSession(models.Model):
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_sessions')
     
     class_type = models.CharField(max_length=10, choices=CLASS_TYPE_CHOICES, default='online')
-    pattern_code = models.CharField(max_length=10, blank=True, null=True)
+    pattern_code = models.CharField(max_length=50, blank=True, null=True)
     
     start_time = models.DateTimeField(auto_now_add=True)
     duration_minutes = models.IntegerField()  # Duration in minutes

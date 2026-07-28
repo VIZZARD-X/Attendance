@@ -48,9 +48,13 @@ class SessionService {
       
       return {'success': false, 'message': 'Failed to create session'};
     } on DioException catch (e) {
+      String errorMessage = 'Failed to create session';
+      if (e.response?.data is Map<String, dynamic>) {
+        errorMessage = e.response?.data['error'] ?? errorMessage;
+      }
       return {
         'success': false,
-        'message': e.response?.data['error'] ?? 'Failed to create session',
+        'message': errorMessage,
       };
     }
   }
@@ -150,9 +154,13 @@ class SessionService {
         'message': 'Failed to end session'
       };
     } on DioException catch (e) {
+      String errorMessage = 'Error ending session';
+      if (e.response?.data is Map<String, dynamic>) {
+        errorMessage = e.response?.data['error'] ?? errorMessage;
+      }
       return {
         'success': false,
-        'message': e.response?.data['error'] ?? 'Error ending session',
+        'message': errorMessage,
       };
     } catch (e) {
       print('Error ending session: $e');
@@ -184,9 +192,13 @@ class SessionService {
       
       return {'success': false, 'message': 'Failed to mark attendance'};
     } on DioException catch (e) {
+      String errorMessage = 'Failed to mark attendance';
+      if (e.response?.data is Map<String, dynamic>) {
+        errorMessage = e.response?.data['error'] ?? errorMessage;
+      }
       return {
         'success': false,
-        'message': e.response?.data['error'] ?? 'Failed to mark attendance',
+        'message': errorMessage,
       };
     }
   }
@@ -251,9 +263,13 @@ class SessionService {
       
       return {'success': false, 'message': 'Failed to mark attendance'};
     } on DioException catch (e) {
+      String errorMessage = 'Failed to mark attendance';
+      if (e.response?.data is Map<String, dynamic>) {
+        errorMessage = e.response?.data['error'] ?? errorMessage;
+      }
       return {
         'success': false,
-        'message': e.response?.data['error'] ?? 'Failed to mark attendance',
+        'message': errorMessage,
       };
     }
   }
@@ -281,9 +297,13 @@ class SessionService {
       
       return {'success': false, 'message': 'Failed to upload image'};
     } on DioException catch (e) {
+      String errorMessage = 'Failed to upload image';
+      if (e.response?.data is Map<String, dynamic>) {
+        errorMessage = e.response?.data['error'] ?? errorMessage;
+      }
       return {
         'success': false,
-        'message': e.response?.data['error'] ?? 'Failed to upload image',
+        'message': errorMessage,
       };
     }
   }
