@@ -13,54 +13,65 @@ def _read_image(image_file):
     return image
 
 
+import json
+import google.generativeai as genai
+import PIL.Image
+import io
+
 def compare_patterns(reference_image, student_image):
-    """Compare patterns in two uploaded images using ORB feature matching. Returns (matched, detail)."""
+    """Compare patterns and context using Gemini Vision API. Returns (matched, detail)."""
+    api_key = getattr(settings, 'GEMINI_API_KEY', '')
+    if not api_key:
+        return False, 'GEMINI_API_KEY is not configured on the server.'
+    
     try:
-        reference = _read_image(reference_image)
-        student = _read_image(student_image)
+        genai.configure(api_key=api_key)
+        
+        # Load images for Gemini
+        reference_image.seek(0)
+        ref_img = PIL.Image.open(io.BytesIO(reference_image.read()))
+        
+        student_image.seek(0)
+        stu_img = PIL.Image.open(io.BytesIO(student_image.read()))
+        
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        prompt = """
+        You are an advanced AI proctor for a university attendance system. 
+        You are provided with two images:
+        Image 1 (Reference): The teacher's drawing of a shape containing a 2-digit number.
+        Image 2 (Student Scan): The student's photo of the classroom board.
+        
+        Your task is to verify TWO things to prevent cheating:
+        1. Pattern Match: Does Image 2 clearly contain the exact same shape and 2-digit number as Image 1?
+        2. Anti-Cheat Context: Does Image 2 appear to be a photo of a large classroom whiteboard, blackboard, or projector screen? 
+           If Image 2 looks like a photo of a piece of paper (e.g. A4 sheet), a digital screen (like another phone), or a small drawing held by hand, you MUST flag it as cheating.
+        
+        Respond ONLY in the following JSON format:
+        {
+            "matched": boolean,
+            "reason": "String explaining why it matched or failed (keep it brief and friendly for the student)."
+        }
+        """
+        
+        response = model.generate_content([prompt, ref_img, stu_img])
+        
+        # Parse JSON
+        response_text = response.text.strip()
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+            
+        data = json.loads(response_text.strip())
+        
+        matched = data.get("matched", False)
+        reason = data.get("reason", "No reason provided")
+        
+        return matched, reason
+
     except Exception as e:
-        return False, f'Error reading images: {str(e)}'
-
-    # Convert to grayscale
-    reference_gray = cv2.cvtColor(reference, cv2.COLOR_BGR2GRAY)
-    student_gray = cv2.cvtColor(student, cv2.COLOR_BGR2GRAY)
-
-    # Initialize ORB detector
-    orb = cv2.ORB_create(nfeatures=1000)
-
-    # Find keypoints and descriptors
-    kp1, des1 = orb.detectAndCompute(reference_gray, None)
-    kp2, des2 = orb.detectAndCompute(student_gray, None)
-
-    if des1 is None or des2 is None or len(des1) < 10 or len(des2) < 10:
-        return False, 'Not enough features detected in images'
-
-    # BFMatcher with default params
-    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-    
-    try:
-        matches = bf.match(des1, des2)
-    except Exception:
-        return False, 'Failed to match features'
-
-    # Sort them in the order of their distance
-    matches = sorted(matches, key=lambda x: x.distance)
-
-    # Calculate score based on good matches
-    # We consider a match "good" if its distance is below a threshold (e.g., 50)
-    good_matches = [m for m in matches if m.distance < 50]
-    
-    # The score is the ratio of good matches to the minimum total features, or simply the count of good matches
-    score = len(good_matches)
-    
-    # Threshold for match (adjust this based on real-world testing, usually 15-20 good matches is solid)
-    # The settings threshold from FACE_MATCH_THRESHOLD was likely a float (e.g., 0.45).
-    # We will use a fixed threshold of 15 good matches for pattern matching.
-    threshold = 15
-    matched = score >= threshold
-    
-    detail = f'Match score: {score} good features (threshold: {threshold})'
-    return matched, detail
+        return False, f'AI Verification failed: {str(e)}'
 
 
 def validate_focal_distance(focal_distance):
