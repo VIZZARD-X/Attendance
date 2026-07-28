@@ -537,10 +537,23 @@ def get_student_active_sessions(request):
         end_time__gt=timezone.now()
     ).select_related('class_obj', 'teacher')
     
-    serializer = SessionSerializer(sessions, many=True)
+    sessions_data = []
+    for session in sessions:
+        data = {
+            'session_id': str(session.session_id),
+            'class_code': session.class_obj.class_code,
+            'class_name': session.class_obj.class_name,
+            'class_type': session.class_type,
+            'pattern_code': session.pattern_code,
+            'has_reference_image': bool(session.reference_image),
+            'end_time': session.end_time,
+            'status': session.status,
+        }
+        sessions_data.append(data)
+
     return Response({
-        'sessions': serializer.data,
-        'total': sessions.count()
+        'sessions': sessions_data,
+        'total': len(sessions_data)
     })
 
 @api_view(['GET'])
