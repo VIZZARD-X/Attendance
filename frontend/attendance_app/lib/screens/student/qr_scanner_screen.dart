@@ -115,9 +115,6 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
       await _cameraController!.initialize();
       
-      // Force flash ON
-      await _cameraController!.setFlashMode(FlashMode.torch);
-      
       // Get zoom limits
       _minAvailableZoom = await _cameraController!.getMinZoomLevel();
       _maxAvailableZoom = await _cameraController!.getMaxZoomLevel();
@@ -130,6 +127,17 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         setState(() {
           _isCameraInitializing = false;
         });
+        
+        // Force flash ON after a tiny delay to ensure hardware readiness after initialization
+        if (_cameraController != null && _cameraController!.value.isInitialized) {
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (mounted && isOfflineMode) {
+              _cameraController!.setFlashMode(FlashMode.torch).catchError((e) {
+                debugPrint('Flash mode toggle failed: $e');
+              });
+            }
+          });
+        }
       }
     }
   }
@@ -194,7 +202,15 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     });
 
     try {
-      final data = jsonDecode(qrData);
+      final dynamic decoded = jsonDecode(qrData);
+      
+      if (decoded is! Map<String, dynamic>) {
+        _showError('Invalid QR code format. Not an attendance code.');
+        setState(() => isProcessing = false);
+        return;
+      }
+      
+      final data = decoded;
       final sessionId = data['session_id'];
 
       if (sessionId == null) {
@@ -376,10 +392,10 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         children: [
           // Camera Background
           if (_cameraPermissionGranted)
-            GestureDetector(
-              onScaleStart: _handleScaleStart,
-              onScaleUpdate: _handleScaleUpdate,
-              child: Positioned.fill(
+            Positioned.fill(
+              child: GestureDetector(
+                onScaleStart: _handleScaleStart,
+                onScaleUpdate: _handleScaleUpdate,
                 child: isOfflineMode
                     ? (_cameraController != null && _cameraController!.value.isInitialized
                         ? CameraPreview(_cameraController!)

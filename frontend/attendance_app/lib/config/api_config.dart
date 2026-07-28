@@ -10,15 +10,24 @@ class ApiConfig {
   static const String _androidEmulatorUrl = 'http://10.0.2.2:8000/api/v1';
 
   // For Local Tunnel (e.g. VS Code Port Forwarding, ngrok, localtunnel)
+  // For Local Tunnel (e.g. VS Code Port Forwarding, ngrok, localtunnel)
   // Ensure that 'Port Forwarding' is active in VS Code if using this method.
   static const String _localtunnelUrl = 'https://qdg6mx71-8000.inc1.devtunnels.ms/api/v1';
 
-  // Getter for base URL depending on platform
+  // Change this to true when deploying to production!
+  static const bool isProduction = true;
+
+  // Your Render URL
+  static const String _productionUrl = 'https://attendance-m2u0.onrender.com/api/v1';
+
+  // Base URL resolution
   static String get baseUrl {
-    // if (kIsWeb) return _webUrl;
+    if (isProduction) {
+      return _productionUrl;
+    }
     return _localtunnelUrl; // Make sure to use the active local tunnel URL
   }
-  
+
   // Connection settings
   static const Duration connectionTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);

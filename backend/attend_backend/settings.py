@@ -178,7 +178,6 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "False").lower() == "true"
-CORS_ALLOW_ALL_ORIGINS = CORS_ALLOW_ALL_ORIGINS if DEBUG else False
 
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
