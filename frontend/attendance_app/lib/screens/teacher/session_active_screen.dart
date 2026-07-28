@@ -28,6 +28,8 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
   List<Map<String, dynamic>> students = [];
   Map<String, dynamic> statistics = {};
   bool isLoading = true;
+  bool isUploadingReference = false;
+  String? referenceImagePath;
 
 
   static const _channel = MethodChannel('attendance_app/camera');
@@ -514,7 +516,39 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
     );
   }
 
-  // Removed _uploadReferenceImage for OCR update
+  Future<void> _uploadReferenceImage() async {
+    String? imagePath;
+    try {
+      imagePath = await _channel.invokeMethod<String>('captureImage');
+    } on MissingPluginException {
+      imagePath = null;
+    } catch (e) {
+      _showErrorSnackBar('Camera error: $e');
+      return;
+    }
+
+    if (imagePath == null) return;
+    
+    setState(() => isUploadingReference = true);
+    
+    try {
+      final result = await _sessionService.uploadReferenceImage(
+        widget.sessionData['session_id'],
+        imagePath,
+      );
+      
+      if (result['success'] == true) {
+        setState(() => referenceImagePath = imagePath);
+        _showSuccessSnackBar('Reference image uploaded successfully');
+      } else {
+        _showErrorSnackBar(result['message'] ?? 'Upload failed');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Upload error: $e');
+    } finally {
+      setState(() => isUploadingReference = false);
+    }
+  }
 
   Widget _buildQRSection({required double size}) {
     final isOffline = widget.sessionData['class_type'] == 'offline';
@@ -563,13 +597,35 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
                 color: Colors.redAccent,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 24),
+            InkWell(
+              onTap: isUploadingReference ? null : _uploadReferenceImage,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF007C91),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF007C91).withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: isUploadingReference
+                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Icon(referenceImagePath != null ? Icons.check : Icons.upload, color: Colors.white, size: 28),
+              ),
+            ),
+            const SizedBox(height: 16),
             const Text(
-              "(No reference image upload required)",
+              "Take a photo of the board",
               style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-                fontStyle: FontStyle.italic,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF1F2937),
               ),
             ),
           ] else ...[

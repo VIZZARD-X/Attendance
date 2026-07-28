@@ -235,9 +235,13 @@ class AttendanceService {
       
       return {'success': false, 'message': 'Verification failed'};
     } on DioException catch (e) {
+      String errorMessage = 'Verification failed';
+      if (e.response?.data is Map<String, dynamic>) {
+        errorMessage = e.response?.data['error'] ?? errorMessage;
+      }
       return {
         'success': false,
-        'message': e.response?.data['error'] ?? 'Verification failed',
+        'message': errorMessage,
       };
     } catch (e) {
       return {'success': false, 'message': 'Unexpected error: $e'};
