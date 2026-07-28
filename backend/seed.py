@@ -175,17 +175,19 @@ def seed_database(reset=False, default_password="password123"):
         'timestamp': now.isoformat(),
     })
 
-    session, created_session = AttendanceSession.objects.get_or_create(
-        class_obj=main_class,
-        status='active',
-        defaults={
-            'session_id': session_id,
-            'teacher': teacher_user,
-            'duration_minutes': 60,
-            'end_time': end_time,
-            'qr_code_data': qr_payload,
-        }
-    )
+    session = AttendanceSession.objects.filter(class_obj=main_class, status='active').first()
+    created_session = False
+    if not session:
+        session = AttendanceSession.objects.create(
+            class_obj=main_class,
+            status='active',
+            session_id=session_id,
+            teacher=teacher_user,
+            duration_minutes=60,
+            end_time=end_time,
+            qr_code_data=qr_payload,
+        )
+        created_session = True
     print(f"  [{'Created' if created_session else 'Found'}] Active Session: {session.session_id} for {main_class.class_code}")
 
     record, created_record = AttendanceRecord.objects.get_or_create(

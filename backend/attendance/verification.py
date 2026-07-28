@@ -18,7 +18,7 @@ import google.generativeai as genai
 import PIL.Image
 import io
 
-def verify_offline_code(expected_code, student_image):
+def verify_offline_code(expected_code, reference_image, student_image):
     """Verify alphanumeric code and context using Gemini Vision API. Returns (matched, detail)."""
     api_key = getattr(settings, 'GEMINI_API_KEY', '')
     if not api_key:
@@ -27,7 +27,10 @@ def verify_offline_code(expected_code, student_image):
     try:
         genai.configure(api_key=api_key)
         
-        # Load image for Gemini
+        # Load images for Gemini
+        reference_image.seek(0)
+        ref_img = PIL.Image.open(io.BytesIO(reference_image.read()))
+        
         student_image.seek(0)
         stu_img = PIL.Image.open(io.BytesIO(student_image.read()))
         
@@ -35,12 +38,14 @@ def verify_offline_code(expected_code, student_image):
         
         prompt = f"""
         You are an AI proctor for a university attendance system. 
-        You are provided with a photo of a classroom board taken by a student.
+        You are provided with TWO photos:
+        Image 1 (Reference): The teacher's photo of the classroom board.
+        Image 2 (Student Scan): The student's photo of the board.
         
         Verify the following:
-        1. Code Verification: Read the handwritten text in the image. Does it clearly contain the exact 6-character code "{expected_code}"? (Ignore case, spaces, or other text around it).
-        2. Anti-Cheat Context: Does this appear to be a legitimate photo of a physical classroom board (whiteboard, chalkboard, projector screen) or a classroom wall? 
-           (Flag as cheating ONLY if the image is OBVIOUSLY a digital screen like a phone/laptop/monitor, or a small piece of paper held in a hand).
+        1. Code Verification: Read the handwritten text in the student's photo (Image 2). Does it clearly contain the exact 6-character code "{expected_code}"? (Ignore case, spaces, or other text around it).
+        2. Environment Match: Does the physical environment in Image 2 (the board texture, wall, lighting, markers) match the environment shown in Image 1? 
+           (This prevents a student from writing the code on a piece of paper at home. If Image 2 looks like a different environment, or is a photo of a phone screen/laptop/small piece of paper, flag it as cheating!).
         
         Respond ONLY in this exact JSON format:
         {{
@@ -49,7 +54,7 @@ def verify_offline_code(expected_code, student_image):
         }}
         """
         
-        response = model.generate_content([prompt, stu_img])
+        response = model.generate_content([prompt, ref_img, stu_img])
         
         # Parse JSON
         response_text = response.text.strip()

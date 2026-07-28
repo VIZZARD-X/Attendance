@@ -719,13 +719,17 @@ def verify_image(request):
             status=status.HTTP_403_FORBIDDEN
         )
 
-    # Reference image is no longer strictly required for OCR approach, 
-    # but the session must have a pattern code.
-    if class_type == 'offline' and not session.pattern_code:
-        return Response(
-            {'error': 'Session has no pattern code for verification'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    if session.class_type == 'offline':
+        if not session.pattern_code:
+            return Response(
+                {'error': 'Session has no pattern code for verification'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if not session.reference_image:
+            return Response(
+                {'error': 'Teacher has not uploaded the reference image yet'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     existing_record = AttendanceRecord.objects.filter(session=session, student=user).first()
     if existing_record:
@@ -741,7 +745,7 @@ def verify_image(request):
     if not is_valid_distance:
         return Response({'error': distance_result}, status=status.HTTP_400_BAD_REQUEST)
 
-    matched, detail = verify_offline_code(session.pattern_code, student_image)
+    matched, detail = verify_offline_code(session.pattern_code, session.reference_image, student_image)
     if not matched:
         return Response({
             'error': f'AI Verification Failed: {detail}',
