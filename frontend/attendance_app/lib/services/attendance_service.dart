@@ -9,8 +9,8 @@ class AttendanceService {
 
   AttendanceService() {
     _dio.options.baseUrl = ApiConfig.baseUrl;
-    _dio.options.connectTimeout = const Duration(seconds: 10);
-    _dio.options.receiveTimeout = const Duration(seconds: 10);
+    _dio.options.connectTimeout = ApiConfig.connectionTimeout;
+    _dio.options.receiveTimeout = ApiConfig.receiveTimeout;
   }
 
   Future<String?> _getToken() async {

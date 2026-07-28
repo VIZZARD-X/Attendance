@@ -28,9 +28,9 @@ class ApiConfig {
     return _localtunnelUrl; // Make sure to use the active local tunnel URL
   }
 
-  // Connection settings
-  static const Duration connectionTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
+  // Connection settings (90s to handle Render free-tier cold starts gracefully)
+  static const Duration connectionTimeout = Duration(seconds: 90);
+  static const Duration receiveTimeout = Duration(seconds: 90);
   
   // Auth endpoints
   static String login = '$baseUrl/auth/token/';
