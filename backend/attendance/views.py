@@ -744,7 +744,7 @@ def verify_image(request):
     matched, detail = compare_patterns(session.reference_image, student_image)
     if not matched:
         return Response({
-            'error': 'Pattern verification failed',
+            'error': f'AI Verification Failed: {detail}',
             'detail': detail
         }, status=status.HTTP_400_BAD_REQUEST)
 
