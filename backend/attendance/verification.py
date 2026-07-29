@@ -3,14 +3,7 @@ import numpy as np
 import io
 import re
 from django.conf import settings
-from .ai_verifier import ProductionBoardAttendanceVerifier
 
-# Initialize globally to keep PyTorch models loaded in memory
-try:
-    ai_verifier = ProductionBoardAttendanceVerifier()
-except Exception as e:
-    print(f"Warning: Failed to initialize AI verifier: {e}")
-    ai_verifier = None
 
 def _load_image(image_file):
     """Load image file into OpenCV format. Handles both local files and Cloudinary FieldFile."""
@@ -69,63 +62,157 @@ def _extract_text_from_image(image):
     return all_text.upper().replace(' ', '').replace('\n', '')
 
 
-def _match_environment(ref_image, student_image, min_good_matches=8):
+def _preprocess_for_matching(image):
     """
-    Use ORB feature matching to verify both images are from the same physical board.
-    Returns (is_same_environment, match_count, detail_message).
+    Preprocess an image for robust feature extraction.
+    Applies CLAHE contrast enhancement and resizes to a standard canvas.
     """
-    orb = cv2.ORB_create(nfeatures=1000)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    kp1, des1 = orb.detectAndCompute(ref_image, None)
-    kp2, des2 = orb.detectAndCompute(student_image, None)
+    # CLAHE: locally enhances contrast so faint whiteboard markers become visible
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+    enhanced = clahe.apply(gray)
 
-    if des1 is None or des2 is None or len(kp1) < 5 or len(kp2) < 5:
+    # Resize to max 1024px on longest side (preserves aspect ratio)
+    h, w = enhanced.shape
+    scale = 1024.0 / max(h, w)
+    if scale < 1.0:
+        enhanced = cv2.resize(enhanced, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+
+    return enhanced
+
+
+def _check_screen_spoof(image):
+    """
+    Lightweight anti-spoof: detect screen pixel grids via FFT analysis.
+    Returns (is_real, reason).
+    """
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+
+    # --- A. Flash Glare on Glass Screen ---
+    _, bright_mask = cv2.threshold(gray, 250, 255, cv2.THRESH_BINARY)
+    bright_ratio = np.sum(bright_mask == 255) / gray.size
+    if bright_ratio > 0.10:
+        return False, f'Screen glass flash glare detected (bright ratio: {bright_ratio:.2%})'
+
+    # --- B. FFT Moiré Pattern Detection ---
+    f = np.fft.fft2(gray.astype(np.float32))
+    fshift = np.fft.fftshift(f)
+    magnitude = 20 * np.log(np.abs(fshift) + 1e-8)
+
+    h, w = gray.shape
+    cy, cx = h // 2, w // 2
+    # Zero out the central low-frequency region
+    high_freq = magnitude.copy()
+    radius = min(30, min(cy, cx) - 1)  # Guard against very small images
+    high_freq[cy - radius:cy + radius, cx - radius:cx + radius] = 0
+
+    spectral_energy = float(np.mean(high_freq))
+    if spectral_energy > 155.0:
+        return False, f'Screen pixel grid pattern detected (spectral energy: {spectral_energy:.1f})'
+
+    return True, 'Passed anti-spoof checks'
+
+
+def _match_boards_sift(ref_image, student_image, min_inliers=10, min_inlier_ratio=0.25):
+    """
+    SIFT-based feature matching with geometric verification.
+
+    Uses SIFT (Scale-Invariant Feature Transform) which is the gold standard
+    for matching the same scene from different viewpoints, zoom levels, and
+    lighting conditions. Combined with FLANN-based matching, Lowe's ratio test,
+    and RANSAC homography for maximum accuracy.
+
+    Returns (is_match, inlier_count, detail_message).
+    """
+    # Preprocess both images (CLAHE + resize)
+    ref_proc = _preprocess_for_matching(ref_image)
+    stu_proc = _preprocess_for_matching(student_image)
+
+    # Create SIFT detector with generous feature count
+    sift = cv2.SIFT_create(nfeatures=2000, contrastThreshold=0.03, edgeThreshold=15)
+
+    kp1, des1 = sift.detectAndCompute(ref_proc, None)
+    kp2, des2 = sift.detectAndCompute(stu_proc, None)
+
+    if des1 is None or des2 is None:
         return False, 0, 'Could not extract features from one or both images.'
 
-    # BFMatcher with Hamming distance for ORB descriptors
-    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
-    matches = bf.knnMatch(des1, des2, k=2)
+    if len(kp1) < 5 or len(kp2) < 5:
+        return False, 0, f'Too few features detected (ref: {len(kp1)}, student: {len(kp2)}).'
 
-    # Lowe's ratio test to filter good matches
+    # FLANN-based matcher (optimized for float descriptors like SIFT)
+    index_params = dict(algorithm=1, trees=5)  # FLANN_INDEX_KDTREE
+    search_params = dict(checks=80)
+    flann = cv2.FlannBasedMatcher(index_params, search_params)
+
+    # KNN match with k=2 for Lowe's ratio test
+    raw_matches = flann.knnMatch(des1, des2, k=2)
+
+    # Lowe's ratio test: keep matches where best is significantly better than second-best
     good_matches = []
-    for m_n in matches:
-        if len(m_n) == 2:
-            m, n = m_n
-            if m.distance < 0.75 * n.distance:
+    for pair in raw_matches:
+        if len(pair) == 2:
+            m, n = pair
+            if m.distance < 0.7 * n.distance:
                 good_matches.append(m)
 
-    if len(good_matches) >= min_good_matches:
-        return True, len(good_matches), f'Environment verified: {len(good_matches)} matching keypoints found.'
-    else:
+    if len(good_matches) < 4:
         return False, len(good_matches), (
-            f'Environment mismatch: Only {len(good_matches)} keypoints matched '
-            f'(minimum {min_good_matches} required). '
-            'The student\'s photo does not appear to be from the same board.'
+            f'Insufficient feature matches: only {len(good_matches)} found. '
+            'The images do not appear to show the same board content.'
+        )
+
+    # Extract matched keypoint coordinates
+    pts_ref = np.float32([kp1[m.queryIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+    pts_stu = np.float32([kp2[m.trainIdx].pt for m in good_matches]).reshape(-1, 1, 2)
+
+    # RANSAC homography: verifies matched points form a valid perspective transform
+    # (i.e., a real 3D board viewed from a different angle, not random noise)
+    _, mask = cv2.findHomography(pts_ref, pts_stu, cv2.RANSAC, 5.0)
+
+    if mask is None:
+        return False, 0, 'Could not compute geometric transform between images.'
+
+    inlier_count = int(np.sum(mask))
+    inlier_ratio = inlier_count / len(good_matches)
+
+    if inlier_count >= min_inliers and inlier_ratio >= min_inlier_ratio:
+        return True, inlier_count, (
+            f'Board match confirmed: {inlier_count} geometric inliers '
+            f'({inlier_ratio:.0%} ratio) from {len(good_matches)} feature matches.'
+        )
+    else:
+        return False, inlier_count, (
+            f'Board mismatch: {inlier_count} inliers ({inlier_ratio:.0%} ratio) '
+            f'from {len(good_matches)} matches — below threshold '
+            f'(need {min_inliers} inliers at {min_inlier_ratio:.0%} ratio). '
+            'The photo does not appear to be of the same board.'
         )
 
 
-def verify_offline_code(expected_code, reference_image, student_image, focal_distance):
+def verify_offline_code(expected_code, reference_image, student_image):
     """
-    Robust two-stage offline attendance verification:
-    Stage 1: OCR - verify the 6-char code is present in the student image.
-    Stage 2: AI Feature Matching - verify student photo is from the same physical board and not a screen.
+    Robust multi-layer offline attendance verification:
+      Layer 1: OCR — verify the 6-char pattern code is present in the student photo.
+      Layer 2: Anti-Spoof — FFT screen pixel grid detection.
+      Layer 3: SIFT Feature Matching — verify student photo shows the same board.
     Returns (matched: bool, detail: str).
     """
     try:
         ref_img = _load_image(reference_image)
         stu_img = _load_image(student_image)
 
-        # --- STAGE 1: OCR Code Verification ---
+        # --- LAYER 1: OCR Code Verification ---
         extracted_text = _extract_text_from_image(stu_img)
         code_upper = expected_code.upper().strip()
 
-        # Allow slight OCR misreads: check exact match first, then fuzzy
+        # Exact match first
         ocr_matched = code_upper in extracted_text
 
         # Fuzzy fallback: tolerate 1 character error (handles I/1, O/0, etc.)
         if not ocr_matched:
             for i in range(len(code_upper)):
-                # Try replacing each character with a wildcard
                 pattern = code_upper[:i] + '.' + code_upper[i+1:]
                 if re.search(pattern, extracted_text):
                     ocr_matched = True
@@ -137,27 +224,24 @@ def verify_offline_code(expected_code, reference_image, student_image, focal_dis
                 f'Please ensure the code is clearly visible and in focus.'
             )
 
-        # --- STAGE 2: Environment / Board Verification ---
-        if ai_verifier is not None:
-            ai_result = ai_verifier.verify_attendance(ref_img, stu_img, focal_distance)
-            
-            if not ai_result["verified"]:
-                reason = ai_result.get("reason", "Unknown AI rejection")
-                return False, f'Board verification failed: {reason}'
-                
-            metrics = ai_result.get("metrics", {})
-            match_count = metrics.get("geometric_inliers", 0)
-            env_detail = f"Deep feature match successful ({match_count} keypoints matched)."
-        else:
-            # Fallback to older ORB logic if PyTorch failed to load
-            env_matched, match_count, env_detail = _match_environment(ref_img, stu_img)
-            if not env_matched:
-                return False, (
-                    f'Board verification failed: {env_detail} '
-                    'Please make sure you are photographing the actual classroom board.'
-                )
+        # --- LAYER 2: Anti-Spoof Check ---
+        is_real, spoof_detail = _check_screen_spoof(stu_img)
+        if not is_real:
+            return False, f'Anti-spoof check failed: {spoof_detail}'
 
-        return True, f'Verified! Code "{expected_code}" found and board environment confirmed ({match_count} keypoints matched).'
+        # --- LAYER 3: SIFT Board Matching ---
+        is_match, match_count, match_detail = _match_boards_sift(ref_img, stu_img)
+
+        if not is_match:
+            return False, (
+                f'Board verification failed: {match_detail} '
+                'Please make sure you are photographing the actual classroom board.'
+            )
+
+        return True, (
+            f'Verified! Code "{expected_code}" found and board environment confirmed '
+            f'({match_count} keypoints matched).'
+        )
 
     except ImportError:
         # Tesseract not installed - fall back to Gemini OCR only
