@@ -14,5 +14,5 @@ COPY . /code/
 
 EXPOSE 8000
 
-# Migrate, seed, and run server
-CMD sh -c "python manage.py migrate && python seed.py && gunicorn --bind 0.0.0.0:8000 attend_backend.wsgi:application"
+# Migrate, seed, and run server (PORT is set by Railway/Render, fallback 8000 for local)
+CMD sh -c "python manage.py migrate && python seed.py && gunicorn --bind 0.0.0.0:${PORT:-8000} attend_backend.wsgi:application"
