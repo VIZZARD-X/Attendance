@@ -3,7 +3,14 @@ import numpy as np
 import io
 import re
 from django.conf import settings
+from .ai_verifier import ProductionBoardAttendanceVerifier
 
+# Initialize globally to keep PyTorch models loaded in memory
+try:
+    ai_verifier = ProductionBoardAttendanceVerifier()
+except Exception as e:
+    print(f"Warning: Failed to initialize AI verifier: {e}")
+    ai_verifier = None
 
 def _load_image(image_file):
     """Load image file into OpenCV format. Handles both local files and Cloudinary FieldFile."""
@@ -97,11 +104,11 @@ def _match_environment(ref_image, student_image, min_good_matches=8):
         )
 
 
-def verify_offline_code(expected_code, reference_image, student_image):
+def verify_offline_code(expected_code, reference_image, student_image, focal_distance):
     """
     Robust two-stage offline attendance verification:
     Stage 1: OCR - verify the 6-char code is present in the student image.
-    Stage 2: ORB Feature Matching - verify student photo is from the same physical board.
+    Stage 2: AI Feature Matching - verify student photo is from the same physical board and not a screen.
     Returns (matched: bool, detail: str).
     """
     try:
@@ -131,13 +138,24 @@ def verify_offline_code(expected_code, reference_image, student_image):
             )
 
         # --- STAGE 2: Environment / Board Verification ---
-        env_matched, match_count, env_detail = _match_environment(ref_img, stu_img)
-
-        if not env_matched:
-            return False, (
-                f'Board verification failed: {env_detail} '
-                'Please make sure you are photographing the actual classroom board.'
-            )
+        if ai_verifier is not None:
+            ai_result = ai_verifier.verify_attendance(ref_img, stu_img, focal_distance)
+            
+            if not ai_result["verified"]:
+                reason = ai_result.get("reason", "Unknown AI rejection")
+                return False, f'Board verification failed: {reason}'
+                
+            metrics = ai_result.get("metrics", {})
+            match_count = metrics.get("geometric_inliers", 0)
+            env_detail = f"Deep feature match successful ({match_count} keypoints matched)."
+        else:
+            # Fallback to older ORB logic if PyTorch failed to load
+            env_matched, match_count, env_detail = _match_environment(ref_img, stu_img)
+            if not env_matched:
+                return False, (
+                    f'Board verification failed: {env_detail} '
+                    'Please make sure you are photographing the actual classroom board.'
+                )
 
         return True, f'Verified! Code "{expected_code}" found and board environment confirmed ({match_count} keypoints matched).'
 

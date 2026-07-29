@@ -758,7 +758,7 @@ def verify_image(request):
     if not is_valid_distance:
         return Response({'error': distance_result}, status=status.HTTP_400_BAD_REQUEST)
 
-    matched, detail = verify_offline_code(session.pattern_code, session.reference_image, student_image)
+    matched, detail = verify_offline_code(session.pattern_code, session.reference_image, student_image, distance_result)
     if not matched:
         return Response({
             'error': f'AI Verification Failed: {detail}',

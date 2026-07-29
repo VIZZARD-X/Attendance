@@ -19,3 +19,8 @@ google-generativeai
 pytesseract>=0.3.10
 cloudinary>=1.36.0
 django-cloudinary-storage>=0.3.0
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.0.0
+torchvision>=0.15.0
+kornia>=0.7.0
+kornia-rs>=0.1.0
