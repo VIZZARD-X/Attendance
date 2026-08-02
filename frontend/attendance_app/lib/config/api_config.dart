@@ -18,7 +18,7 @@ class ApiConfig {
   static const bool isProduction = true;
 
   // Your Render URL
-  static const String _productionUrl = 'https://attendance-m2u0.onrender.com/api/v1';
+  static const String _productionUrl = 'https://attendance-production-5fb3.up.railway.app/api/v1';
 
   // Base URL resolution
   static String get baseUrl {

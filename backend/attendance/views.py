@@ -732,52 +732,56 @@ def verify_image(request):
             status=status.HTTP_403_FORBIDDEN
         )
 
-    if session.class_type == 'offline':
-        if not session.pattern_code:
-            return Response(
-                {'error': 'Session has no pattern code for verification'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        if not session.reference_image:
-            return Response(
-                {'error': 'Teacher has not uploaded the reference image yet'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+    try:
+        if session.class_type == 'offline':
+            if not session.pattern_code:
+                return Response(
+                    {'error': 'Session has no pattern code for verification'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if not session.reference_image:
+                return Response(
+                    {'error': 'Teacher has not uploaded the reference image yet'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-    existing_record = AttendanceRecord.objects.filter(session=session, student=user).first()
-    if existing_record:
+        existing_record = AttendanceRecord.objects.filter(session=session, student=user).first()
+        if existing_record:
+            return Response({
+                'error': 'Attendance already marked',
+                'marked_at': existing_record.marked_at,
+                'status': existing_record.status
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        from attendance.verification import verify_offline_code, validate_focal_distance
+        
+        is_valid_distance, distance_result = validate_focal_distance(focal_distance)
+        if not is_valid_distance:
+            return Response({'error': distance_result}, status=status.HTTP_400_BAD_REQUEST)
+
+        matched, detail = verify_offline_code(session.pattern_code, session.reference_image, student_image)
+        if not matched:
+            return Response({
+                'error': f'AI Verification Failed: {detail}',
+                'detail': detail
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        record = AttendanceRecord.objects.create(
+            session=session,
+            student=user,
+            status='present'
+        )
+
         return Response({
-            'error': 'Attendance already marked',
-            'marked_at': existing_record.marked_at,
-            'status': existing_record.status
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-    from attendance.verification import verify_offline_code, validate_focal_distance
-    
-    is_valid_distance, distance_result = validate_focal_distance(focal_distance)
-    if not is_valid_distance:
-        return Response({'error': distance_result}, status=status.HTTP_400_BAD_REQUEST)
-
-    matched, detail = verify_offline_code(session.pattern_code, session.reference_image, student_image)
-    if not matched:
-        return Response({
-            'error': f'AI Verification Failed: {detail}',
-            'detail': detail
-        }, status=status.HTTP_400_BAD_REQUEST)
-
-    record = AttendanceRecord.objects.create(
-        session=session,
-        student=user,
-        status='present'
-    )
-
-    return Response({
-        'message': f'Attendance verified for {session.class_obj.class_code}',
-        'detail': detail,
-        'focal_distance': distance_result,
-        'marked_at': record.marked_at,
-        'status': 'present'
-    }, status=status.HTTP_201_CREATED)
+            'message': f'Attendance verified for {session.class_obj.class_code}',
+            'detail': detail,
+            'focal_distance': distance_result,
+            'marked_at': record.marked_at,
+            'status': 'present'
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        import traceback
+        return Response({'error': f"Backend Error: {str(e)}", 'trace': traceback.format_exc()}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
