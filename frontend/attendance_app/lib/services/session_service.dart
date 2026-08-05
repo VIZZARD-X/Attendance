@@ -23,6 +23,7 @@ class SessionService {
     required int classId,
     required int durationMinutes,
     String classType = 'online',
+    String boardType = 'whiteboard',
   }) async {
     try {
       final token = await _getToken();
@@ -33,6 +34,7 @@ class SessionService {
           'class_id': classId,
           'duration_minutes': durationMinutes,
           'class_type': classType,
+          'board_type': boardType,
         },
         options: Options(
           headers: {'Authorization': 'Bearer $token'},

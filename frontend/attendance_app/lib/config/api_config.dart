@@ -1,6 +1,6 @@
 class ApiConfig {
   // Local IP for physical phone testing on same Wi-Fi.
-  static const String _localIp = 'http://10.201.14.219:8000/api/v1';
+  static const String _localIp = 'http://10.127.123.219:8000/api/v1';
 
   // Compile-time overrides:
   // flutter run --dart-define=API_BASE_URL=https://your-backend.onrender.com/api/v1
@@ -10,12 +10,11 @@ class ApiConfig {
   static const String _androidEmulatorUrl = 'http://10.0.2.2:8000/api/v1';
 
   // For Local Tunnel (e.g. VS Code Port Forwarding, ngrok, localtunnel)
-  // For Local Tunnel (e.g. VS Code Port Forwarding, ngrok, localtunnel)
   // Ensure that 'Port Forwarding' is active in VS Code if using this method.
   static const String _localtunnelUrl = 'https://qdg6mx71-8000.inc1.devtunnels.ms/api/v1';
 
-  // Change this to true when deploying to production!
-  static const bool isProduction = true;
+  // Change this to false to use local IP for debugging!
+  static const bool isProduction = false;
 
   // Your Render URL
   static const String _productionUrl = 'https://attendance-production-5fb3.up.railway.app/api/v1';
@@ -40,13 +39,11 @@ class ApiConfig {
   
   // Headers
   static Map<String, String> get headers => {
-    'Content-Type': 'application/json',
     'Bypass-Tunnel-Reminder': 'true', // Required to bypass Localtunnel warning page
   };
   
-  static Map<String, String> authHeaders(String token) => {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer $token',
+  static Map<String, String> authHeaders(String? token) => {
+    'Authorization': 'Bearer ${token ?? ""}',
     'Bypass-Tunnel-Reminder': 'true', // Required to bypass Localtunnel warning page
   };
 }

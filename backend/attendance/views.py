@@ -428,6 +428,7 @@ def create_session(request):
     reference_image = request.FILES.get('reference_image')
 
     class_type = serializer.validated_data.get('class_type', 'online')
+    board_type = serializer.validated_data.get('board_type', 'whiteboard')
     
     # Reference image is uploaded later for offline sessions via a separate endpoint.
     # Online sessions don't require it at all.
@@ -449,8 +450,11 @@ def create_session(request):
     
     import random
     import string
+    
+    instruction_card = None
     if class_type == 'offline':
-        pattern_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        from attendance.verification import generate_shape_combo
+        shape_combo, instruction_card, pattern_code = generate_shape_combo()
     else:
         pattern_code = None
     
@@ -466,6 +470,7 @@ def create_session(request):
         'end_time': end_time.isoformat(),
         'duration': duration_minutes,
         'class_type': class_type,
+        'board_type': board_type,
         'pattern_code': pattern_code
     }
     
@@ -479,7 +484,10 @@ def create_session(request):
         qr_code_data=json.dumps(qr_data),
         reference_image=reference_image,
         class_type=class_type,
+        board_type=board_type,
         pattern_code=pattern_code,
+        instruction_card=instruction_card,
+        shape_data=shape_combo,
         status='active'
     )
     
@@ -681,11 +689,32 @@ def upload_reference_image(request, session_id):
             status=status.HTTP_400_BAD_REQUEST
         )
         
-    session.reference_image = request.FILES['reference_image']
+    ref_file = request.FILES['reference_image']
+    
+    from attendance.verification import verify_teacher_reference
+    
+    try:
+        ref_bytes = ref_file.read()
+        ref_file.seek(0) # Reset pointer so Django can save it
+        
+        success, message = verify_teacher_reference(ref_bytes, session.pattern_code, session.shape_data)
+        if not success:
+            return Response(
+                {'error': message},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+    except Exception as e:
+        return Response(
+            {'error': f'Failed to process image: {str(e)}'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+        
+    session.reference_image = ref_file
     session.save()
     
     return Response({
-        'message': 'Reference image uploaded successfully'
+        'message': 'Reference image verified and uploaded successfully'
     })
 
 @api_view(['POST'])
@@ -703,6 +732,9 @@ def verify_image(request):
     session_id = request.data.get('session_id')
     focal_distance = request.data.get('focal_distance')
     student_image = request.FILES.get('student_image')
+    
+    flash_fired_str = request.data.get('flash_fired', 'false').lower()
+    flash_fired = flash_fired_str in ['true', '1', 'yes']
 
     if not session_id:
         return Response({'error': 'session_id is required'}, status=status.HTTP_400_BAD_REQUEST)
@@ -747,11 +779,15 @@ def verify_image(request):
 
         existing_record = AttendanceRecord.objects.filter(session=session, student=user).first()
         if existing_record:
-            return Response({
-                'error': 'Attendance already marked',
-                'marked_at': existing_record.marked_at,
-                'status': existing_record.status
-            }, status=status.HTTP_400_BAD_REQUEST)
+            if existing_record.status == 'pending_review':
+                # Allow the student to retry scanning if their previous attempt failed verification
+                existing_record.delete()
+            else:
+                return Response({
+                    'error': 'Attendance already marked',
+                    'marked_at': existing_record.marked_at,
+                    'status': existing_record.status
+                }, status=status.HTTP_400_BAD_REQUEST)
 
         from attendance.verification import verify_offline_code, validate_focal_distance
         
@@ -759,25 +795,34 @@ def verify_image(request):
         if not is_valid_distance:
             return Response({'error': distance_result}, status=status.HTTP_400_BAD_REQUEST)
 
-        matched, detail = verify_offline_code(session.pattern_code, session.reference_image, student_image)
-        if not matched:
-            return Response({
-                'error': f'AI Verification Failed: {detail}',
-                'detail': detail
-            }, status=status.HTTP_400_BAD_REQUEST)
+        matched, final_score, reasons = verify_offline_code(
+            session.pattern_code, session.reference_image, student_image, session.board_type, flash_fired
+        )
+        
+        status_val = 'present' if matched else 'pending_review'
 
         record = AttendanceRecord.objects.create(
             session=session,
             student=user,
-            status='present'
+            status=status_val,
+            verification_score=final_score,
+            verification_reasons=json.dumps(reasons)
         )
 
+        if not matched:
+            return Response({
+                'status': 'fail',
+                'score': final_score,
+                'reasons': reasons,
+                'error': f'Verification failed. Reasons: {", ".join(reasons)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         return Response({
+            'status': 'pass',
+            'score': final_score,
             'message': f'Attendance verified for {session.class_obj.class_code}',
-            'detail': detail,
             'focal_distance': distance_result,
             'marked_at': record.marked_at,
-            'status': 'present'
         }, status=status.HTTP_201_CREATED)
     except Exception as e:
         import traceback

@@ -21,6 +21,7 @@ class AuthService {
         if (token != null && token.isNotEmpty) {
           options.headers['Authorization'] = 'Bearer $token';
         }
+        options.headers['Bypass-Tunnel-Reminder'] = 'true';
         handler.next(options);
       },
     ));

@@ -25,7 +25,7 @@ class AttendanceService {
       final response = await _dio.post(
         '/sessions/$sessionId/mark/',
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
       
@@ -71,7 +71,7 @@ class AttendanceService {
       final response = await _dio.get(
         '/students/my-attendance/',
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
       
@@ -109,7 +109,7 @@ class AttendanceService {
         '/teachers/attendance-history/',
         queryParameters: queryParams,
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
       
@@ -142,7 +142,7 @@ class AttendanceService {
         '/attendance/$recordId/update/',
         data: {'status': status},
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
       
@@ -179,7 +179,7 @@ class AttendanceService {
       final response = await _dio.get(
         '/sessions/$sessionId/attendance/',
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
       
@@ -206,6 +206,7 @@ class AttendanceService {
     required String sessionId,
     required String imagePath,
     required double focalDistance,
+    bool flashFired = false,
   }) async {
     try {
       final token = await _getToken();
@@ -213,6 +214,7 @@ class AttendanceService {
       final formData = FormData.fromMap({
         'session_id': sessionId,
         'focal_distance': focalDistance,
+        'flash_fired': flashFired,
         'student_image': await MultipartFile.fromFile(imagePath),
       });
 
@@ -220,7 +222,7 @@ class AttendanceService {
         '/sessions/verify-image/',
         data: formData,
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
       

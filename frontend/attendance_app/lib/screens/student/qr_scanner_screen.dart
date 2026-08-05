@@ -548,7 +548,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Point camera at the board pattern and tap Capture',
+                          'Point camera at the board. Zoom in so the pattern fills the box clearly, then tap Capture.',
                           style: TextStyle(color: Colors.white70, fontSize: 13),
                           textAlign: TextAlign.center,
                         ),

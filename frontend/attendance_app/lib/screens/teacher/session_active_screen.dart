@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../services/session_service.dart';
+import '../common/custom_camera_screen.dart';
+import '../../widgets/pattern_painter.dart';
 
 class SessionActiveScreen extends StatefulWidget {
   final Map<String, dynamic> sessionData;
@@ -519,9 +521,15 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
   Future<void> _uploadReferenceImage() async {
     String? imagePath;
     try {
-      imagePath = await _channel.invokeMethod<String>('captureImage');
-    } on MissingPluginException {
-      imagePath = null;
+      imagePath = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const CustomCameraScreen(
+            title: 'Capture Reference Board',
+            helperText: 'Capture the entire whiteboard with the drawn pattern clearly visible.',
+          ),
+        ),
+      );
     } catch (e) {
       _showErrorSnackBar('Camera error: $e');
       return;
@@ -571,26 +579,45 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
       child: Column(
         children: [
           if (isOffline) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF22C55E), width: 2),
-              ),
-              child: Text(
-                patternCode,
-                style: const TextStyle(
-                  fontSize: 42,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 8,
-                  color: Color(0xFF166534),
+            if (widget.sessionData['shape_data'] != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF22C55E), width: 2),
+                ),
+                child: SizedBox(
+                  width: 200,
+                  height: 200,
+                  child: CustomPaint(
+                    painter: PatternPainter(
+                      shapeData: widget.sessionData['shape_data'] as Map<String, dynamic>,
+                    ),
+                  ),
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFF22C55E), width: 2),
+                ),
+                child: Text(
+                  patternCode,
+                  style: const TextStyle(
+                    fontSize: 42,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 8,
+                    color: Color(0xFF166534),
+                  ),
                 ),
               ),
-            ),
             const SizedBox(height: 16),
             const Text(
-              "Write this code on the board",
+              "Draw this exactly on the board",
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,

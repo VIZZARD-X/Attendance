@@ -258,6 +258,10 @@ class CreateSessionSerializer(serializers.Serializer):
     class_id = serializers.IntegerField()
     duration_minutes = serializers.IntegerField(min_value=1, max_value=300)
     class_type = serializers.ChoiceField(choices=['online', 'offline'], default='online')
+    board_type = serializers.ChoiceField(
+        choices=['whiteboard', 'blackboard', 'greenboard', 'glass', 'paper'], 
+        default='whiteboard'
+    )
     
     def validate_class_id(self, value):
         """Check if class exists and belongs to teacher"""
@@ -284,7 +288,7 @@ class SessionSerializer(serializers.ModelSerializer):
             'id', 'session_id', 'class_code', 'class_name', 'semester',
             'teacher_name', 'start_time', 'end_time',
             'duration_minutes', 'status', 'is_active', 'qr_data', 'created_at',
-            'class_type', 'pattern_code'
+            'class_type', 'board_type', 'pattern_code', 'instruction_card', 'shape_data'
         ]
     
     def get_qr_data(self, obj):
@@ -304,7 +308,7 @@ class AttendanceRecordSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = AttendanceRecord
-        fields = ['id', 'student_name', 'student_email', 'roll_no', 'status', 'marked_at']
+        fields = ['id', 'student_name', 'student_email', 'roll_no', 'status', 'marked_at', 'verification_score', 'verification_reasons']
     
     def get_roll_no(self, obj):
         try:
