@@ -155,10 +155,54 @@ class _OfflineVerificationScreenState extends State<OfflineVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Verify: ${widget.classCode}'),
-        backgroundColor: const Color(0xFF007C91),
-        foregroundColor: Colors.white,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight + 10),
+        child: Container(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 8,
+            bottom: 8,
+            left: 20,
+            right: 16,
+          ),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF007C91), Color(0xFF0097A7)],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                  onPressed: () => Navigator.pop(context),
+                  tooltip: 'Back',
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  'Verify: ${widget.classCode}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
       body: Center(
         child: _isProcessing

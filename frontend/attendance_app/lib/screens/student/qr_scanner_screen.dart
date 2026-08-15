@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../widgets/student_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -401,33 +404,80 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: Text(isOfflineMode ? 'Capture Pattern' : 'Scan QR Code'),
-        backgroundColor: const Color(0xFF007C91),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          Row(
-            children: [
-              Text(
-                isOfflineMode ? 'Offline' : 'Online',
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              Switch(
-                value: isOfflineMode,
-                activeThumbColor: Colors.orange,
-                activeTrackColor: Colors.orange.withValues(alpha: 0.5),
-                inactiveThumbColor: Colors.white,
-                inactiveTrackColor: Colors.white30,
-                onChanged: _toggleMode,
+      drawer: isMobile ? const StudentDrawer(currentRoute: 'Scan QR') : null,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight + 10),
+        child: Container(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 8,
+            bottom: 8,
+            left: isMobile ? 12 : 20,
+            right: 16,
+          ),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF007C91), Color(0xFF0097A7)],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: Offset(0, 4),
               ),
             ],
           ),
-          const SizedBox(width: 16),
-        ],
+          child: Row(
+            children: [
+              if (isMobile)
+                Builder(
+                  builder: (context) => IconButton(
+                    icon: const Icon(Icons.menu_rounded, color: Colors.white),
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                  ),
+                )
+              else
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                    onPressed: () => Navigator.pop(context),
+                    tooltip: 'Back',
+                  ),
+                ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  isOfflineMode ? 'Capture Pattern' : 'Scan QR Code',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    isOfflineMode ? 'Offline' : 'Online',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  Switch(
+                    value: isOfflineMode,
+                    activeThumbColor: Colors.orange,
+                    activeTrackColor: Colors.orange.withValues(alpha: 0.5),
+                    inactiveThumbColor: Colors.greenAccent,
+                    inactiveTrackColor: Colors.greenAccent.withValues(alpha: 0.3),
+                    onChanged: _toggleMode,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
       body: Stack(
         children: [

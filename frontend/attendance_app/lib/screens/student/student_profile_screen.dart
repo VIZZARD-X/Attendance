@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/profile_service.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/student_drawer.dart';
 
 class StudentProfileScreen extends StatefulWidget {
   const StudentProfileScreen({super.key});
@@ -132,13 +133,14 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
     final bool isMobile = screenW < 600;
 
     return Scaffold(
+      drawer: isMobile ? const StudentDrawer(currentRoute: 'Profile') : null,
       body: Stack(
         children: [
           // Background gradient
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF00BCD4), Color(0xFF00838F)],
+                colors: [Color(0xFF007C91), Color(0xFF0097A7)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -148,28 +150,66 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
           SafeArea(
             child: Column(
               children: [
-                // App Bar
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 12 : 20,
+                    vertical: isMobile ? 10 : 14,
+                  ),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF007C91), Color(0xFF0097A7)],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
                   child: Row(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      const Expanded(
-                        child: Text(
-                          'My Profile',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                      if (isMobile)
+                        Builder(
+                          builder: (context) => IconButton(
+                            icon: const Icon(Icons.menu_rounded, color: Colors.white),
+                            onPressed: () => Scaffold.of(context).openDrawer(),
+                          ),
+                        )
+                      else
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                            onPressed: () => Navigator.pop(context),
+                            tooltip: 'Back',
                           ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.refresh, color: Colors.white),
-                        onPressed: _loadProfileData,
+                      SizedBox(width: isMobile ? 8 : 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'My Profile',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: isMobile ? 18 : 22,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.6,
+                              ),
+                            ),
+                            if (!isMobile)
+                              const Text(
+                                'View your profile details',
+                                style: TextStyle(color: Colors.white70, fontSize: 14),
+                              ),
+                          ],
+                        ),
                       ),
                     ],
                   ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/attendance_service.dart';
+import '../../services/profile_service.dart';
+import '../../widgets/student_drawer.dart';
 
 class AttendanceHistoryScreen extends StatefulWidget {
   const AttendanceHistoryScreen({super.key});
@@ -90,10 +92,11 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     final isMobile = screenW < 600;
 
     return Scaffold(
+      drawer: isMobile ? const StudentDrawer(currentRoute: 'Attendance History') : null,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF26A69A), Color(0xFF00897B)],
+            colors: [Color(0xFF007C91), Color(0xFF0097A7)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -103,7 +106,6 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
             children: [
               _buildAppBar(isMobile),
               if (!isLoading && attendanceRecords.isNotEmpty) ...[
-                _buildStatisticsCard(isMobile),
                 _buildFilterChips(isMobile),
               ],
               Expanded(
@@ -122,32 +124,36 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   Widget _buildAppBar(bool isMobile) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 12 : 20,
-        vertical: isMobile ? 10 : 14,
+        horizontal: isMobile ? 16 : 20,
+        vertical: isMobile ? 12 : 16,
       ),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF26A69A), Color(0xFF00897B)],
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF007C91), Color(0xFF0097A7)],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: Icon(
-              Icons.arrow_back_rounded,
-              color: Colors.white,
-              size: isMobile ? 24 : 28,
+          if (isMobile)
+            Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu_rounded, color: Colors.white),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+            )
+          else
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                onPressed: () => Navigator.pop(context),
+                tooltip: 'Back',
+              ),
             ),
-            onPressed: () => Navigator.pop(context),
-          ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 16),
           const Expanded(
             child: Text(
               'My Attendance',
@@ -171,11 +177,6 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                 _buildViewButton(Icons.view_module_rounded, 'ByClass', isMobile),
               ],
             ),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _loadAttendanceHistory,
           ),
         ],
       ),

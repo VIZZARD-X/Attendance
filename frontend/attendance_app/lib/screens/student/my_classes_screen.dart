@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../widgets/enhanced_dashboard_card.dart';
 import '../../services/class_service.dart';
+import '../../widgets/student_drawer.dart';
 import 'attendance_history_screen.dart';
 
 class StudentMyClassesScreen extends StatefulWidget {
@@ -65,6 +67,7 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
     final isMobile = screenW < 600;
 
     return Scaffold(
+      drawer: isMobile ? const StudentDrawer(currentRoute: 'My Classes') : null,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -114,20 +117,25 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
       ),
       child: Row(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: Colors.white,
-                size: 20,
+          if (isMobile)
+            Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu_rounded, color: Colors.white),
+                onPressed: () => Scaffold.of(context).openDrawer(),
               ),
-              onPressed: () => Navigator.pop(context),
+            )
+          else
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                onPressed: () => Navigator.pop(context),
+                tooltip: 'Back',
+              ),
             ),
-          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -151,20 +159,6 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
                   ),
                 ),
               ],
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: const Icon(
-                Icons.refresh_rounded,
-                color: Colors.white,
-                size: 22,
-              ),
-              onPressed: _loadEnrolledClasses,
             ),
           ),
         ],
@@ -556,160 +550,139 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.white, Colors.grey.shade50],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
         ),
-        child: DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.5,
-          maxChildSize: 0.9,
-          builder: (_, controller) => ListView(
-            controller: controller,
-            padding: const EdgeInsets.all(24),
-            children: [
-              // Handle
-              Center(
-                child: Container(
-                  width: 50,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            
+            // Header with class info
+            Container(
+              padding: const EdgeInsets.all(24),
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF007C91), Color(0xFF0097A7)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
               ),
-              const SizedBox(height: 24),
-
-              // Header
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF007C91), Color(0xFF0097A7)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF007C91).withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
+              child: Column(
+                children: [
+                  Text(
+                    classData['class_code'] ?? 'N/A',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    classData['class_name'] ?? 'Unknown Class',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Scrollable Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Details
+                    _buildDetailCard(
+                      Icons.calendar_today_rounded,
+                      'Semester',
+                      classData['semester'] ?? 'N/A',
+                    ),
+                    _buildDetailCard(
+                      Icons.person_rounded,
+                      'Teacher',
+                      classData['teacher_name'] ?? 'N/A',
+                    ),
+                    _buildDetailCard(
+                      Icons.people_rounded,
+                      'Total Students',
+                      '${classData['student_count'] ?? 0} enrolled',
+                    ),
+                    _buildDetailCard(
+                      Icons.access_time_rounded,
+                      'Enrolled On',
+                      _formatDate(classData['enrolled_at']),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Action Button
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(8),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF007C91), Color(0xFF0097A7)],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF007C91).withOpacity(0.3),
+                            blurRadius: 15,
+                            offset: Offset(0, 8),
+                          ),
+                        ],
                       ),
-                      child: Text(
-                        classData['class_code'] ?? 'N/A',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AttendanceHistoryScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.history_rounded, color: Colors.white),
+                        label: const Text(
+                          'View Attendance History',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      classData['class_name'] ?? 'Unknown Class',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 24),
-
-              // Details
-              _buildDetailCard(
-                Icons.calendar_today_rounded,
-                'Semester',
-                classData['semester'] ?? 'N/A',
-              ),
-              _buildDetailCard(
-                Icons.person_rounded,
-                'Teacher',
-                classData['teacher_name'] ?? 'N/A',
-              ),
-              _buildDetailCard(
-                Icons.people_rounded,
-                'Total Students',
-                '${classData['student_count'] ?? 0} enrolled',
-              ),
-              _buildDetailCard(
-                Icons.access_time_rounded,
-                'Enrolled On',
-                _formatDate(classData['enrolled_at']),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Action Button
-              Container(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF007C91), Color(0xFF0097A7)],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF007C91).withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AttendanceHistoryScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.history_rounded, color: Colors.white),
-                  label: const Text(
-                    'View Attendance History',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

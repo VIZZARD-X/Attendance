@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/profile_service.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/teacher_web_layout.dart';
+import '../../widgets/teacher_drawer.dart';
 
 class TeacherProfileScreen extends StatefulWidget {
   const TeacherProfileScreen({super.key});
@@ -168,17 +169,25 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
+                    if (isMobile)
+                      Builder(
+                        builder: (context) => IconButton(
+                          icon: const Icon(Icons.menu_rounded, color: Colors.white),
+                          onPressed: () => Scaffold.of(context).openDrawer(),
+                        ),
+                      )
+                    else
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                          onPressed: () => Navigator.pop(context),
+                          tooltip: 'Back',
+                        ),
                       ),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
-                        onPressed: () => Navigator.pop(context),
-                        tooltip: 'Back',
-                      ),
-                    ),
                     SizedBox(width: isMobile ? 8 : 12),
                     Expanded(
                       child: Column(
@@ -382,7 +391,10 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
         ],
       );
 
-    Widget mobileChild = Scaffold(body: mainContent);
+    Widget mobileChild = Scaffold(
+      drawer: isMobile ? const TeacherDrawer(currentRoute: 'Profile') : null,
+      body: mainContent,
+    );
     
     return TeacherWebLayout(
       currentRoute: 'Profile',

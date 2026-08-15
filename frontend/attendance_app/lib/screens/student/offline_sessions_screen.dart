@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/session_service.dart';
+import '../../widgets/student_drawer.dart';
 import 'offline_verification_screen.dart';
 
 class OfflineSessionsScreen extends StatefulWidget {
@@ -40,11 +41,66 @@ class _OfflineSessionsScreenState extends State<OfflineSessionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Offline Attendance'),
-        backgroundColor: const Color(0xFF007C91),
-        foregroundColor: Colors.white,
+      drawer: isMobile ? const StudentDrawer(currentRoute: 'Offline Attendance') : null,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight + 10),
+        child: Container(
+          padding: EdgeInsets.only(
+            top: MediaQuery.of(context).padding.top + 8,
+            bottom: 8,
+            left: isMobile ? 12 : 20,
+            right: 16,
+          ),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF007C91), Color(0xFF0097A7)],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              if (isMobile)
+                Builder(
+                  builder: (context) => IconButton(
+                    icon: const Icon(Icons.menu_rounded, color: Colors.white),
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                  ),
+                )
+              else
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                    onPressed: () => Navigator.pop(context),
+                    tooltip: 'Back',
+                  ),
+                ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Text(
+                  'Offline Attendance',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

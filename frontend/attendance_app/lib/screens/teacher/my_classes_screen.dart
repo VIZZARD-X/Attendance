@@ -8,6 +8,7 @@ import '../../services/auth_service.dart';
 import 'add_students_screen.dart';
 import '../../widgets/teacher_web_layout.dart';
 import '../../services/class_service.dart';
+import '../../widgets/teacher_drawer.dart';
 
 class MyClassesScreen extends StatefulWidget {
   const MyClassesScreen({super.key});
@@ -1126,52 +1127,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
     );
 
     Widget mobileChild = Scaffold(
-      drawer: isMobile
-          ? Drawer(
-              child: Container(
-                color: const Color(0xFF1E1E2C),
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    const DrawerHeader(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF007C91), Color(0xFF0097A7)],
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Icon(Icons.school_rounded, color: Colors.white, size: 40),
-                          SizedBox(height: 12),
-                          Text(
-                            'My Classes',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    _buildSidebarItem(Icons.dashboard, 'Dashboard', isMobile: true),
-                    _buildSidebarItem(Icons.people, 'My Classes', isMobile: true),
-                    _buildSidebarItem(Icons.analytics, 'Analysis', isMobile: true),
-                    const Divider(color: Colors.white24),
-                    ListTile(
-                      leading: const Icon(Icons.arrow_back_rounded, color: Colors.white70),
-                      title: const Text('Back', style: TextStyle(color: Colors.white)),
-                      onTap: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            )
-          : null,
+      drawer: isMobile ? const TeacherDrawer(currentRoute: 'My Classes') : null,
       body: SafeArea(
         child: mainContent,
       ),
@@ -1457,7 +1413,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -1470,30 +1426,31 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.6),
-                        ),
-                        child: const Icon(
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
                           Icons.people_rounded,
                           color: Colors.black87,
-                          size: 16,
+                          size: 14,
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${classData['students']} students',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF111827),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${classData['students']} students',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),

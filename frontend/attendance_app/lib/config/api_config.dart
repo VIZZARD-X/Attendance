@@ -31,7 +31,7 @@ class ApiConfig {
       return 'http://127.0.0.1:8000/api/v1';
     }
     
-    return _androidEmulatorUrl; // Fallback to emulator URL for mobile local dev
+    return _localtunnelUrl; // Fallback to localtunnel for physical device USB debugging
   }
 
   // Connection settings (90s to handle Render free-tier cold starts gracefully)

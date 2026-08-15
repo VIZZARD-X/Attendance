@@ -7,6 +7,7 @@ import '../../services/attendance_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/class_service.dart';
 import '../../widgets/teacher_web_layout.dart';
+import '../../widgets/teacher_drawer.dart';
 
 class TeacherAttendanceHistoryScreen extends StatefulWidget {
   const TeacherAttendanceHistoryScreen({super.key});
@@ -238,7 +239,10 @@ class _TeacherAttendanceHistoryScreenState
       ),
     );
 
-    Widget mobileChild = Scaffold(body: mainContent);
+    Widget mobileChild = Scaffold(
+      drawer: isMobile ? const TeacherDrawer(currentRoute: 'Attendance History') : null,
+      body: mainContent,
+    );
     
     return TeacherWebLayout(
       currentRoute: 'Attendance History',
@@ -268,21 +272,25 @@ class _TeacherAttendanceHistoryScreenState
       ),
       child: Row(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: const Icon(
-                Icons.arrow_back_rounded,
-                color: Colors.white,
-                size: 24,
+          if (isMobile)
+            Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu_rounded, color: Colors.white),
+                onPressed: () => Scaffold.of(context).openDrawer(),
               ),
-              onPressed: () => Navigator.pop(context),
-              tooltip: 'Back',
+            )
+          else
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                onPressed: () => Navigator.pop(context),
+                tooltip: 'Back',
+              ),
             ),
-          ),
           SizedBox(width: isMobile ? 8 : 12),
           Expanded(
             child: Column(

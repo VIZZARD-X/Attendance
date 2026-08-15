@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../services/class_service.dart';
 import '../../services/session_service.dart';
+import '../../widgets/teacher_drawer.dart';
 import 'dart:convert';
 import 'session_active_screen.dart';
 import '../../widgets/teacher_web_layout.dart';
@@ -214,17 +216,25 @@ class _SessionPageState extends State<SessionPage>
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
+                    if (isMobile)
+                      Builder(
+                        builder: (context) => IconButton(
+                          icon: const Icon(Icons.menu_rounded, color: Colors.white),
+                          onPressed: () => Scaffold.of(context).openDrawer(),
+                        ),
+                      )
+                    else
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                          onPressed: () => Navigator.pop(context),
+                          tooltip: 'Back',
+                        ),
                       ),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
-                        onPressed: () => Navigator.pop(context),
-                        tooltip: 'Back',
-                      ),
-                    ),
                     SizedBox(width: isMobile ? 8 : 12),
                     Expanded(
                       child: Column(
@@ -468,10 +478,6 @@ class _SessionPageState extends State<SessionPage>
                                           DropdownMenuItem(
                                             value: 'chalkboard',
                                             child: Text('Chalkboard'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'digital',
-                                            child: Text('Digital Screen'),
                                           ),
                                         ],
                                         onChanged: (value) {
@@ -821,48 +827,7 @@ class _SessionPageState extends State<SessionPage>
                                       ),
                                     ),
 
-                                  //  QR Placeholder (when not active)
-                                  if (!isSessionActive)
-                                    Container(
-                                      height: isMobile ? 150 : 180,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(
-                                          color: const Color(0xFF007C91).withOpacity(0.3),
-                                          width: 2,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.05),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Center(
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.qr_code_2_rounded,
-                                              size: isMobile ? 60 : 80,
-                                              color: Colors.grey[300],
-                                            ),
-                                            const SizedBox(height: 12),
-                                            Text(
-                                              "QR Code will appear here",
-                                              style: TextStyle(
-                                                color: Colors.grey[500],
-                                                fontSize: isMobile ? 13 : 15,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  
-                                  if (!isSessionActive) SizedBox(height: isMobile ? 20 : 32),
+
 
                                   // Start Session Button
                                   if (!isSessionActive)
@@ -942,7 +907,10 @@ class _SessionPageState extends State<SessionPage>
         ),
       );
 
-    Widget mobileChild = Scaffold(body: mainContent);
+    Widget mobileChild = Scaffold(
+      drawer: isMobile ? const TeacherDrawer(currentRoute: 'Create Session') : null,
+      body: mainContent,
+    );
     
     return TeacherWebLayout(
       currentRoute: 'Create Session',

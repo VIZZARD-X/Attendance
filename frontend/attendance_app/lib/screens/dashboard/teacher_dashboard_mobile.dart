@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/class_service.dart';
+import '../../widgets/teacher_drawer.dart';
 import '../../widgets/enhanced_dashboard_card.dart';
 import '../teacher/my_classes_screen.dart';
 import '../teacher/session_create_screen.dart';
@@ -283,7 +284,7 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
     return Scaffold(
       backgroundColor: const Color(0xFFF4F8FB),
       appBar: isMobile || isTablet ? _buildTopBar(isMobile) : null,
-      drawer: isMobile || isTablet ? _buildMobileDrawer() : null,
+      drawer: isMobile || isTablet ? const TeacherDrawer(currentRoute: 'Dashboard') : null,
       body: Stack(
         children: [
           SafeArea(
@@ -372,7 +373,7 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Welcome back, $teacherName',
+                  'Welcome, $teacherName',
                   style: TextStyle(
                     fontSize: isMobile ? 16 : 18,
                     fontWeight: FontWeight.bold,
@@ -444,7 +445,8 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
     final primaryColor = gradientColors.first;
 
     return Container(
-      padding: EdgeInsets.all(isMobile ? 16 : 24),
+      height: isMobile ? 100 : 120,
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: isMobile ? 12 : 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: gradientColors,
@@ -464,31 +466,40 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: Colors.black87, size: isMobile ? 24 : 28),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: isMobile ? 24 : 28,
-                    fontWeight: FontWeight.bold,
-                    color: const Color(0xFF1F2937),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: isMobile ? 24 : 28,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF1F2937),
+                    ),
                   ),
                 ),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: isMobile ? 12 : 14,
-                    color: Colors.grey[600],
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: isMobile ? 12 : 14,
+                      color: Colors.grey[800],
+                    ),
                   ),
                 ),
               ],
@@ -620,75 +631,4 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
     );
   }
 
-  Widget _buildMobileDrawer() {
-    return Drawer(
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF1E1E2C), Color(0xFF2D2D44)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: ListView(
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF007C91), Color(0xFF0097A7)],
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  const CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.person, size: 35, color: Color(0xFF007C91)),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    teacherName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    '@$username',
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            ...dashboardCards.map((card) => _buildDrawerItem(
-              card['icon'] as IconData,
-              card['title'] as String,
-            )),
-            const Divider(color: Colors.white24),
-            _buildDrawerItem(Icons.logout, 'Logout'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem(IconData icon, String title, {VoidCallback? onTap}) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.white70),
-      title: Text(title, style: const TextStyle(color: Colors.white)),
-      onTap: () {
-        Navigator.pop(context); // Close drawer
-        if (title == 'Logout') {
-          _logout();
-        } else {
-          _handleCardTap(title);
-        }
-      },
-    );
-  }
 }
