@@ -37,7 +37,7 @@ class SessionService {
           'board_type': boardType,
         },
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
       
@@ -69,12 +69,14 @@ class SessionService {
       final response = await _dio.get(
         '/sessions/active/',
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
       
       if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(response.data['sessions']);
+        return (response.data['sessions'] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e))
+            .toList() ?? [];
       }
       
       return [];
@@ -92,7 +94,7 @@ class SessionService {
       final response = await _dio.get(
         '/sessions/student-active/',
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
       
@@ -116,7 +118,7 @@ class SessionService {
       final response = await _dio.get(
         '/sessions/$sessionId/',
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
       
@@ -139,7 +141,7 @@ class SessionService {
       final response = await _dio.post(
         '/sessions/$sessionId/end/',
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
       
@@ -182,7 +184,7 @@ class SessionService {
       final response = await _dio.post(
         '/sessions/$sessionId/mark/',
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
       
@@ -214,7 +216,7 @@ class SessionService {
       final response = await _dio.get(
         '/sessions/$sessionId/attendance/',
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
       
@@ -222,9 +224,9 @@ class SessionService {
         return {
           'success': true,
           'session': response.data['session'],
-          'students': List<Map<String, dynamic>>.from(
-            response.data['students'] ?? []
-          ),
+          'students': (response.data['students'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e))
+              .toList() ?? [],
           'statistics': response.data['statistics'] ?? {},
         };
       }
@@ -252,7 +254,7 @@ class SessionService {
           'status': status,
         },
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
       
@@ -290,7 +292,7 @@ class SessionService {
         '/sessions/$sessionId/upload-reference/',
         data: formData,
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
       

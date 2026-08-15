@@ -118,7 +118,9 @@ class ClassService {
       );
 
       if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(response.data['classes']);
+        return (response.data['classes'] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e))
+            .toList() ?? [];
       }
 
       return [];

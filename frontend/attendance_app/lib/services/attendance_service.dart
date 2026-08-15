@@ -76,9 +76,9 @@ class AttendanceService {
       );
       
       if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(
-          response.data['attendance'] ?? []
-        );
+        return (response.data['attendance'] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e))
+            .toList() ?? [];
       }
       
       return [];
@@ -116,9 +116,9 @@ class AttendanceService {
       if (response.statusCode == 200) {
         return {
           'success': true,
-          'attendance': List<Map<String, dynamic>>.from(
-            response.data['attendance'] ?? []
-          ),
+          'attendance': (response.data['attendance'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e))
+              .toList() ?? [],
           'statistics': response.data['statistics'] ?? {},
         };
       }
@@ -187,9 +187,9 @@ class AttendanceService {
         return {
           'success': true,
           'session': response.data['session'],
-          'students': List<Map<String, dynamic>>.from(
-            response.data['students'] ?? []
-          ),
+          'students': (response.data['students'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e))
+              .toList() ?? [],
           'statistics': response.data['statistics'] ?? {},
         };
       }

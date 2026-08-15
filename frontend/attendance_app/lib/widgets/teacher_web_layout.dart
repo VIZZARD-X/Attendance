@@ -40,6 +40,16 @@ class TeacherWebLayout extends StatefulWidget {
 }
 
 class _TeacherWebLayoutState extends State<TeacherWebLayout> {
+
+  PageRouteBuilder _fadeRoute(Widget page) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      transitionDuration: const Duration(milliseconds: 150),
+    );
+  }
   final AuthService _authService = AuthService();
   final ClassService _classService = ClassService();
 
@@ -60,13 +70,13 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
       case 'Dashboard':
         await Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const TeacherDashboardWeb()),
+          _fadeRoute(const TeacherDashboardWeb()),
         );
         break;
       case 'My Classes':
         await Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const MyClassesScreen()),
+          _fadeRoute(const MyClassesScreen()),
         );
         break;
       case 'Create Session':
@@ -75,13 +85,13 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
       case 'Attendance History':
         await Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const TeacherAttendanceHistoryScreen()),
+          _fadeRoute(const TeacherAttendanceHistoryScreen()),
         );
         break;
       case 'Profile':
         await Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const TeacherProfileScreen()),
+          _fadeRoute(const TeacherProfileScreen()),
         );
         break;
       default:
@@ -115,7 +125,7 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
       if (!mounted) return;
       await Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => SessionPage(subjects: subjects)),
+        _fadeRoute(SessionPage(subjects: subjects)),
       );
     } catch (e) {
       if (!mounted) return;
@@ -278,3 +288,4 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
     return widget.mobileChild;
   }
 }
+

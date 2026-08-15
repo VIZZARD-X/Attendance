@@ -190,6 +190,16 @@ class TeacherDashboardWeb extends StatefulWidget {
 }
 
 class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
+
+  PageRouteBuilder _fadeRoute(Widget page) {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      transitionDuration: const Duration(milliseconds: 150),
+    );
+  }
   final AuthService  _authService  = AuthService();
   final ClassService _classService = ClassService();
 
@@ -308,7 +318,7 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
       case 'My Classes':
         await Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const MyClassesScreen()),
+          _fadeRoute(const MyClassesScreen()),
         );
         _loadUserData(forceRefresh: true);
         break;
@@ -318,14 +328,14 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
       case 'Attendance History':
         await Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const TeacherAttendanceHistoryScreen()),
+          _fadeRoute(const TeacherAttendanceHistoryScreen()),
         );
         _loadUserData(forceRefresh: true);
         break;
       case 'Profile':
         await Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const TeacherProfileScreen()),
+          _fadeRoute(const TeacherProfileScreen()),
         );
         _loadUserData(forceRefresh: true);
         break;
@@ -364,7 +374,7 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
       if (!mounted) return;
       await Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => SessionPage(subjects: subjects)),
+        _fadeRoute(SessionPage(subjects: subjects)),
       );
       _loadUserData(forceRefresh: true);
     } catch (e) {
@@ -875,3 +885,5 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
     );
   }
 }
+
+
