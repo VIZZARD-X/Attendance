@@ -457,6 +457,7 @@ def create_session(request):
         shape_combo, instruction_card, pattern_code = generate_shape_combo()
     else:
         pattern_code = None
+        shape_combo = None
     
     # Create QR code data (JSON string)
     qr_data = {
