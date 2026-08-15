@@ -4,6 +4,7 @@ import 'admin_profile_screen.dart';
 import 'manage_students_screen.dart';
 import 'manage_teachers_screen.dart';
 import 'reset_login_screen.dart';
+import '../../widgets/admin_web_layout.dart';
 
 abstract class _AppColors {
   static const tealDark = Color(0xFF007C91);

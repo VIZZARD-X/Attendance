@@ -61,12 +61,6 @@ class _ResetLoginScreenState extends State<ResetLoginScreen> {
     final isMobile = screenW < 600;
     final isDesktop = screenW >= 1024;
 
-  @override
-  Widget build(BuildContext context) {
-    final screenW = MediaQuery.of(context).size.width;
-    final isMobile = screenW < 600;
-    final isDesktop = screenW >= 1024;
-
     Widget mainContent = isDesktop
         ? SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
