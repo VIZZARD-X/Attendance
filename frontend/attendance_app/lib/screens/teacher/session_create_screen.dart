@@ -4,6 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../services/session_service.dart';
 import 'dart:convert';
 import 'session_active_screen.dart';
+import '../../widgets/teacher_web_layout.dart';
 
 class SessionPage extends StatefulWidget {
   final List<Map<String, String>> subjects;  
@@ -185,12 +186,11 @@ class _SessionPageState extends State<SessionPage>
     final isDesktop = size.width > 800;
     final isMobile = size.width < 600;
 
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        color: const Color(0xFF00838f), // Solid Teal background
-        child: SafeArea(
+    Widget mainContent = Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: const Color(0xFF00838f), // Solid Teal background
+      child: SafeArea(
           child: Column(
             children: [
               // Top AppBar
@@ -200,19 +200,32 @@ class _SessionPageState extends State<SessionPage>
                   horizontal: isMobile ? 12 : 20,
                   vertical: isMobile ? 10 : 14,
                 ),
-                color: const Color(0xFF00838f), // Solid Teal app bar
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF007C91), Color(0xFF0097A7)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: Icon(
-                        Icons.arrow_back_rounded,
-                        color: Colors.white,
-                        size: isMobile ? 24 : 28,
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      onPressed: () => Navigator.pop(context),
-                      tooltip: 'Back',
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                        onPressed: () => Navigator.pop(context),
+                        tooltip: 'Back',
+                      ),
                     ),
-                    SizedBox(width: isMobile ? 4 : 8),
+                    SizedBox(width: isMobile ? 8 : 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -927,7 +940,14 @@ class _SessionPageState extends State<SessionPage>
             ],
           ),
         ),
-      ),
+      );
+
+    Widget mobileChild = Scaffold(body: mainContent);
+    
+    return TeacherWebLayout(
+      currentRoute: 'Create Session',
+      mobileChild: mobileChild,
+      desktopBody: mainContent,
     );
   }
 }

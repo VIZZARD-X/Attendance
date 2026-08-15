@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../config/api_config.dart';
 import '../../services/attendance_service.dart';
+import '../../services/auth_service.dart';
 import '../../services/class_service.dart';
+import '../../widgets/teacher_web_layout.dart';
 
 class TeacherAttendanceHistoryScreen extends StatefulWidget {
   const TeacherAttendanceHistoryScreen({super.key});
@@ -90,7 +95,9 @@ class _TeacherAttendanceHistoryScreenState
 
       if (mounted) {
         setState(() {
-          attendanceRecords = result['attendance'] ?? [];
+          attendanceRecords = (result['attendance'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e))
+              .toList() ?? [];
           statistics = result['statistics'] ?? {};
           _groupRecordsByClassAndSession();
           isLoading = false;
@@ -207,39 +214,45 @@ class _TeacherAttendanceHistoryScreenState
     final screenW = MediaQuery.of(context).size.width;
     final isMobile = screenW < 600;
 
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF007C91), Color(0xFF0097A7)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildModernAppBar(isMobile),
-              if (statistics.isNotEmpty) _buildStatisticsCard(isMobile),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _loadAttendanceHistory,
-                  color: const Color(0xFF007C91),
-                  child: _buildBody(isMobile),
-                ),
-              ),
-            ],
-          ),
+    Widget mainContent = Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF007C91), Color(0xFF0097A7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
       ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            _buildModernAppBar(isMobile),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _loadAttendanceHistory,
+                color: const Color(0xFF007C91),
+                child: _buildBody(isMobile),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    Widget mobileChild = Scaffold(body: mainContent);
+    
+    return TeacherWebLayout(
+      currentRoute: 'Attendance History',
+      mobileChild: mobileChild,
+      desktopBody: mainContent,
     );
   }
 
   Widget _buildModernAppBar(bool isMobile) {
     return Container(
+      width: double.infinity,
       padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 16 : 20,
-        vertical: isMobile ? 12 : 16,
+        horizontal: isMobile ? 12 : 20,
+        vertical: isMobile ? 10 : 14,
       ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -262,14 +275,15 @@ class _TeacherAttendanceHistoryScreenState
             ),
             child: IconButton(
               icon: const Icon(
-                Icons.arrow_back_ios_new_rounded,
+                Icons.arrow_back_rounded,
                 color: Colors.white,
-                size: 20,
+                size: 24,
               ),
               onPressed: () => Navigator.pop(context),
+              tooltip: 'Back',
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: isMobile ? 8 : 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,19 +292,19 @@ class _TeacherAttendanceHistoryScreenState
                   'Attendance History',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: isMobile ? 22 : 26,
+                    fontSize: isMobile ? 18 : 22,
                     fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
+                    letterSpacing: 0.6,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${attendanceRecords.length} total records',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
-                    fontSize: isMobile ? 13 : 14,
+                if (!isMobile)
+                  Text(
+                    '${attendanceRecords.length} total records',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -308,146 +322,8 @@ class _TeacherAttendanceHistoryScreenState
               onPressed: _showFilterDialog,
             ),
           ),
-          const SizedBox(width: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: IconButton(
-              icon: const Icon(
-                Icons.refresh_rounded,
-                color: Colors.white,
-                size: 22,
-              ),
-              onPressed: _loadAttendanceHistory,
-            ),
-          ),
         ],
       ),
-    );
-  }
-
-  Widget _buildStatisticsCard(bool isMobile) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.white, Colors.white.withOpacity(0.95)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF007C91).withOpacity(0.2),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildStatCard(
-                'Total',
-                '${statistics['total']}',
-                Icons.people_rounded,
-                const Color(0xFF007C91),
-              ),
-              _buildStatCard(
-                'Present',
-                '${statistics['present']}',
-                Icons.check_circle_rounded,
-                Colors.green,
-              ),
-              _buildStatCard(
-                'Absent',
-                '${statistics['absent']}',
-                Icons.cancel_rounded,
-                Colors.red,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF007C91).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFF007C91).withOpacity(0.3),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.trending_up_rounded,
-                  color: const Color(0xFF007C91),
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Attendance Rate: ${statistics['attendance_rate'] ?? 0}%',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF007C91),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [color, color.withOpacity(0.8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Icon(icon, color: Colors.white, size: 28),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
     );
   }
 

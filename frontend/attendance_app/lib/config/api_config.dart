@@ -14,7 +14,7 @@ class ApiConfig {
   static const String _localtunnelUrl = 'https://qdg6mx71-8000.inc1.devtunnels.ms/api/v1';
 
   // Change this to false to use local IP for debugging!
-  static const bool isProduction = false;
+  static const bool isProduction = true;
 
   // Your Render URL
   static const String _productionUrl = 'https://attendance-production-5fb3.up.railway.app/api/v1';
@@ -24,7 +24,14 @@ class ApiConfig {
     if (isProduction) {
       return _productionUrl;
     }
-    return _localtunnelUrl; // Make sure to use the active local tunnel URL
+    
+    // Check if we're running on the web
+    if (identical(0, 0.0)) { 
+      // A trick to detect web without importing flutter/foundation.dart
+      return 'http://127.0.0.1:8000/api/v1';
+    }
+    
+    return _androidEmulatorUrl; // Fallback to emulator URL for mobile local dev
   }
 
   // Connection settings (90s to handle Render free-tier cold starts gracefully)

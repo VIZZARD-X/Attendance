@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/profile_service.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/teacher_web_layout.dart';
 
 class TeacherProfileScreen extends StatefulWidget {
   const TeacherProfileScreen({super.key});
@@ -130,103 +131,133 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
     final double screenW = MediaQuery.of(context).size.width;
     final bool isMobile = screenW < 600;
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Background gradient
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF007C91), Color(0xFF0097A7)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+    Widget mainContent = Stack(
+      children: [
+        // Background gradient
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF007C91), Color(0xFF0097A7)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
-          
-          SafeArea(
-            child: Column(
-              children: [
-                // App Bar
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      const Expanded(
-                        child: Text(
-                          'My Profile',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.refresh, color: Colors.white),
-                        onPressed: _loadProfileData,
-                      ),
-                    ],
-                  ),
+        ),
+        
+        SafeArea(
+          child: Column(
+            children: [
+              // App Bar
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 12 : 20,
+                  vertical: isMobile ? 10 : 14,
                 ),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF007C91), Color(0xFF0097A7)],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                        onPressed: () => Navigator.pop(context),
+                        tooltip: 'Back',
+                      ),
+                    ),
+                    SizedBox(width: isMobile ? 8 : 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'My Profile',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: isMobile ? 18 : 22,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.6,
+                            ),
+                          ),
+                          if (!isMobile)
+                            const Text(
+                              'View your profile details',
+                              style: TextStyle(color: Colors.white70, fontSize: 14),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
-                // Content
-                Expanded(
-                  child: isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(color: Colors.white),
-                        )
-                      : SingleChildScrollView(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              const SizedBox(height: 20),
-                              
-                              // Profile Avatar with Halo
-                              AnimatedBuilder(
-                                animation: _haloAnim,
-                                builder: (context, child) {
-                                  return Transform.scale(
-                                    scale: _haloAnim.value,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.white.withOpacity(0.5),
-                                            blurRadius: 20,
-                                            spreadRadius: 8,
-                                          ),
-                                        ],
-                                      ),
-                                      child: CircleAvatar(
-                                        radius: isMobile ? 60 : 80,
-                                        backgroundColor: Colors.white,
-                                        child: Text(
-                                          userName.isNotEmpty ? userName[0].toUpperCase() : 'T',
-                                          style: TextStyle(
-                                            fontSize: isMobile ? 48 : 64,
-                                            fontWeight: FontWeight.bold,
-                                            color: const Color(0xFF007C91),
-                                          ),
+              // Content
+              Expanded(
+                child: isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      )
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const SizedBox(height: 20),
+                            
+                            // Profile Avatar with Halo
+                            AnimatedBuilder(
+                              animation: _haloAnim,
+                              builder: (context, child) {
+                                return Transform.scale(
+                                  scale: _haloAnim.value,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.white.withOpacity(0.5),
+                                          blurRadius: 20,
+                                          spreadRadius: 8,
+                                        ),
+                                      ],
+                                    ),
+                                    child: CircleAvatar(
+                                      radius: isMobile ? 60 : 80,
+                                      backgroundColor: Colors.white,
+                                      child: Text(
+                                        userName.isNotEmpty ? userName[0].toUpperCase() : 'T',
+                                        style: TextStyle(
+                                          fontSize: isMobile ? 48 : 64,
+                                          fontWeight: FontWeight.bold,
+                                          color: const Color(0xFF007C91),
                                         ),
                                       ),
                                     ),
-                                  );
-                                },
-                              ),
-                              
-                              const SizedBox(height: 20),
-                              
-                              // Name & Role
-                              FadeTransition(
-                                opacity: _fadeIn,
+                                  ),
+                                );
+                              },
+                            ),
+                            
+                            const SizedBox(height: 20),
+                            
+                            // Name & Role
+                            FadeTransition(
+                              opacity: _fadeIn,
                                 child: Column(
                                   children: [
                                     Text(
@@ -349,7 +380,14 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
             ),
           ),
         ],
-      ),
+      );
+
+    Widget mobileChild = Scaffold(body: mainContent);
+    
+    return TeacherWebLayout(
+      currentRoute: 'Profile',
+      mobileChild: mobileChild,
+      desktopBody: mainContent,
     );
   }
 

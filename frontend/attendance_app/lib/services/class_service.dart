@@ -166,7 +166,9 @@ class ClassService {
       if (response.statusCode == 200) {
         // Backend returns {class_code, class_name, semester, students, total}
         if (response.data is Map && response.data.containsKey('students')) {
-          return List<Map<String, dynamic>>.from(response.data['students']);
+          return (response.data['students'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e))
+              .toList() ?? [];
         }
       }
 
@@ -290,7 +292,9 @@ class ClassService {
       );
 
       if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(response.data['classes']);
+        return (response.data['classes'] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e))
+            .toList() ?? [];
       }
 
       return [];
@@ -313,7 +317,9 @@ class ClassService {
       );
 
       if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(response.data['attendance']);
+        return (response.data['attendance'] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e))
+            .toList() ?? [];
       }
 
       return [];

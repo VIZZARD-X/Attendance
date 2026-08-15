@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:math';
+
+import '../../config/api_config.dart';
+import '../../services/auth_service.dart';
 import 'add_students_screen.dart';
+import '../../widgets/teacher_web_layout.dart';
 import '../../services/class_service.dart';
 
 class MyClassesScreen extends StatefulWidget {
@@ -1088,10 +1095,37 @@ class _MyClassesScreenState extends State<MyClassesScreen>
     final crossAxisCount = isMobile ? 1 : (isTablet ? 2 : (screenW < 1400 ? 3 : 4));
     final cardPadding = isMobile ? 12.0 : (isTablet ? 16.0 : 20.0);
     final gridSpacing = isMobile ? 12.0 : (isTablet ? 16.0 : 18.0);
-    final sidebarWidth = isMobile ? 0.0 : (isSidebarExpanded ? 200.0 : 70.0);
     final cardAspectRatio = isMobile ? 1.4 : (isTablet ? 1.15 : 1.25);
 
-    return Scaffold(
+    Widget mainContent = Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF007C91), Color(0xFF0097A7)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        children: [
+          _buildAppBar(isMobile),
+          Expanded(
+            child: isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      strokeWidth: 3,
+                    ),
+                  )
+                : classes.isEmpty
+                    ? _buildEmptyState()
+                    : _buildClassesGrid(
+                        crossAxisCount, cardPadding, gridSpacing, cardAspectRatio),
+          ),
+        ],
+      ),
+    );
+
+    Widget mobileChild = Scaffold(
       drawer: isMobile
           ? Drawer(
               child: Container(
@@ -1131,7 +1165,6 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                       title: const Text('Back', style: TextStyle(color: Colors.white)),
                       onTap: () {
                         Navigator.pop(context);
-                        
                       },
                     ),
                   ],
@@ -1140,82 +1173,14 @@ class _MyClassesScreenState extends State<MyClassesScreen>
             )
           : null,
       body: SafeArea(
-        child: Row(
-          children: [
-            //  SIDEBAR (Desktop/Tablet only)
-            if (!isMobile)
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                width: sidebarWidth,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF1E1E2C),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(2, 0)),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 14),
-                    IconButton(
-                      icon: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: isSidebarExpanded
-                            ? const Icon(Icons.arrow_back_ios_new_rounded,
-                                color: Colors.white, key: ValueKey(1))
-                            : const Icon(Icons.menu_rounded,
-                                color: Colors.white, key: ValueKey(2)),
-                      ),
-                      onPressed: () =>
-                          setState(() => isSidebarExpanded = !isSidebarExpanded),
-                    ),
-                    const SizedBox(height: 24),
-                    Expanded(
-                      child: ListView(
-                        children: [
-                          _buildSidebarItem(Icons.dashboard, 'Dashboard'),
-                          _buildSidebarItem(Icons.people, 'My Classes'),
-                          _buildSidebarItem(Icons.analytics, 'Analysis'),
-                          _buildSidebarItem(Icons.settings, 'Settings'),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // MAIN CONTENT
-            Expanded(
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF007C91), Color(0xFF0097A7)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    _buildAppBar(isMobile),
-                    Expanded(
-                      child: isLoading
-                          ? const Center(
-                              child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                strokeWidth: 3,
-                              ),
-                            )
-                          : classes.isEmpty
-                              ? _buildEmptyState()
-                              : _buildClassesGrid(
-                                  crossAxisCount, cardPadding, gridSpacing, cardAspectRatio),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+        child: mainContent,
       ),
+    );
+
+    return TeacherWebLayout(
+      currentRoute: 'My Classes',
+      mobileChild: mobileChild,
+      desktopBody: mainContent,
     );
   }
 
@@ -1492,13 +1457,13 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: classData['color'].withOpacity(0.18),
+                      color: Colors.white.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       classData['semester'],
-                      style: TextStyle(
-                        color: classData['color'],
+                      style: const TextStyle(
+                        color: Colors.black87,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                       ),
@@ -1511,11 +1476,11 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: classData['color'].withOpacity(0.18),
+                          color: Colors.white.withOpacity(0.6),
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.people_rounded,
-                          color: classData['color'],
+                          color: Colors.black87,
                           size: 16,
                         ),
                       ),

@@ -26,7 +26,7 @@ class ProfileService {
       final response = await _dio.get(
         '/auth/me/',
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
 
@@ -49,11 +49,13 @@ class ProfileService {
       final response = await _dio.get(
         '/students/my-classes/',
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
 
-      return List<Map<String, dynamic>>.from(response.data['classes'] ?? []);
+      return (response.data['classes'] as List?)
+          ?.map((e) => Map<String, dynamic>.from(e))
+          .toList() ?? [];
     } on DioException catch (e) {
       print('Error getting student classes: ${e.message}');
       return [];
@@ -69,11 +71,13 @@ class ProfileService {
       final response = await _dio.get(
         '/classes/',
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
 
-      return List<Map<String, dynamic>>.from(response.data['classes'] ?? []);
+      return (response.data['classes'] as List?)
+          ?.map((e) => Map<String, dynamic>.from(e))
+          .toList() ?? [];
     } on DioException catch (e) {
       print('Error getting teacher classes: ${e.message}');
       return [];
@@ -89,13 +93,13 @@ class ProfileService {
       final response = await _dio.get(
         '/students/my-attendance/',
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: ApiConfig.authHeaders(token),
         ),
       );
 
-      final attendance = List<Map<String, dynamic>>.from(
-        response.data['attendance'] ?? []
-      );
+      final attendance = (response.data['attendance'] as List?)
+          ?.map((e) => Map<String, dynamic>.from(e))
+          .toList() ?? [];
 
       final total = attendance.length;
       final present = attendance.where((a) => a['status'] == 'present').length;
