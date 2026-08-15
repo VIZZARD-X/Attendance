@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/profile_service.dart';
 import '../../services/class_service.dart';
+import '../../widgets/admin_web_layout.dart';
 
 class AdminProfileScreen extends StatefulWidget {
   const AdminProfileScreen({super.key});
@@ -95,29 +96,57 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
     final isMobile = screenW < 600;
     final isDesktop = screenW >= 1024;
 
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(color: Color(0xFF0288A3)),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _buildTopBar(isMobile),
-              Expanded(
-                child: isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
-                      )
-                    : SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        child: Padding(
-                          padding: EdgeInsets.all(isMobile ? 16 : 40),
-                          child: isDesktop
-                              ? _buildDesktopContent()
-                              : _buildMobileContent(isMobile),
+    Widget mainContent = Container(
+      decoration: const BoxDecoration(color: Color(0xFF0288A3)),
+      child: Column(
+        children: [
+          if (!isDesktop) _buildTopBar(isMobile),
+          Expanded(
+            child: isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  )
+                : SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Padding(
+                      padding: EdgeInsets.all(isMobile ? 16 : 40),
+                      child: isDesktop ? _buildDesktopContent() : _buildMobileContent(isMobile),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+
+    Widget mobileChild = Scaffold(
+      body: SafeArea(child: mainContent),
+    );
+
+    return AdminWebLayout(
+      currentRoute: 'Profile',
+      mobileChild: mobileChild,
+      desktopBody: Scaffold(
+        body: SafeArea(
+          child: Container(
+            decoration: const BoxDecoration(color: Color(0xFF0288A3)),
+            child: Column(
+              children: [
+                _buildTopBar(isMobile),
+                Expanded(
+                  child: isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(color: Colors.white),
+                        )
+                      : SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: Padding(
+                            padding: EdgeInsets.all(isMobile ? 16 : 40),
+                            child: isDesktop ? _buildDesktopContent() : _buildMobileContent(isMobile),
+                          ),
                         ),
-                      ),
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/class_service.dart';
 import 'teacher_list_screen.dart';
 import 'student_list_screen.dart';
+import '../../widgets/admin_web_layout.dart';
 
 abstract class _AppColors {
   static const tealDark = Color(0xFF007C91);
@@ -60,77 +61,93 @@ class _ResetLoginScreenState extends State<ResetLoginScreen> {
     final isMobile = screenW < 600;
     final isDesktop = screenW >= 1024;
 
-    if (isDesktop) return _buildDesktopLayout();
+  @override
+  Widget build(BuildContext context) {
+    final screenW = MediaQuery.of(context).size.width;
+    final isMobile = screenW < 600;
+    final isDesktop = screenW >= 1024;
 
-    return Scaffold(
+    Widget mainContent = isDesktop
+        ? SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 76,
+                        height: 76,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [_AppColors.tealDark, _AppColors.teal],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                          borderRadius: BorderRadius.circular(63.5),
+                        ),
+                        child: const Icon(Icons.lock_reset_rounded, color: Colors.white, size: 38),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Login Reset',
+                              style: TextStyle(color: _AppColors.tealDark, fontSize: 38, fontFamily: 'Inter', fontWeight: FontWeight.w700),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            const Text('Reset Login Access', style: TextStyle(fontSize: 16, color: _AppColors.textMuted, fontFamily: 'Inter')),
+                          ],
+                        ),
+                      ),
+                      IconButton(icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary), onPressed: () => Navigator.pop(context), tooltip: 'Back'),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  if (_isLoading)
+                    const Center(child: Padding(padding: EdgeInsets.only(top: 40), child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal))))
+                  else
+                    _buildCards(false),
+                ],
+              ),
+            ),
+          )
+        : SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: EdgeInsets.all(isMobile ? 16 : 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeaderSection(isMobile),
+                  const SizedBox(height: 24),
+                  if (_isLoading)
+                    const Center(child: Padding(padding: EdgeInsets.only(top: 40), child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal))))
+                  else
+                    _buildCards(isMobile),
+                ],
+              ),
+            ),
+          );
+
+    Widget mobileChild = Scaffold(
       backgroundColor: _AppColors.background,
       appBar: _buildTopBar(isMobile),
       drawer: _buildMobileDrawer(),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: EdgeInsets.all(isMobile ? 16 : 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeaderSection(isMobile),
-                const SizedBox(height: 24),
-                if (_isLoading)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 40),
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal),
-                      ),
-                    ),
-                  )
-                else
-                  _buildCards(isMobile),
-              ],
-            ),
-          ),
-        ),
+        child: mainContent,
       ),
     );
-  }
 
-  Widget _buildDesktopLayout() {
-    return Scaffold(
-      backgroundColor: _AppColors.background,
-      body: SafeArea(
-        child: Row(
-          children: [
-            _buildDesktopSidebar(),
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildDesktopHeader(),
-                      const SizedBox(height: 32),
-                      if (_isLoading)
-                        const Center(
-                          child: Padding(
-                            padding: EdgeInsets.only(top: 40),
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal),
-                            ),
-                          ),
-                        )
-                      else
-                        _buildCards(false),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return AdminWebLayout(
+      currentRoute: 'Reset Login',
+      mobileChild: mobileChild,
+      desktopBody: mainContent,
     );
   }
 
@@ -146,9 +163,7 @@ class _ResetLoginScreenState extends State<ResetLoginScreen> {
         children: [
           Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [_AppColors.tealDark, _AppColors.teal],
-              ),
+              gradient: LinearGradient(colors: [_AppColors.tealDark, _AppColors.teal]),
               shape: BoxShape.circle,
             ),
             padding: const EdgeInsets.all(8),
@@ -158,134 +173,11 @@ class _ResetLoginScreenState extends State<ResetLoginScreen> {
           const Expanded(
             child: Text(
               'Login Reset',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: _AppColors.textPrimary,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _AppColors.textPrimary),
               overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildDesktopHeader() {
-    return Row(
-      children: [
-        Container(
-          width: 76,
-          height: 76,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [_AppColors.tealDark, _AppColors.teal],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-            borderRadius: BorderRadius.circular(63.5),
-          ),
-          child: const Icon(Icons.lock_reset_rounded, color: Colors.white, size: 38),
-        ),
-        const SizedBox(width: 20),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Login Reset',
-                style: TextStyle(
-                  color: _AppColors.tealDark,
-                  fontSize: 38,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Reset Login Access',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: _AppColors.textMuted,
-                  fontFamily: 'Inter',
-                ),
-              ),
-            ],
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
-          onPressed: () => Navigator.pop(context),
-          tooltip: 'Back',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDesktopSidebar() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      width: _isSidebarExpanded ? 220 : 72,
-      decoration: const BoxDecoration(color: _AppColors.darkBg),
-      child: Column(
-        children: [
-          const SizedBox(height: 24),
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [_AppColors.tealDark, _AppColors.teal],
-              ),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: const Icon(Icons.lock_reset_rounded, color: Colors.white, size: 26),
-          ),
-          IconButton(
-            icon: Icon(
-              _isSidebarExpanded ? Icons.chevron_left : Icons.chevron_right,
-              color: Colors.white70,
-            ),
-            onPressed: () =>
-                setState(() => _isSidebarExpanded = !_isSidebarExpanded),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                _buildSidebarItem(Icons.dashboard_rounded, 'Dashboard'),
-                _buildSidebarItem(Icons.lock_reset_rounded, 'Reset Login'),
-              ],
-            ),
-          ),
-          _buildSidebarItem(Icons.arrow_back_rounded, 'Back'),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSidebarItem(
-    IconData icon,
-    String title, {
-    bool isMobile = false,
-  }) {
-    final showLabel = _isSidebarExpanded || isMobile;
-    return Tooltip(
-      message: showLabel ? '' : title,
-      child: ListTile(
-        leading: Icon(icon, color: Colors.white70, size: isMobile ? 24 : 20),
-        title: showLabel
-            ? Text(title,
-                style: const TextStyle(color: Colors.white, fontSize: 14))
-            : null,
-        onTap: () {
-          if (title == 'Back' || title == 'Dashboard') {
-            Navigator.pop(context);
-          }
-        },
       ),
     );
   }
@@ -298,9 +190,7 @@ class _ResetLoginScreenState extends State<ResetLoginScreen> {
           children: [
             DrawerHeader(
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [_AppColors.tealDark, _AppColors.teal],
-                ),
+                gradient: LinearGradient(colors: [_AppColors.tealDark, _AppColors.teal]),
               ),
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,28 +199,20 @@ class _ResetLoginScreenState extends State<ResetLoginScreen> {
                   CircleAvatar(
                     radius: 30,
                     backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.lock_reset_rounded,
-                      size: 35,
-                      color: _AppColors.tealDark,
-                    ),
+                    child: Icon(Icons.lock_reset_rounded, size: 35, color: _AppColors.tealDark),
                   ),
                   SizedBox(height: 10),
-                  Text(
-                    'Login Reset',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  Text('Login Reset', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
-            _buildSidebarItem(Icons.dashboard_rounded, 'Dashboard', isMobile: true),
-            _buildSidebarItem(Icons.lock_reset_rounded, 'Reset Login', isMobile: true),
-            const Divider(color: Colors.white24),
-            _buildSidebarItem(Icons.arrow_back_rounded, 'Back', isMobile: true),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.white70),
+              title: const Text('Logout', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                // back / logout
+              },
+            ),
           ],
         ),
       ),

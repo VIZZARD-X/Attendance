@@ -144,69 +144,58 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     final screenW = MediaQuery.of(context).size.width;
     final isMobile = screenW < 600;
     final isDesktop = screenW >= 1024;
-
-    if (isDesktop) return _buildDesktopLayout();
-
     final crossAxisCount = isMobile ? 1 : 2;
 
-    return Scaffold(
+    Widget mainContent = isDesktop
+        ? SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDesktopHeader(),
+                  const SizedBox(height: 48),
+                  _buildSectionHeader(),
+                  const SizedBox(height: 24),
+                  _buildDashboardGrid(3, false),
+                ],
+              ),
+            ),
+          )
+        : SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: EdgeInsets.all(isMobile ? 16 : 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionHeader(),
+                  const SizedBox(height: 16),
+                  _buildDashboardGrid(crossAxisCount, isMobile),
+                ],
+              ),
+            ),
+          );
+
+    Widget mobileChild = Scaffold(
       backgroundColor: _AppColors.background,
       appBar: _buildTopBar(isMobile),
       drawer: _buildMobileDrawer(),
       body: Stack(
         children: [
-          SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Padding(
-                padding: EdgeInsets.all(isMobile ? 16 : 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionHeader(),
-                    const SizedBox(height: 16),
-                    _buildDashboardGrid(crossAxisCount, isMobile),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          SafeArea(child: mainContent),
           if (_isLoading) _buildLoadingOverlay(),
         ],
       ),
     );
-  }
 
-  Widget _buildDesktopLayout() {
-    return Scaffold(
-      backgroundColor: _AppColors.background,
-      body: Stack(
+    return AdminWebLayout(
+      currentRoute: 'Dashboard',
+      mobileChild: mobileChild,
+      desktopBody: Stack(
         children: [
-          SafeArea(
-            child: Row(
-              children: [
-                _buildDesktopSidebar(),
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDesktopHeader(),
-                          const SizedBox(height: 48),
-                          _buildSectionHeader(),
-                          const SizedBox(height: 24),
-                          _buildDashboardGrid(3, false),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          mainContent,
           if (_isLoading) _buildLoadingOverlay(),
         ],
       ),
@@ -248,25 +237,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         const SizedBox(height: 18),
         Row(
           children: [
-            Container(
-              width: 12,
-              height: 43,
-              decoration: ShapeDecoration(
-                color: _AppColors.tealLight,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
+            Container(width: 30, height: 4, decoration: BoxDecoration(color: _AppColors.tealDark, borderRadius: BorderRadius.circular(2))),
+            const SizedBox(width: 8),
             const Text(
               'Quick Actions',
-              style: TextStyle(
-                fontSize: 33,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w700,
-                color: Colors.black,
-              ),
+              style: TextStyle(fontSize: 16, color: _AppColors.textMuted, fontWeight: FontWeight.w600, fontFamily: 'Inter'),
             ),
           ],
         ),
@@ -275,97 +250,70 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   Widget _buildDashboardGrid(int crossAxisCount, bool isMobile) {
-    final childAspectRatio =
-        crossAxisCount == 1 ? 1.5 : (crossAxisCount == 2 ? 1.3 : 1.6);
-
     return GridView.builder(
-      itemCount: _cards.length,
-      physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _cards.length,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        mainAxisSpacing: 42,
-        crossAxisSpacing: 55,
-        childAspectRatio: childAspectRatio,
+        crossAxisSpacing: isMobile ? 16 : 24,
+        mainAxisSpacing: isMobile ? 16 : 24,
+        childAspectRatio: isMobile ? 1.2 : 1.4,
       ),
-      itemBuilder: (context, idx) => _buildActionCard(_cards[idx], isMobile),
-    );
-  }
-
-  Widget _buildActionCard(_DashboardCard card, bool isMobile) {
-    return InkWell(
-      onTap: () => _handleCardTap(card.title),
-      borderRadius: BorderRadius.circular(43),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-        decoration: ShapeDecoration(
-          gradient: LinearGradient(
-            begin: const Alignment(-0.05, -0.07),
-            end: const Alignment(1.18, 1.28),
-            colors: card.gradient,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(43),
-            side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+      itemBuilder: (context, index) {
+        final card = _cards[index];
+        return InkWell(
+          onTap: () => _handleCardTap(card.title),
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: card.gradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(color: card.color.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6)),
+              ],
+            ),
+            child: Stack(
               children: [
-                Container(
-                  width: 68,
-                  height: 68,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
-                    border: Border.all(
-                      color: card.color.withOpacity(0.70),
-                      width: 1.5,
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(card.icon, color: card.color, size: 30),
+                Positioned(
+                  right: -20,
+                  top: -20,
+                  child: Icon(card.icon, size: 100, color: Colors.white.withOpacity(0.15)),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
+                Padding(
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
                     children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(16)),
+                        child: Icon(card.icon, color: Colors.white, size: 28),
+                      ),
+                      const Spacer(),
                       Text(
                         card.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 20,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         card.subtitle,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 14,
-                          fontFamily: 'Inter',
-                        ),
+                        style: const TextStyle(color: Colors.black, fontSize: 14, fontFamily: 'Inter'),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -377,9 +325,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         children: [
           Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [_AppColors.tealDark, _AppColors.teal],
-              ),
+              gradient: LinearGradient(colors: [_AppColors.tealDark, _AppColors.teal]),
               shape: BoxShape.circle,
             ),
             padding: const EdgeInsets.all(8),
@@ -389,22 +335,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           Expanded(
             child: Text(
               'Welcome, $_username',
-              style: TextStyle(
-                fontSize: isMobile ? 16 : 18,
-                fontWeight: FontWeight.bold,
-                color: _AppColors.textPrimary,
-              ),
+              style: TextStyle(fontSize: isMobile ? 16 : 18, fontWeight: FontWeight.bold, color: _AppColors.textPrimary),
               overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.logout, color: _AppColors.textPrimary),
-          onPressed: _logout,
-        ),
-      ],
     );
   }
 
@@ -431,22 +367,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             children: [
               Text(
                 'Welcome, $_username',
-                style: const TextStyle(
-                  color: _AppColors.tealDark,
-                  fontSize: 38,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                ),
+                style: const TextStyle(color: _AppColors.tealDark, fontSize: 38, fontFamily: 'Inter', fontWeight: FontWeight.w700),
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
               const Text(
                 'Admin Panel',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: _AppColors.textMuted,
-                  fontFamily: 'Inter',
-                ),
+                style: TextStyle(fontSize: 16, color: _AppColors.textMuted, fontFamily: 'Inter'),
               ),
             ],
           ),
@@ -459,69 +386,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
-  Widget _buildDesktopSidebar() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      width: _isSidebarExpanded ? 220 : 72,
-      decoration: const BoxDecoration(color: _AppColors.darkBg),
-      child: Column(
-        children: [
-          const SizedBox(height: 24),
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [_AppColors.tealDark, _AppColors.teal],
-              ),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 26),
-          ),
-          IconButton(
-            icon: Icon(
-              _isSidebarExpanded ? Icons.chevron_left : Icons.chevron_right,
-              color: Colors.white70,
-            ),
-            onPressed: () =>
-                setState(() => _isSidebarExpanded = !_isSidebarExpanded),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: _cards
-                  .map((c) => _buildSidebarItem(c.icon, c.title))
-                  .toList(),
-            ),
-          ),
-          _buildSidebarItem(Icons.logout, 'Logout'),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSidebarItem(
-    IconData icon,
-    String title, {
-    bool isMobile = false,
-  }) {
-    final showLabel = _isSidebarExpanded || isMobile;
-    return Tooltip(
-      message: showLabel ? '' : title,
-      child: ListTile(
-        leading: Icon(icon, color: Colors.white70, size: isMobile ? 24 : 20),
-        title: showLabel
-            ? Text(title,
-                style: const TextStyle(color: Colors.white, fontSize: 14))
-            : null,
-        onTap: () =>
-            title == 'Logout' ? _logout() : _handleCardTap(title),
-      ),
-    );
-  }
-
   Widget _buildMobileDrawer() {
     return Drawer(
       child: Container(
@@ -530,9 +394,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           children: [
             DrawerHeader(
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [_AppColors.tealDark, _AppColors.teal],
-                ),
+                gradient: LinearGradient(colors: [_AppColors.tealDark, _AppColors.teal]),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -541,29 +403,21 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   const CircleAvatar(
                     radius: 30,
                     backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.admin_panel_settings_rounded,
-                      size: 35,
-                      color: _AppColors.tealDark,
-                    ),
+                    child: Icon(Icons.admin_panel_settings_rounded, size: 35, color: _AppColors.tealDark),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     _username,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
             ),
-            ..._cards.map(
-              (c) => _buildSidebarItem(c.icon, c.title, isMobile: true),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.white70),
+              title: const Text('Logout', style: TextStyle(color: Colors.white)),
+              onTap: _logout,
             ),
-            const Divider(color: Colors.white24),
-            _buildSidebarItem(Icons.logout, 'Logout', isMobile: true),
           ],
         ),
       ),
