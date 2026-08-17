@@ -77,10 +77,20 @@ class _StudentDrawerState extends State<StudentDrawer> {
     }
 
     if (nextScreen != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => nextScreen!),
-      );
+      if (title == 'Dashboard') {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => nextScreen!),
+          (route) => false,
+        );
+      } else {
+        // Pop back to the Dashboard (first route) to clear current screens like QR Scanner
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        // Push the new screen on top of the Dashboard
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => nextScreen!),
+        );
+      }
     }
   }
 

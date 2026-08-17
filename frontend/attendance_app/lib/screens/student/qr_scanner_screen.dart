@@ -16,7 +16,7 @@ class QRScannerScreen extends StatefulWidget {
   State<QRScannerScreen> createState() => _QRScannerScreenState();
 }
 
-class _QRScannerScreenState extends State<QRScannerScreen> {
+class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingObserver {
   final AttendanceService _attendanceService = AttendanceService();
   final SessionService _sessionService = SessionService();
   
@@ -46,6 +46,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Initialize MobileScannerController with torch enabled
     _scannerController = MobileScannerController(torchEnabled: true);
     _checkCameraPermission();
@@ -53,9 +54,30 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scannerController.dispose();
     _cameraController?.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    if (state == AppLifecycleState.resumed) {
+      if (!isOfflineMode) {
+        _scannerController.start();
+      } else {
+        _initializeOfflineCamera();
+      }
+    } else {
+      if (!isOfflineMode) {
+        _scannerController.stop();
+      } else if (_cameraController != null) {
+        _cameraController!.dispose();
+        _cameraController = null;
+      }
+    }
   }
 
   Future<void> _checkCameraPermission() async {
