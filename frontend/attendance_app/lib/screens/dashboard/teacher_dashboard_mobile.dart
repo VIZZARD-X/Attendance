@@ -417,7 +417,8 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
             'Total Classes',
             totalClasses.toString(),
             Icons.menu_book_rounded,
-            [const Color(0xFF6DE899), const Color(0xFFD4F7DF)], // Figma gradient
+            [const Color(0xFF66E9E1), Colors.white],
+            const Color(0xFF0097A7),
             isMobile,
           ),
         ),
@@ -427,7 +428,8 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
             'Active Sessions',
             activeSessions.toString(),
             Icons.timer_rounded,
-            [const Color(0xFFF27572), const Color(0xFFFCDEDD)], // Figma gradient
+            [const Color(0xFFA8E6A7), Colors.white],
+            const Color(0xFF1EBA57),
             isMobile,
           ),
         ),
@@ -440,10 +442,9 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
     String value,
     IconData icon,
     List<Color> gradientColors,
+    Color borderColor,
     bool isMobile,
   ) {
-    final primaryColor = gradientColors.first;
-
     return Container(
       height: isMobile ? 100 : 120,
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: isMobile ? 12 : 16),
@@ -453,12 +454,12 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: primaryColor.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(23),
+        border: Border.all(color: borderColor, width: 2),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.15),
-            blurRadius: 12,
+            color: borderColor.withOpacity(0.1),
+            blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
@@ -468,10 +469,10 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.15),
+              color: borderColor.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: Colors.black87, size: isMobile ? 24 : 28),
+            child: Icon(icon, color: borderColor, size: isMobile ? 24 : 28),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -487,20 +488,20 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
                     style: TextStyle(
                       fontSize: isMobile ? 24 : 28,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1F2937),
+                      color: Colors.black,
+                      fontFamily: 'Inter',
                     ),
                   ),
                 ),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: isMobile ? 12 : 14,
-                      color: Colors.grey[800],
-                    ),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: isMobile ? 12 : 14,
+                    color: Colors.black54,
+                    fontFamily: 'Inter',
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

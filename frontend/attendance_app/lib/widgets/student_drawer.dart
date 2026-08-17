@@ -68,9 +68,6 @@ class _StudentDrawerState extends State<StudentDrawer> {
       case 'Scan QR':
         nextScreen = const QRScannerScreen();
         break;
-      case 'Offline Attendance':
-        nextScreen = const OfflineSessionsScreen();
-        break;
       case 'Attendance History':
         nextScreen = const AttendanceHistoryScreen();
         break;
@@ -80,7 +77,7 @@ class _StudentDrawerState extends State<StudentDrawer> {
     }
 
     if (nextScreen != null) {
-      Navigator.pushReplacement(
+      Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => nextScreen!),
       );
@@ -93,7 +90,6 @@ class _StudentDrawerState extends State<StudentDrawer> {
       {'title': 'Dashboard', 'icon': Icons.dashboard},
       {'title': 'My Classes', 'icon': Icons.class_rounded},
       {'title': 'Scan QR', 'icon': Icons.qr_code_scanner_rounded},
-      {'title': 'Offline Attendance', 'icon': Icons.wifi_off_rounded},
       {'title': 'Attendance History', 'icon': Icons.history_rounded},
       {'title': 'Profile', 'icon': Icons.person_rounded},
     ];

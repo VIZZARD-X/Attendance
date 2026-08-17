@@ -165,17 +165,6 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         });
         break;
 
-      case 'Offline Attendance':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const OfflineSessionsScreen(),
-          ),
-        ).then((_) {
-          _loadUserData(forceRefresh: true);  
-        });
-        break;
-
       case 'Attendance History':
         Navigator.push(
           context,
