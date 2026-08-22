@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../services/class_service.dart';
 
 class AddStudentsScreen extends StatefulWidget {
@@ -23,6 +24,26 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
   bool isLoading = false;
   bool isCheckingEmail = false;
   bool isExistingStudent = false;
+  String? classCode;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchClassDetails();
+  }
+
+  Future<void> _fetchClassDetails() async {
+    try {
+      final details = await _classService.getClassDetails(widget.classId);
+      if (details != null && mounted) {
+        setState(() {
+          classCode = details['class_code'];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching class details: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -441,6 +462,21 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
               ],
             ),
           ),
+          if (classCode != null)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.share_rounded, color: Colors.white, size: 20),
+                tooltip: 'Share Invite Link',
+                onPressed: () {
+                  final link = 'https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net/join/$classCode';
+                  Share.share('Join my class on Presence!\nTap here to join: $link');
+                },
+              ),
+            ),
         ],
       ),
     );
