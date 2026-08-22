@@ -347,7 +347,7 @@ class _SessionPageState extends State<SessionPage>
                                         return DropdownMenuItem<String>(
                                           value: subject['id'],
                                           child: Text(
-                                            "${subject['code']} - ${subject['name']} (${subject['semester'] ?? ''})",
+                                            "${subject['name']} (Semester ${subject['semester'] ?? ''})",
                                             style: TextStyle(
                                               fontSize: isMobile ? 14 : 16,
                                               fontWeight: FontWeight.w500,
@@ -513,7 +513,7 @@ class _SessionPageState extends State<SessionPage>
                                           child: Column(
                                             children: [
                                               Text(
-                                                "Session Active: $selectedSubjectCode",
+                                                "Session Active: $selectedSubjectName",
                                                 style: TextStyle(
                                                   fontSize: isMobile ? 16 : 18,
                                                   fontWeight: FontWeight.bold,
@@ -678,34 +678,7 @@ class _SessionPageState extends State<SessionPage>
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.class_rounded,
-                                                      size: 16,
-                                                      color: Colors.grey[600],
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    Text(
-                                                      "Code:",
-                                                      style: TextStyle(
-                                                        fontSize: isMobile ? 12 : 13,
-                                                        color: Colors.grey[600],
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    Expanded(
-                                                      child: Text(
-                                                        selectedSubjectCode ?? 'N/A',
-                                                        style: TextStyle(
-                                                          fontSize: isMobile ? 14 : 15,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: Colors.grey[800],
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
+                                                // Code row removed
                                                 const SizedBox(height: 8),
                                                 Row(
                                                   children: [

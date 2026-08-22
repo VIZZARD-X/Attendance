@@ -1367,12 +1367,13 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                     children: [
                       Expanded(
                         child: Text(
-                          classData['code'],
+                          classData['name'],
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF111827),
                           ),
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -1413,7 +1414,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                             ),
                             onTap: () {
                               final appUrl = 'https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net';
-                              final shareText = "Join my class '${classData['name']}' on Attendance App!\nClick here to join: $appUrl/#/join/${classData['code']}\nOr manually enter code: ${classData['code']}";
+                              final shareText = "Join my class '${classData['name']}' on Attendance App!\nClick here to join: $appUrl/#/join/${classData['code']}";
                               Share.share(shareText);
                             },
                           ),
@@ -1432,18 +1433,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Expanded(
-                    child: Text(
-                      classData['name'],
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[700],
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
+                  const Spacer(),
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
