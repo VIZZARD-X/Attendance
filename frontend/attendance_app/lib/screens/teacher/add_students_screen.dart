@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../services/class_service.dart';
 
@@ -311,7 +312,10 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        _buildAddStudentForm(true),
+        SizedBox(
+          height: 650, // Fixed height for tabs
+          child: _buildLeftPanel(true),
+        ),
         if (students.isNotEmpty) ...[
           const SizedBox(height: 24),
           _buildStudentsList(),
@@ -329,19 +333,12 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // LEFT SIDE - Add Student Form
+          // LEFT SIDE - Add Student Form / Share Link
           Expanded(
             flex: 2,
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  _buildAddStudentForm(false),
-                  if (students.isNotEmpty) ...[
-                    const SizedBox(height: 24),
-                    _buildSubmitButton(),
-                  ],
-                ],
-              ),
+            child: SizedBox(
+              height: 600, // Fixed height for tab view to work properly in row
+              child: _buildLeftPanel(false),
             ),
           ),
           
@@ -482,20 +479,205 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
     );
   }
 
-  Widget _buildAddStudentForm(bool isMobile) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+  Widget _buildLeftPanel(bool isMobile) {
+    return DefaultTabController(
+      length: 2,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+              ),
+              child: const TabBar(
+                labelColor: Color(0xFF007C91),
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: Color(0xFF007C91),
+                indicatorWeight: 3,
+                tabs: [
+                  Tab(
+                    icon: Icon(Icons.link_rounded),
+                    text: 'Invite Link',
+                  ),
+                  Tab(
+                    icon: Icon(Icons.person_add_rounded),
+                    text: 'Manual Add',
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _buildShareLinkTab(),
+                  _buildManualAddTab(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShareLinkTab() {
+    final link = classCode != null
+        ? 'https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net/join/$classCode'
+        : 'Loading...';
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Link',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF007C91),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    link,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                InkWell(
+                  onTap: () {
+                    if (classCode != null) {
+                      Clipboard.setData(ClipboardData(text: link));
+                      _showSuccessSnackBar('✓ Link copied to clipboard!');
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.copy_rounded, color: Colors.black87),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          const Text(
+            'Class Code',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF007C91),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFB2EBF2), Color(0xFF80DEEA)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF007C91).withOpacity(0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                classCode ?? '...',
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 4,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 40),
+          Center(
+            child: SizedBox(
+              width: 200,
+              height: 54,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  if (classCode != null) {
+                    Share.share('Join my class on Presence!\nTap here to join: $link');
+                  }
+                },
+                icon: const Icon(Icons.reply_rounded, size: 24), // Share arrow icon
+                label: const Text(
+                  'Share link',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0097A7),
+                  foregroundColor: Colors.white,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildManualAddTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
