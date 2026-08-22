@@ -1388,7 +1388,7 @@ def join_class_by_code(request):
     }, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([permissions.AllowAny])
 def assetlinks_json(request):
     """
     Serve the assetlinks.json file required for Android App Links (Deep Linking).
