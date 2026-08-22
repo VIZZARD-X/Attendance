@@ -399,30 +399,7 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF007C91).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: const Color(0xFF007C91).withOpacity(0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              classCode,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF007C91),
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
+                          // Class code removed
                           Text(
                             className,
                             style: TextStyle(
@@ -448,7 +425,7 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
                   children: [
                     _buildInfoChip(
                       Icons.calendar_month_rounded,
-                      'Semester $semester',
+                      semester.toString().toLowerCase().startsWith('semester') ? semester.toString() : 'Semester $semester',
                     ),
                     _buildInfoChip(
                       Icons.person_outline_rounded,
@@ -582,22 +559,13 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
               child: Column(
                 children: [
                   Text(
-                    classData['class_code'] ?? 'N/A',
+                    classData['class_name'] ?? 'Unknown Class',
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    classData['class_name'] ?? 'Unknown Class',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
