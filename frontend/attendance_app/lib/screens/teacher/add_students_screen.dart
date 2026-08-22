@@ -601,46 +601,6 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
             ),
           ),
           const SizedBox(height: 32),
-          const Text(
-            'Class Code',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF007C91),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFB2EBF2), Color(0xFF80DEEA)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF007C91).withOpacity(0.2),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                classCode ?? '...',
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 4,
-                  color: Colors.black87,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 40),
           Center(
             child: SizedBox(
               width: 200,
