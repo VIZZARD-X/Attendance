@@ -47,7 +47,6 @@ class ClassService {
 
   /// Create a new class with students
   Future<Map<String, dynamic>> createClass({
-    required String code,
     required String name,
     required String semester,
     required List<Map<String, String>> students,
@@ -58,7 +57,6 @@ class ClassService {
       final response = await _dio.post(
         '/classes/',
         data: {
-          'code': code,
           'name': name,
           'semester': semester,
           'students': students,
@@ -688,7 +686,7 @@ class ClassService {
 
   Future<Map<String, dynamic>> joinClass(String classCode) async {
     try {
-      final token = await StorageService.read(key: 'token');
+      final token = await _getToken();
       final response = await _dio.post(
         '/classes/join/',
         data: {'class_code': classCode},

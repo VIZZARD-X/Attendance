@@ -78,7 +78,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
               'id': c['id'],
               'code': c['class_code'],
               'name': c['class_name'],
-              'semester': c['semester'],
+              'semester': c['semester'].toString().length == 1 ? 'Semester ${c['semester']}' : c['semester'],
               'students': c['student_count'] ?? 0,
               'color': colorPalette[index % colorPalette.length],
             };
@@ -96,115 +96,135 @@ class _MyClassesScreenState extends State<MyClassesScreen>
   }
 
   void _showCreateClassDialog() {
-    final codeController = TextEditingController();
     final nameController = TextEditingController();
-    final semesterController = TextEditingController();
+    String selectedSemester = '1';
+    final List<String> semesters = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF007C91), Color(0xFF0097A7)],
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Create New Class',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildDialogTextField(
+                  controller: nameController,
+                  label: 'Class Name *',
+                  hint: 'e.g., Computer Science',
+                  icon: Icons.book_rounded,
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedSemester,
+                  items: semesters.map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text('Semester $value'),
+                    );
+                  }).toList(),
+                  onChanged: (newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        selectedSemester = newValue;
+                      });
+                    }
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'Semester *',
+                    prefixIcon: const Icon(Icons.calendar_today_rounded, color: Color(0xFF007C91), size: 22),
+                    filled: true,
+                    fillColor: Colors.grey.shade50,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFF007C91), width: 2),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600),
+              ),
+            ),
             Container(
-              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFF007C91), Color(0xFF0097A7)],
                 ),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF007C91).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              'Create New Class',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1F2937),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  if (nameController.text.isNotEmpty) {
+                    Navigator.pop(context);
+                    _navigateToAddStudents(
+                      nameController.text,
+                      selectedSemester,
+                    );
+                  } else {
+                    _showErrorSnackBar('Please fill in all required fields');
+                  }
+                },
+                icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                label: const Text('Next: Add Students'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
               ),
             ),
           ],
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDialogTextField(
-                controller: codeController,
-                label: 'Class Code *',
-                hint: 'e.g., CS101',
-                icon: Icons.code_rounded,
-              ),
-              const SizedBox(height: 16),
-              _buildDialogTextField(
-                controller: nameController,
-                label: 'Class Name *',
-                hint: 'e.g., Computer Science',
-                icon: Icons.book_rounded,
-              ),
-              const SizedBox(height: 16),
-              _buildDialogTextField(
-                controller: semesterController,
-                label: 'Semester *',
-                hint: 'e.g., Fall 2024',
-                icon: Icons.calendar_today_rounded,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600),
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF007C91), Color(0xFF0097A7)],
-              ),
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF007C91).withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                if (codeController.text.isNotEmpty &&
-                    nameController.text.isNotEmpty &&
-                    semesterController.text.isNotEmpty) {
-                  Navigator.pop(context);
-                  _navigateToAddStudents(
-                    codeController.text,
-                    nameController.text,
-                    semesterController.text,
-                  );
-                } else {
-                  _showErrorSnackBar('Please fill in all required fields');
-                }
-              },
-              icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-              label: const Text('Next: Add Students'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -240,12 +260,11 @@ class _MyClassesScreenState extends State<MyClassesScreen>
     );
   }
 
-  void _navigateToAddStudents(String code, String name, String semester) async {
+  void _navigateToAddStudents(String name, String semester) async {
     setState(() => isLoading = true);
 
     try {
       final result = await _classService.createClass(
-        code: code,
         name: name,
         semester: semester,
         students: [],

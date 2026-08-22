@@ -85,9 +85,23 @@ class _MyAppState extends State<MyApp> {
         await StorageService.write(key: 'pending_join_code', value: code);
         
         if (navigatorKey.currentState != null) {
-          navigatorKey.currentState!.pushReplacementNamed(
-            widget.initialRoute == '/student' ? '/student' : '/login'
-          );
+          String nextRoute = '/login';
+          final userJson = await StorageService.read(key: 'user');
+          if (userJson != null && userJson.isNotEmpty) {
+            try {
+              final user = jsonDecode(userJson);
+              if (user['role'] == 'student') {
+                nextRoute = '/student';
+              } else if (user['role'] == 'teacher') {
+                nextRoute = '/teacher';
+              } else if (user['role'] == 'admin') {
+                nextRoute = '/admin';
+              }
+            } catch (e) {
+              debugPrint('Error parsing saved user: $e');
+            }
+          }
+          navigatorKey.currentState!.pushReplacementNamed(nextRoute);
         }
       }
     });

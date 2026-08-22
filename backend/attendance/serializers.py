@@ -4,6 +4,9 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from .models import StudentProfile, Class, Enrollment, AttendanceSession, AttendanceRecord
 import json
+import uuid
+import string
+import random
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
@@ -187,28 +190,36 @@ class ClassListSerializer(serializers.ModelSerializer):
 
 class CreateClassSerializer(serializers.Serializer):  # Changed from ModelSerializer
     """Serializer for creating a class"""
-    code = serializers.CharField(max_length=20)
     name = serializers.CharField(max_length=200)
     semester = serializers.CharField(max_length=50)
     students = StudentCreateSerializer(many=True, write_only=True, required=False)
-
-    def validate_code(self, value):
-        """Check if class code already exists"""
-        if Class.objects.filter(class_code__iexact=value).exists():
-            raise serializers.ValidationError(f"Class code {value} already exists.")
-        return value
 
     def create(self, validated_data):
         from django.db import transaction
 
         students_data = validated_data.pop('students', [])
         teacher = self.context['request'].user
+        
+        name = validated_data['name']
+        semester_str = validated_data['semester']
+        
+        # Generate base code: s + semester + first 2 chars of name
+        prefix_name = ''.join(c for c in name if c.isalnum())
+        prefix_name = prefix_name[:2].lower() if len(prefix_name) >= 2 else prefix_name.lower().ljust(2, 'x')
+        base_code = f"s{semester_str}{prefix_name}"
+        
+        code = base_code
+        counter = 1
+        while Class.objects.filter(class_code__iexact=code).exists():
+            random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+            code = f"{base_code}-{random_suffix}"
+            counter += 1
 
         with transaction.atomic():
             # Create the class
             class_obj = Class.objects.create(
                 teacher=teacher,
-                class_code=validated_data['code'],
+                class_code=code,
                 class_name=validated_data['name'],
                 semester=validated_data['semester']
             )
