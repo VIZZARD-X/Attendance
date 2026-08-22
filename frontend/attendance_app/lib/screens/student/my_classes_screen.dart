@@ -655,7 +655,9 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const AttendanceHistoryScreen(),
+                              builder: (context) => AttendanceHistoryScreen(
+                                filterClassName: classData['class_name'],
+                              ),
                             ),
                           );
                         },

@@ -5,7 +5,8 @@ import '../../services/profile_service.dart';
 import '../../widgets/student_drawer.dart';
 
 class AttendanceHistoryScreen extends StatefulWidget {
-  const AttendanceHistoryScreen({super.key});
+  final String? filterClassName;
+  const AttendanceHistoryScreen({super.key, this.filterClassName});
 
   @override
   State<AttendanceHistoryScreen> createState() => _AttendanceHistoryScreenState();
@@ -21,10 +22,12 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   
   String selectedFilter = 'All'; // 'All', 'Present', 'Absent'
   String selectedView = 'Timeline'; // 'Timeline', 'ByClass'
+  String? _selectedClassFilter;
 
   @override
   void initState() {
     super.initState();
+    _selectedClassFilter = widget.filterClassName;
     _loadAttendanceHistory();
   }
 
@@ -56,8 +59,11 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
 
   void _groupRecordsByClass() {
     groupedRecords.clear();
-    for (var record in attendanceRecords) {
-      final classKey = '${record['class_code']} - ${record['class_name']}';
+    final recordsToGroup = _selectedClassFilter != null 
+        ? attendanceRecords.where((r) => r['class_name'] == _selectedClassFilter).toList() 
+        : attendanceRecords;
+    for (var record in recordsToGroup) {
+      final classKey = record['class_name'] ?? 'Unknown Class';
       if (!groupedRecords.containsKey(classKey)) {
         groupedRecords[classKey] = [];
       }
@@ -66,15 +72,22 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   }
 
   List<Map<String, dynamic>> get filteredRecords {
-    if (selectedFilter == 'All') return attendanceRecords;
-    return attendanceRecords
+    var records = attendanceRecords;
+    if (_selectedClassFilter != null) {
+      records = records.where((r) => r['class_name'] == _selectedClassFilter).toList();
+    }
+    if (selectedFilter == 'All') return records;
+    return records
         .where((r) => r['status'].toString().toLowerCase() == selectedFilter.toLowerCase())
         .toList();
   }
 
   Map<String, dynamic> get statistics {
-    final total = attendanceRecords.length;
-    final present = attendanceRecords.where((r) => r['status'] == 'present').length;
+    final records = _selectedClassFilter != null 
+        ? attendanceRecords.where((r) => r['class_name'] == _selectedClassFilter).toList() 
+        : attendanceRecords;
+    final total = records.length;
+    final present = records.where((r) => r['status'] == 'present').length;
     final absent = total - present;
     final rate = total > 0 ? (present / total * 100) : 0.0;
     
@@ -309,6 +322,22 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
+            if (_selectedClassFilter != null) ...[
+              Chip(
+                label: Text(_selectedClassFilter!),
+                onDeleted: () {
+                  setState(() {
+                    _selectedClassFilter = null;
+                    _groupRecordsByClass();
+                  });
+                },
+                backgroundColor: const Color(0xFF26A69A),
+                labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                deleteIconColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Colors.transparent)),
+              ),
+              const SizedBox(width: 8),
+            ],
             _buildFilterChip('All', isMobile),
             const SizedBox(width: 8),
             _buildFilterChip('Present', isMobile),
