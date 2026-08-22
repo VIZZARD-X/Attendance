@@ -1354,7 +1354,7 @@ def get_session_attendance_details(request, session_id):
     })
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([permissions.IsAuthenticated])
 def join_class_by_code(request):
     """
     Allow a student to join a class by providing its class_code

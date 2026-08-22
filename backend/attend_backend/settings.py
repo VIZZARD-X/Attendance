@@ -94,7 +94,7 @@ WSGI_APPLICATION = 'attend_backend.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.parse(
-        os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
+        os.getenv("DATABASE_URL", "postgresql://dbadmin:Robby%4020@attendance-db-123.postgres.database.azure.com:5432/postgres?sslmode=require")
     )
 }
 
