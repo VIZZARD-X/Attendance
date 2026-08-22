@@ -69,28 +69,49 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     _checkPendingJoinCode();
   }
 
+  static bool _isJoining = false;
+
   Future<void> _checkPendingJoinCode() async {
+    if (_isJoining) return;
     final code = await StorageService.read(key: 'pending_join_code');
     if (code != null && code.isNotEmpty) {
-      await StorageService.delete(key: 'pending_join_code');
-      // Show loading
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Joining class $code...')),
-        );
-      }
-      final result = await _classService.joinClass(code);
-      if (mounted) {
-        if (result['success'] == true) {
+      _isJoining = true;
+      try {
+        await StorageService.delete(key: 'pending_join_code');
+        // Show loading
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message']), backgroundColor: Colors.green),
-          );
-          _loadUserData(forceRefresh: true);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result['message']), backgroundColor: Colors.red),
+            SnackBar(content: Text('Joining class $code...')),
           );
         }
+        final result = await _classService.joinClass(code);
+        if (mounted) {
+          if (result['success'] == true) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(result['message']), backgroundColor: Colors.green),
+            );
+            await _loadUserData(forceRefresh: true);
+            if (mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const StudentMyClassesScreen(),
+                ),
+              ).then((_) {
+                _loadUserData(forceRefresh: true);
+              });
+            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(result['message']), backgroundColor: Colors.red),
+            );
+          }
+        }
+      } finally {
+        // Reset flag after a short delay to prevent double-firing
+        Future.delayed(const Duration(seconds: 2), () {
+          _isJoining = false;
+        });
       }
     }
   }
