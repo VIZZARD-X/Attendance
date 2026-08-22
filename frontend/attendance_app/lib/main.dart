@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:app_links/app_links.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/dashboard/student_dashboard.dart';
@@ -15,7 +17,19 @@ void main() async {
 
   String initialRoute = '/login';
   
-  // Extract initial path from the web URL if present
+  // Try to get initial link from AppLinks
+  try {
+    final appLinks = AppLinks();
+    final initialUri = await appLinks.getInitialLink();
+    if (initialUri != null && initialUri.path.startsWith('/join/')) {
+      final code = initialUri.path.split('/join/').last;
+      await StorageService.write(key: 'pending_join_code', value: code);
+    }
+  } catch (e) {
+    debugPrint('Error getting initial deep link: $e');
+  }
+
+  // Also extract initial path from the web URL if present (hash routing fallback)
   final currentPath = Uri.base.fragment;
   if (currentPath.startsWith('/join/')) {
     final code = currentPath.split('/join/').last;
@@ -41,21 +55,61 @@ void main() async {
   runApp(MyApp(initialRoute: initialRoute));
 }
 
-class MyApp extends StatelessWidget {
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+class MyApp extends StatefulWidget {
   final String initialRoute;
 
   const MyApp({super.key, required this.initialRoute});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _initDeepLinks();
+  }
+
+  Future<void> _initDeepLinks() async {
+    _appLinks = AppLinks();
+    _linkSubscription = _appLinks.uriLinkStream.listen((uri) async {
+      debugPrint('onAppLink: $uri');
+      if (uri.path.startsWith('/join/')) {
+        final code = uri.path.split('/join/').last;
+        await StorageService.write(key: 'pending_join_code', value: code);
+        
+        if (navigatorKey.currentState != null) {
+          navigatorKey.currentState!.pushReplacementNamed(
+            widget.initialRoute == '/student' ? '/student' : '/login'
+          );
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Attendance App',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
-      initialRoute: initialRoute,
+      initialRoute: widget.initialRoute,
       routes: {
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignUpPage(),
@@ -82,7 +136,7 @@ class MyApp extends StatelessWidget {
           StorageService.write(key: 'pending_join_code', value: code);
           // Redirect based on role
           return MaterialPageRoute(
-            builder: (_) => initialRoute == '/student' 
+            builder: (_) => widget.initialRoute == '/student' 
                 ? const StudentDashboardPage() 
                 : const LoginPage(),
           );

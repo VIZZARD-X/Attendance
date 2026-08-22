@@ -32,6 +32,7 @@ from attendance.views import (
     upload_reference_image,
     get_student_active_sessions,
     join_class_by_code,
+    assetlinks_json,
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 from django.views.static import serve as static_serve
@@ -46,6 +47,7 @@ def serve_flutter(request, path=''):
     return static_serve(request, 'index.html', document_root=FLUTTER_WEB_DIR)
 
 urlpatterns = [
+    path('.well-known/assetlinks.json', assetlinks_json, name='assetlinks'),
     path('admin/', admin.site.urls),
 
     # JWT Authentication
