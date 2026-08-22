@@ -130,7 +130,7 @@ def _bytes_to_cv2(image_bytes):
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     return img
 
-def verify_offline_code(expected_code, reference_image, student_image, board_type, flash_fired):
+def verify_offline_code(expected_code, reference_image, student_image, flash_fired):
     """
     Main verification pipeline using Gemini Vision AI.
     Returns (matched: bool, score: float, reasons: list)

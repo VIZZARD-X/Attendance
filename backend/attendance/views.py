@@ -428,7 +428,7 @@ def create_session(request):
     reference_image = request.FILES.get('reference_image')
 
     class_type = serializer.validated_data.get('class_type', 'online')
-    board_type = serializer.validated_data.get('board_type', 'whiteboard')
+
     
     # Reference image is uploaded later for offline sessions via a separate endpoint.
     # Online sessions don't require it at all.
@@ -471,7 +471,7 @@ def create_session(request):
         'end_time': end_time.isoformat(),
         'duration': duration_minutes,
         'class_type': class_type,
-        'board_type': board_type,
+
         'pattern_code': pattern_code
     }
     
@@ -485,7 +485,7 @@ def create_session(request):
         qr_code_data=json.dumps(qr_data),
         reference_image=reference_image,
         class_type=class_type,
-        board_type=board_type,
+
         pattern_code=pattern_code,
         instruction_card=instruction_card,
         shape_data=shape_combo,
@@ -797,7 +797,7 @@ def verify_image(request):
             return Response({'error': distance_result}, status=status.HTTP_400_BAD_REQUEST)
 
         matched, final_score, reasons = verify_offline_code(
-            session.pattern_code, session.reference_image, student_image, session.board_type, flash_fired
+            session.pattern_code, session.reference_image, student_image, flash_fired
         )
         
         status_val = 'present' if matched else 'pending_review'
@@ -1352,3 +1352,37 @@ def get_session_attendance_details(request, session_id):
             'attendance_rate': attendance_rate
         }
     })
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def join_class_by_code(request):
+    """
+    Allow a student to join a class by providing its class_code
+    """
+    user = request.user
+    if user.role != 'student':
+        return Response({'error': 'Only students can join classes directly'}, status=status.HTTP_403_FORBIDDEN)
+        
+    class_code = request.data.get('class_code')
+    if not class_code:
+        return Response({'error': 'class_code is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        class_obj = Class.objects.get(class_code=class_code)
+    except Class.DoesNotExist:
+        return Response({'error': 'Class not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+    # Check if already enrolled
+    if Enrollment.objects.filter(class_obj=class_obj, student=user).exists():
+        return Response({'message': 'Already enrolled'}, status=status.HTTP_200_OK)
+        
+    Enrollment.objects.create(class_obj=class_obj, student=user)
+    
+    return Response({
+        'message': f"Successfully joined {class_obj.class_name}",
+        'class': {
+            'id': class_obj.id,
+            'name': class_obj.class_name,
+            'code': class_obj.class_code
+        }
+    }, status=status.HTTP_200_OK)

@@ -14,6 +14,14 @@ void main() async {
   await StorageService.init();
 
   String initialRoute = '/login';
+  
+  // Extract initial path from the web URL if present
+  final currentPath = Uri.base.fragment;
+  if (currentPath.startsWith('/join/')) {
+    final code = currentPath.split('/join/').last;
+    await StorageService.write(key: 'pending_join_code', value: code);
+  }
+
   final userJson = await StorageService.read(key: 'user');
   if (userJson != null && userJson.isNotEmpty) {
     try {
@@ -66,6 +74,20 @@ class MyApp extends StatelessWidget {
             {'code': 'BIO106', 'name': 'Biology'},
           ],
         ),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name != null && settings.name!.startsWith('/join/')) {
+          final code = settings.name!.split('/join/').last;
+          // Save for when they log in
+          StorageService.write(key: 'pending_join_code', value: code);
+          // Redirect based on role
+          return MaterialPageRoute(
+            builder: (_) => initialRoute == '/student' 
+                ? const StudentDashboardPage() 
+                : const LoginPage(),
+          );
+        }
+        return null;
       },
       onUnknownRoute: (settings) => MaterialPageRoute(
         builder: (_) => const LoginPage(),

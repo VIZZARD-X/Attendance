@@ -9,6 +9,7 @@ import 'add_students_screen.dart';
 import '../../widgets/teacher_web_layout.dart';
 import '../../services/class_service.dart';
 import '../../widgets/teacher_drawer.dart';
+import 'package:share_plus/share_plus.dart';
 
 class MyClassesScreen extends StatefulWidget {
   const MyClassesScreen({super.key});
@@ -1380,6 +1381,21 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                                   ),
                                 ).then((_) => _loadClasses());
                               });
+                            },
+                          ),
+                          PopupMenuItem(
+                            child: Row(
+                              children: [
+                                Icon(Icons.share_rounded,
+                                    color: Colors.green.shade600, size: 20),
+                                const SizedBox(width: 12),
+                                const Text('Share Link'),
+                              ],
+                            ),
+                            onTap: () {
+                              final appUrl = 'https://presence-cpe6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net';
+                              final shareText = "Join my class '${classData['name']}' on Attendance App!\nClick here to join: $appUrl/#/join/${classData['code']}\nOr manually enter code: ${classData['code']}";
+                              Share.share(shareText);
                             },
                           ),
                           PopupMenuItem(

@@ -9,6 +9,8 @@ import '../student/qr_scanner_screen.dart';
 import '../student/attendance_history_screen.dart';
 import '../student/student_profile_screen.dart';
 import '../student/offline_sessions_screen.dart';
+import '../../services/class_service.dart';
+import '../../services/storage_service.dart';
 
 class StudentDashboardPage extends StatefulWidget {
   const StudentDashboardPage({super.key});
@@ -20,6 +22,7 @@ class StudentDashboardPage extends StatefulWidget {
 class _StudentDashboardPageState extends State<StudentDashboardPage> {
   final AuthService _authService = AuthService();
   final ProfileService _profileService = ProfileService();  
+  final ClassService _classService = ClassService();
   
   bool isSidebarExpanded = false;
   String studentName = "Loading...";
@@ -63,6 +66,33 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
   void initState() {
     super.initState();
     _loadUserData();
+    _checkPendingJoinCode();
+  }
+
+  Future<void> _checkPendingJoinCode() async {
+    final code = await StorageService.read(key: 'pending_join_code');
+    if (code != null && code.isNotEmpty) {
+      await StorageService.delete(key: 'pending_join_code');
+      // Show loading
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Joining class $code...')),
+        );
+      }
+      final result = await _classService.joinClass(code);
+      if (mounted) {
+        if (result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message']), backgroundColor: Colors.green),
+          );
+          _loadUserData(forceRefresh: true);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message']), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
   }
 
   @override

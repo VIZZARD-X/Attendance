@@ -92,20 +92,13 @@ class AttendanceSession(models.Model):
         ('offline', 'Offline'),
     )
     
-    BOARD_TYPE_CHOICES = (
-        ('whiteboard', 'Whiteboard'),
-        ('blackboard', 'Blackboard'),
-        ('greenboard', 'Greenboard'),
-        ('glass', 'Glass Board'),
-        ('paper', 'Paper'),
-    )
-    
+
     session_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     class_obj = models.ForeignKey(Class, on_delete=models.CASCADE, related_name='sessions')
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_sessions')
     
     class_type = models.CharField(max_length=10, choices=CLASS_TYPE_CHOICES, default='online')
-    board_type = models.CharField(max_length=20, choices=BOARD_TYPE_CHOICES, default='whiteboard')
+
     pattern_code = models.CharField(max_length=50, blank=True, null=True)
     instruction_card = models.TextField(blank=True, null=True)
     shape_data = models.JSONField(blank=True, null=True)

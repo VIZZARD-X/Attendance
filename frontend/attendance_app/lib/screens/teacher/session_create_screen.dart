@@ -25,7 +25,7 @@ class _SessionPageState extends State<SessionPage>
   String? selectedSubjectName;
   String? selectedSemester;
   String selectedClassType = 'online'; // Default to online
-  String selectedBoardType = 'whiteboard'; // Default board type
+
   final TextEditingController durationController = TextEditingController();
 
   Timer? countdownTimer;
@@ -87,7 +87,6 @@ class _SessionPageState extends State<SessionPage>
         classId: int.parse(selectedSubjectId!),
         durationMinutes: durationMinutes,
         classType: selectedClassType, // Pass class type
-        boardType: selectedBoardType, // Pass board type
       );
 
       if (!mounted) return;
@@ -438,59 +437,7 @@ class _SessionPageState extends State<SessionPage>
                                   ),
                                   SizedBox(height: isMobile ? 16 : 24),
                                   
-                                  if (selectedClassType == 'offline') ...[
-                                    Text(
-                                      "Board Type",
-                                      style: TextStyle(
-                                        fontSize: isMobile ? 14 : 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.grey[700],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(16),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.05),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                                      child: DropdownButtonFormField<String>(
-                                        decoration: const InputDecoration(
-                                          border: InputBorder.none,
-                                          prefixIcon: Icon(Icons.dashboard_rounded, color: Color(0xFF007C91)),
-                                          contentPadding: EdgeInsets.symmetric(vertical: 18),
-                                        ),
-                                        dropdownColor: Colors.white,
-                                        isExpanded: true,
-                                        value: selectedBoardType,
-                                        items: const [
-                                          DropdownMenuItem(
-                                            value: 'whiteboard',
-                                            child: Text('Whiteboard'),
-                                          ),
-                                          DropdownMenuItem(
-                                            value: 'chalkboard',
-                                            child: Text('Chalkboard'),
-                                          ),
-                                        ],
-                                        onChanged: (value) {
-                                          if (value != null) {
-                                            setState(() {
-                                              selectedBoardType = value;
-                                            });
-                                          }
-                                        },
-                                      ),
-                                    ),
-                                    SizedBox(height: isMobile ? 16 : 24),
-                                  ],
+
 
                                   // Duration
                                   Text(

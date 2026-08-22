@@ -685,4 +685,25 @@ class ClassService {
       return {};
     }
   }
+
+  Future<Map<String, dynamic>> joinClass(String classCode) async {
+    try {
+      final token = await StorageService.read(key: 'token');
+      final response = await _dio.post(
+        '/classes/join/',
+        data: {'class_code': classCode},
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': response.data['message']};
+      }
+      return {'success': false, 'message': 'Failed to join class'};
+    } catch (e) {
+      print('Error joining class: $e');
+      if (e is DioException && e.response != null) {
+        return {'success': false, 'message': e.response?.data['error'] ?? 'Unknown error'};
+      }
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }
