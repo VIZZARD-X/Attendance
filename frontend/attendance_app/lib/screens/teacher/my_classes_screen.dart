@@ -1393,7 +1393,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                               ],
                             ),
                             onTap: () {
-                              final appUrl = 'https://presence-cpe6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net';
+                              final appUrl = 'https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net';
                               final shareText = "Join my class '${classData['name']}' on Attendance App!\nClick here to join: $appUrl/#/join/${classData['code']}\nOr manually enter code: ${classData['code']}";
                               Share.share(shareText);
                             },
