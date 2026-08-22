@@ -33994,7 +33994,7 @@ b=B.dZ[(b^q.h(a,s))&255]^b>>>8
 if(--p,p>0){s=r
 continue}else break}while(!0)
 return(b^4294967295)>>>0},
-Rl(){return"https://presence-cpe6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net/api/v1"},
+Rl(){return"https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net/api/v1"},
 ku(a){var s=a==null?"":a,r=t.N
 return A.a_(["Authorization","Bearer "+s,"Bypass-Tunnel-Reminder","true"],r,r)},
 awx(){var s=0,r=A.w(t.H),q
@@ -56965,7 +56965,7 @@ $1(a){return this.a.l_()},
 $S:84}
 A.aJb.prototype={
 $0(){var s=this.a,r=J.a2(s)
-A.aZP("Join my class '"+A.i(r.h(s,"name"))+"' on Attendance App!\nClick here to join: https://presence-cpe6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net/#/join/"+A.i(r.h(s,"code"))+"\nOr manually enter code: "+A.i(r.h(s,"code")))},
+A.aZP("Join my class '"+A.i(r.h(s,"name"))+"' on Attendance App!\nClick here to join: https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net/#/join/"+A.i(r.h(s,"code"))+"\nOr manually enter code: "+A.i(r.h(s,"code")))},
 $S:0}
 A.aJc.prototype={
 $0(){return this.a.vb(this.b)},

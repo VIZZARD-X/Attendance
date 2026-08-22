@@ -30,11 +30,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,presence-cpe6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net").split(",")
-    if host.strip()
-]
+ALLOWED_HOSTS = ['*']
 
 AUTH_USER_MODEL = 'attendance.User'
 
@@ -186,7 +182,7 @@ CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         "CORS_ALLOWED_ORIGINS",
-        "http://localhost:3000,http://localhost:8080,http://localhost:5000,http://localhost:59371,https://presence-cpe6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net",
+        "http://localhost:3000,http://localhost:8080,http://localhost:5000,http://localhost:59371,https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net",
     ).split(",")
     if origin.strip()
 ]
@@ -195,7 +191,7 @@ CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "False").lower() ==
 
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "https://presence-cpe6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net").split(",")
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net").split(",")
     if origin.strip()
 ]
 
