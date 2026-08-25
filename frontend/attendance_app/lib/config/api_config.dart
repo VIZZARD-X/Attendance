@@ -15,7 +15,7 @@ class ApiConfig {
       'https://qdg6mx71-8000.inc1.devtunnels.ms/api/v1';
 
   // Change this to false to use local IP for debugging!
-  static const bool isProduction = false;
+  static const bool isProduction = true;
 
   // Your Render URL
   static const String _productionUrl =
