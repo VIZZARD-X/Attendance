@@ -9,6 +9,7 @@ import 'add_students_screen.dart';
 import '../../widgets/teacher_web_layout.dart';
 import '../../services/class_service.dart';
 import '../../widgets/teacher_drawer.dart';
+import '../../widgets/hover_wrapper.dart';
 import 'package:share_plus/share_plus.dart';
 
 class MyClassesScreen extends StatefulWidget {
@@ -1199,9 +1200,10 @@ class _MyClassesScreenState extends State<MyClassesScreen>
   }
 
   Widget _buildClassCard(Map<String, dynamic> classData, int index) {
-    return InkWell(
-      onTap: () => _showClassDetails(classData),
-      borderRadius: BorderRadius.circular(18),
+    return HoverWrapper(
+      child: InkWell(
+        onTap: () => _showClassDetails(classData),
+        borderRadius: BorderRadius.circular(18),
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -1380,6 +1382,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
             ),
           ],
         ),
+      ),
       ),
     );
   }

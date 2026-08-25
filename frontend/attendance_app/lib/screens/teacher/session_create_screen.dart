@@ -78,7 +78,7 @@ class _SessionPageState extends State<SessionPage>
   }
 
   // ✅ NEW: Start session with backend API call
-  Future<void> startSession() async {
+  Future<void> startSession({bool forceOffline = false}) async {
     if (selectedSubjectId == null || durationController.text.isEmpty) {
       _showErrorSnackBar("Please select a class and enter duration.");
       return;
@@ -94,7 +94,7 @@ class _SessionPageState extends State<SessionPage>
 
     try {
       final connectivityResults = await Connectivity().checkConnectivity();
-      final isOffline =
+      final isOffline = forceOffline ||
           connectivityResults.isEmpty ||
           connectivityResults.contains(ConnectivityResult.none);
 
@@ -544,155 +544,12 @@ class _SessionPageState extends State<SessionPage>
                                 ),
                                 SizedBox(height: isMobile ? 16 : 24),
 
-                                // Class Type Dropdown
-                                Text(
-                                  "Class Type",
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 14 : 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey[700],
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  child: DropdownButtonFormField<String>(
-                                    decoration: const InputDecoration(
-                                      border: InputBorder.none,
-                                      prefixIcon: Icon(
-                                        Icons.class_rounded,
-                                        color: Color(0xFF007C91),
-                                      ),
-                                      contentPadding: EdgeInsets.symmetric(
-                                        vertical: 18,
-                                      ),
-                                    ),
-                                    dropdownColor: Colors.white,
-                                    isExpanded: true,
-                                    value: selectedClassType,
-                                    items: const [
-                                      DropdownMenuItem(
-                                        value: 'qr',
-                                        child: Text('QR'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'pattern',
-                                        child: Text('Pattern'),
-                                      ),
-                                    ],
-                                    onChanged: (value) {
-                                      if (value != null) {
-                                        setState(() {
-                                          selectedClassType = value;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ),
                                 SizedBox(height: isMobile ? 16 : 24),
 
-                                // Duration
-                                Text(
-                                  "Duration (minutes)",
-                                  style: TextStyle(
-                                    fontSize: isMobile ? 14 : 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey[700],
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: TextField(
-                                    controller: durationController,
-                                    keyboardType: TextInputType.number,
-                                    style: TextStyle(
-                                      fontSize: isMobile ? 14 : 16,
-                                    ),
-                                    decoration: InputDecoration(
-                                      prefixIcon: const Icon(
-                                        Icons.timer_outlined,
-                                        color: Color(0xFF007C91),
-                                      ),
-                                      hintText: "e.g. 45",
-                                      hintStyle: TextStyle(
-                                        color: Colors.grey[400],
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 20,
-                                            vertical: 18,
-                                          ),
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(height: isMobile ? 16 : 24),
-
-                                // Past Session Toggle
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: SwitchListTile(
-                                    title: const Text(
-                                      "Past Session",
-                                      style: TextStyle(fontWeight: FontWeight.bold),
-                                    ),
-                                    subtitle: const Text("Create a session for a previous date"),
-                                    activeColor: const Color(0xFF007C91),
-                                    value: isPastSession,
-                                    onChanged: (bool value) {
-                                      setState(() {
-                                        isPastSession = value;
-                                        if (value && selectedStartTime == null) {
-                                          selectedStartTime = DateTime.now();
-                                        }
-                                      });
-                                    },
-                                  ),
-                                ),
-
+                                // Past Session Date & Time Picker
                                 if (isPastSession) ...[
-                                  SizedBox(height: isMobile ? 16 : 24),
                                   Text(
-                                    "Start Date & Time",
+                                    "Past Session Date & Time",
                                     style: TextStyle(
                                       fontSize: isMobile ? 14 : 16,
                                       fontWeight: FontWeight.bold,
@@ -1095,85 +952,90 @@ class _SessionPageState extends State<SessionPage>
                                     ),
                                   ),
 
-                                // Start Session Button
+                                // 4 Buttons for Starting Session
                                 if (!isSessionActive)
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: isMobile ? 48 : 56,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors:
-                                              (isCreatingSession ||
-                                                  widget.subjects.isEmpty)
-                                              ? [
-                                                  Colors.grey[400]!,
-                                                  Colors.grey[500]!,
-                                                ]
-                                              : [
-                                                  const Color(0xFF007C91),
-                                                  const Color(0xFF0097A7),
-                                                ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(16),
-                                        boxShadow:
-                                            (!isCreatingSession &&
-                                                widget.subjects.isNotEmpty)
-                                            ? [
-                                                BoxShadow(
-                                                  color: const Color(
-                                                    0xFF007C91,
-                                                  ).withOpacity(0.4),
-                                                  blurRadius: 15,
-                                                  offset: const Offset(0, 8),
-                                                ),
-                                              ]
-                                            : [],
-                                      ),
-                                      child: ElevatedButton.icon(
-                                        onPressed:
-                                            (isCreatingSession ||
-                                                widget.subjects.isEmpty)
-                                            ? null
-                                            : startSession,
-                                        icon: isCreatingSession
-                                            ? const SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                      color: Colors.white,
-                                                      strokeWidth: 2,
-                                                    ),
-                                              )
-                                            : const Icon(
-                                                Icons.play_circle_fill_rounded,
-                                                size: 24,
-                                              ),
-                                        label: Text(
-                                          isCreatingSession
-                                              ? "Creating..."
-                                              : widget.subjects.isEmpty
-                                              ? "No Classes Available"
-                                              : "Start Session",
-                                          style: TextStyle(
-                                            fontSize: isMobile ? 16 : 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.transparent,
-                                          shadowColor: Colors.transparent,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              16,
+                                  Column(
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: _buildSessionButton(
+                                              title: "Start QR Session",
+                                              icon: Icons.qr_code_2_rounded,
+                                              colors: [const Color(0xFF007C91), const Color(0xFF0097A7)],
+                                              isMobile: isMobile,
+                                              onTap: () {
+                                                setState(() {
+                                                  selectedClassType = 'qr';
+                                                  isPastSession = false;
+                                                });
+                                                startSession();
+                                              },
                                             ),
                                           ),
-                                        ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: _buildSessionButton(
+                                              title: "Start Pattern Session",
+                                              icon: Icons.gesture_rounded,
+                                              colors: [const Color(0xFF2DC1A5), const Color(0xFFCBF0E8)],
+                                              textColor: Colors.black87,
+                                              isMobile: isMobile,
+                                              onTap: () {
+                                                setState(() {
+                                                  selectedClassType = 'pattern';
+                                                  isPastSession = false;
+                                                });
+                                                startSession();
+                                              },
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: _buildSessionButton(
+                                              title: "Start Offline Session",
+                                              icon: Icons.wifi_off_rounded,
+                                              colors: [const Color(0xFFFDBB49), const Color(0xFFFEF3DE)],
+                                              textColor: Colors.black87,
+                                              isMobile: isMobile,
+                                              onTap: () {
+                                                setState(() {
+                                                  selectedClassType = 'qr';
+                                                  isPastSession = false;
+                                                });
+                                                startSession(forceOffline: true);
+                                              },
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: _buildSessionButton(
+                                              title: "Create Past Session",
+                                              icon: Icons.history_rounded,
+                                              colors: [const Color(0xFF8F939A), const Color(0xFFE2E4E7)],
+                                              textColor: Colors.black87,
+                                              isMobile: isMobile,
+                                              onTap: () {
+                                                setState(() {
+                                                  selectedClassType = 'qr';
+                                                  isPastSession = true;
+                                                  if (selectedStartTime == null) {
+                                                    selectedStartTime = DateTime.now();
+                                                  }
+                                                });
+                                                if (selectedStartTime != null) {
+                                                  startSession();
+                                                }
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                               ],
                             ),
@@ -1198,5 +1060,73 @@ class _SessionPageState extends State<SessionPage>
     );
 
     return mobileChild;
+  }
+
+  Widget _buildSessionButton({
+    required String title,
+    required IconData icon,
+    required List<Color> colors,
+    required bool isMobile,
+    required VoidCallback onTap,
+    Color textColor = Colors.white,
+  }) {
+    return Container(
+      height: isMobile ? 60 : 70,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: (isCreatingSession || widget.subjects.isEmpty)
+              ? [Colors.grey[300]!, Colors.grey[400]!]
+              : colors,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: (!isCreatingSession && widget.subjects.isNotEmpty)
+            ? [
+                BoxShadow(
+                  color: colors.first.withOpacity(0.4),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: (isCreatingSession || widget.subjects.isEmpty) ? null : onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isCreatingSession)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                else
+                  Icon(icon, color: textColor, size: isMobile ? 20 : 24),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: isMobile ? 12 : 14,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

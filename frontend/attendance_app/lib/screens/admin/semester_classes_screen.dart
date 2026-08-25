@@ -168,7 +168,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
           controller: _searchController,
           onChanged: (v) => setState(() => _searchQuery = v),
           decoration: InputDecoration(
-            hintText: 'Search by name, email or roll no',
+            hintText: 'Search by name or email',
             hintStyle: TextStyle(
               color: Colors.black.withValues(alpha: 0.3),
               fontSize: 14,
@@ -309,12 +309,13 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                       if (classes.isNotEmpty)
                         Expanded(
                           child: Text(
-                            'Classes: ${classes.map((c) => c['class_code']).join(', ')}',
+                            'Classes: ${classes.map((c) => c['class_name']).join(', ')}',
                             style: TextStyle(
                               fontSize: 11,
-                              color: const Color(0xFF007C91).withOpacity(0.8),
+                              color: Colors.black.withOpacity(0.5),
                             ),
                             overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ),
                     ],
@@ -476,7 +477,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
             'Remove Student',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          content: Text('Remove $studentName from ${cls['class_code']}?'),
+          content: Text('Remove $studentName from ${cls['class_name']}?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -495,7 +496,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        '$studentName removed from ${cls['class_code']}',
+                        '$studentName removed from ${cls['class_name']}',
                       ),
                       backgroundColor: const Color(0xFF007C91),
                     ),
@@ -553,8 +554,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                     final isSelected = selectedClasses.contains(classId);
                     return CheckboxListTile(
                       value: isSelected,
-                      title: Text(cls['class_code'] ?? ''),
-                      subtitle: Text(cls['class_code'] ?? ''),
+                      title: Text(cls['class_name'] ?? 'Unknown Class'),
                       controlAffinity: ListTileControlAffinity.leading,
                       dense: true,
                       onChanged: (v) {

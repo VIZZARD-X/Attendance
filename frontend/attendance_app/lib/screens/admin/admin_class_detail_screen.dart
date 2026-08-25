@@ -96,7 +96,7 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    '$_classCode \u2022 ${_students.length} students',
+                    '${_students.length} students',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF6B7280),

@@ -11,6 +11,7 @@ import '../../widgets/teacher_drawer.dart';
 import 'dart:async';
 import '../../services/sync_service.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../widgets/hover_wrapper.dart';
 
 
 class TeacherAttendanceHistoryScreen extends StatefulWidget {
@@ -741,8 +742,9 @@ class _TeacherAttendanceHistoryScreenState
     // ✅ ADD THIS: Convert UTC to local time
     final markedAt = DateTime.parse(record['marked_at']).toLocal();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+    return HoverWrapper(
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
       padding: EdgeInsets.all(isMobile ? 12 : 14),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -879,6 +881,7 @@ class _TeacherAttendanceHistoryScreenState
             ],
           ),
         ],
+      ),
       ),
     );
   }
