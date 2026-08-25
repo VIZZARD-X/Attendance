@@ -65,31 +65,31 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
 
     switch (title) {
       case 'Dashboard':
-        await Navigator.pushReplacement(
+        await Navigator.push(
           context,
           _fadeRoute(const AdminDashboardPage()),
         );
         break;
       case 'Manage Students':
-        await Navigator.pushReplacement(
+        await Navigator.push(
           context,
           _fadeRoute(const ManageStudentsScreen()),
         );
         break;
       case 'Manage Teachers':
-        await Navigator.pushReplacement(
+        await Navigator.push(
           context,
           _fadeRoute(const ManageTeachersScreen()),
         );
         break;
       case 'Reset Login':
-        await Navigator.pushReplacement(
+        await Navigator.push(
           context,
           _fadeRoute(const ResetLoginScreen()),
         );
         break;
       case 'Profile':
-        await Navigator.pushReplacement(
+        await Navigator.push(
           context,
           _fadeRoute(const AdminProfileScreen()),
         );

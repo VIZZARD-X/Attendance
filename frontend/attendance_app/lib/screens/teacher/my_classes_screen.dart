@@ -1027,11 +1027,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
       body: SafeArea(child: mainContent),
     );
 
-    return TeacherWebLayout(
-      currentRoute: 'My Classes',
-      mobileChild: mobileChild,
-      desktopBody: mainContent,
-    );
+    return mobileChild;
   }
 
   Widget _buildAppBar(bool isMobile) {

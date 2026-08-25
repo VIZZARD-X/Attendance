@@ -579,37 +579,38 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
             onPressed: _endSession,
             tooltip: 'End Session',
           ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'cancel') {
-                _cancelSession();
-              } else if (value == 'mark_all') {
-                _markAllPresent();
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'mark_all',
-                child: Row(
-                  children: [
-                    Icon(Icons.done_all, color: Colors.green),
-                    SizedBox(width: 8),
-                    Text('Mark All Present'),
-                  ],
+          if (widget.sessionData['is_offline'] != true)
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'cancel') {
+                  _cancelSession();
+                } else if (value == 'mark_all') {
+                  _markAllPresent();
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'mark_all',
+                  child: Row(
+                    children: [
+                      Icon(Icons.done_all, color: Colors.green),
+                      SizedBox(width: 8),
+                      Text('Mark All Present'),
+                    ],
+                  ),
                 ),
-              ),
-              const PopupMenuItem(
-                value: 'cancel',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete_forever, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Cancel Session', style: TextStyle(color: Colors.red)),
-                  ],
+                const PopupMenuItem(
+                  value: 'cancel',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_forever, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('Cancel Session', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
       body: PopScope(

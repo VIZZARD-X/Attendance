@@ -29,11 +29,12 @@ class _TeacherDrawerState extends State<TeacherDrawer> {
 
   Future<void> _loadUserData() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final authService = AuthService();
+      final user = await authService.getCurrentUser();
       if (mounted) {
         setState(() {
-          teacherName = prefs.getString('name') ?? 'Teacher';
-          username = prefs.getString('username') ?? 'teacher';
+          teacherName = user?['first_name'] ?? 'Teacher';
+          username = user?['username'] ?? 'teacher';
         });
       }
     } catch (e) {

@@ -409,11 +409,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
       body: mainContent,
     );
 
-    return TeacherWebLayout(
-      currentRoute: 'Profile',
-      mobileChild: mobileChild,
-      desktopBody: mainContent,
-    );
+    return mobileChild;
   }
 
   Widget _profileStatCard(String title, String value, Color color) {

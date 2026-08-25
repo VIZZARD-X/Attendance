@@ -11,7 +11,7 @@ import '../../widgets/teacher_drawer.dart';
 import 'dart:async';
 import '../../services/sync_service.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'session_edit_screen.dart';
+
 
 class TeacherAttendanceHistoryScreen extends StatefulWidget {
   const TeacherAttendanceHistoryScreen({super.key});
@@ -284,11 +284,7 @@ class _TeacherAttendanceHistoryScreenState
       body: mainContent,
     );
 
-    return TeacherWebLayout(
-      currentRoute: 'Attendance History',
-      mobileChild: mobileChild,
-      desktopBody: mainContent,
-    );
+    return mobileChild;
   }
 
   Widget _buildModernAppBar(bool isMobile) {
@@ -608,29 +604,9 @@ class _TeacherAttendanceHistoryScreenState
             horizontal: 12,
             vertical: 4,
           ),
-          trailing: IconButton(
-            icon: const Icon(Icons.edit, color: Color(0xFF007C91)),
-            onPressed: () async {
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SessionEditScreen(
-                    sessionData: {
-                      'session_id': hasSessionId ? sessionKey : records.first['session_id'],
-                      'class_id': records.first['class_id'],
-                      'class_name': sessionTitle,
-                      'start_time': records.first['marked_at'],
-                      'duration_minutes': records.first['duration_minutes'] ?? 45,
-                    },
-                  ),
-                ),
-              );
-              if (result == true) {
-                _loadAttendanceHistory();
-              }
-            },
-            tooltip: 'Edit Session',
-          ),
+          trailing: hasSessionId
+                ? const Icon(Icons.chevron_right, color: Colors.grey)
+                : null,
           leading: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(

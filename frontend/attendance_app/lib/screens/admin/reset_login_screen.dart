@@ -177,11 +177,7 @@ class _ResetLoginScreenState extends State<ResetLoginScreen> {
       body: SafeArea(child: mainContent),
     );
 
-    return AdminWebLayout(
-      currentRoute: 'Reset Login',
-      mobileChild: mobileChild,
-      desktopBody: mainContent,
-    );
+    return mobileChild;
   }
 
   PreferredSizeWidget _buildTopBar(bool isMobile) {

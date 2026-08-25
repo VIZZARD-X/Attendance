@@ -71,13 +71,13 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
 
     switch (title) {
       case 'Dashboard':
-        await Navigator.pushReplacement(
+        await Navigator.push(
           context,
           _fadeRoute(const TeacherDashboardWeb()),
         );
         break;
       case 'My Classes':
-        await Navigator.pushReplacement(
+        await Navigator.push(
           context,
           _fadeRoute(const MyClassesScreen()),
         );
@@ -86,13 +86,13 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
         await _navigateToCreateSession();
         break;
       case 'Attendance History':
-        await Navigator.pushReplacement(
+        await Navigator.push(
           context,
           _fadeRoute(const TeacherAttendanceHistoryScreen()),
         );
         break;
       case 'Profile':
-        await Navigator.pushReplacement(
+        await Navigator.push(
           context,
           _fadeRoute(const TeacherProfileScreen()),
         );

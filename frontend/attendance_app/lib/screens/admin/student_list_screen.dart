@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/class_service.dart';
+import '../../widgets/hover_wrapper.dart';
 
 abstract class _AppColors {
   static const tealDark = Color(0xFF007C91);
@@ -557,7 +558,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
         controller: _searchController,
         onChanged: (v) => setState(() => _searchQuery = v),
         decoration: InputDecoration(
-          hintText: 'Search by name, email or roll no',
+          hintText: 'Search by name, email or username',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           prefixIcon: const Icon(
             Icons.search,
@@ -677,7 +678,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 controller: _searchController,
                 onChanged: (v) => setState(() => _searchQuery = v),
                 decoration: InputDecoration(
-                  hintText: 'Search by name, email or roll no',
+                  hintText: 'Search by name, email or username',
                   hintStyle: TextStyle(
                     color: Colors.black.withValues(alpha: 0.3),
                     fontSize: isCompact ? 14 : 18,
@@ -962,10 +963,11 @@ class _StudentListScreenState extends State<StudentListScreen> {
         _showDeleteStudentDialog(student);
         return false;
       },
-      child: InkWell(
-        onTap: () => _showAccessDialog(student),
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
+      child: HoverWrapper(
+        child: InkWell(
+          onTap: () => _showAccessDialog(student),
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -1082,6 +1084,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

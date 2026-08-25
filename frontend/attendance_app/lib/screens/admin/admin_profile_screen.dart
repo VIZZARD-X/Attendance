@@ -100,7 +100,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
       decoration: const BoxDecoration(color: Color(0xFF0288A3)),
       child: Column(
         children: [
-          if (!isDesktop) _buildTopBar(isMobile),
+          _buildTopBar(isMobile),
           Expanded(
             child: isLoading
                 ? const Center(
@@ -119,40 +119,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
         ],
       ),
     );
-
+    
     Widget mobileChild = Scaffold(body: SafeArea(child: mainContent));
 
-    return AdminWebLayout(
-      currentRoute: 'Profile',
-      mobileChild: mobileChild,
-      desktopBody: Scaffold(
-        body: SafeArea(
-          child: Container(
-            decoration: const BoxDecoration(color: Color(0xFF0288A3)),
-            child: Column(
-              children: [
-                _buildTopBar(isMobile),
-                Expanded(
-                  child: isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(color: Colors.white),
-                        )
-                      : SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          child: Padding(
-                            padding: EdgeInsets.all(isMobile ? 16 : 40),
-                            child: isDesktop
-                                ? _buildDesktopContent()
-                                : _buildMobileContent(isMobile),
-                          ),
-                        ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    return mobileChild;
   }
 
   Widget _buildTopBar(bool isMobile) {

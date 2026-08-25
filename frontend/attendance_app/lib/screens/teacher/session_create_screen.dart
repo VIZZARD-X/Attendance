@@ -1197,10 +1197,6 @@ class _SessionPageState extends State<SessionPage>
       body: mainContent,
     );
 
-    return TeacherWebLayout(
-      currentRoute: 'Create Session',
-      mobileChild: mobileChild,
-      desktopBody: mainContent,
-    );
+    return mobileChild;
   }
 }

@@ -222,11 +222,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
       body: Stack(children: [SafeArea(child: mainContent)]),
     );
 
-    return AdminWebLayout(
-      currentRoute: 'Manage Students',
-      mobileChild: mobileChild,
-      desktopBody: mainContent,
-    );
+    return mobileChild;
   }
 
   PreferredSizeWidget _buildTopBar(bool isMobile) {

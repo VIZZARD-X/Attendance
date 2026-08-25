@@ -22,6 +22,7 @@ class SyncService {
   }
 
   void _startPeriodicSync() {
+    if (kIsWeb) return;
     // Try to sync every 30 seconds automatically for edge cases where the user remains online
     _syncTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       syncQueueToServer();
@@ -110,7 +111,24 @@ class SyncService {
     );
   }
 
+  Future<void> enqueueOfflineSession(Map<String, dynamic> sessionData) async {
+    if (kIsWeb) return;
+    final db = await database;
+    await db.insert('offline_sessions', {
+      'id': sessionData['id'],
+      'class_id': sessionData['class_id'],
+      'class_type': sessionData['class_type'],
+      'duration_minutes': sessionData['duration_minutes'],
+      'start_time': sessionData['start_time'],
+      'end_time': sessionData['end_time'],
+      'shape_data': sessionData['shape_data'],
+      'status': 'pending',
+    });
+    debugPrint('Queued offline session ${sessionData['id']}');
+  }
+
   Future<void> enqueuePatternScan(String imagePath, String timestamp) async {
+    if (kIsWeb) return;
     final db = await database;
     await db.insert('offline_queue', {
       'image_path': imagePath,
@@ -164,6 +182,7 @@ class SyncService {
   }
 
   Future<void> syncQueueToServer() async {
+    if (kIsWeb) return;
     if (_isSyncing) return;
     _isSyncing = true;
     bool anythingSynced = false;
@@ -313,6 +332,7 @@ class SyncService {
           final result = await _attendanceService.markAttendance(
             sessionId,
             isOfflineSync: true,
+            timestamp: timestamp,
           );
           if (result['success']) {
             await db.update(
@@ -341,6 +361,7 @@ class SyncService {
   }
 
   Future<void> enqueueQRScan(String sessionId, String timestamp) async {
+    if (kIsWeb) return;
     final db = await database;
     await db.insert('offline_qr_queue', {
       'session_id': sessionId,

@@ -161,11 +161,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
       ),
     );
 
-    return AdminWebLayout(
-      currentRoute: 'Manage Teachers',
-      mobileChild: mobileChild,
-      desktopBody: mainContent,
-    );
+    return mobileChild;
   }
 
   PreferredSizeWidget _buildTopBar(bool isMobile) {

@@ -604,6 +604,11 @@ def mark_attendance(request, session_id):
         )
     
     is_offline_sync = request.data.get('is_offline_sync', False)
+    timestamp_str = request.data.get('timestamp')
+    scan_time = None
+    if is_offline_sync and timestamp_str:
+        from django.utils.dateparse import parse_datetime
+        scan_time = parse_datetime(timestamp_str)
     
     # Check if session is active (unless offline sync)
     if not is_offline_sync:
@@ -642,7 +647,7 @@ def mark_attendance(request, session_id):
         if is_offline_sync and existing_record.status == 'absent':
             # Allow offline sync to overwrite 'absent' with 'present'
             existing_record.status = 'present'
-            existing_record.marked_at = timezone.now()
+            existing_record.marked_at = scan_time if scan_time else timezone.now()
             existing_record.save()
             return Response({
                 'message': f'Attendance marked for {session.class_obj.class_code}',
@@ -663,6 +668,9 @@ def mark_attendance(request, session_id):
         student=user,
         status='present'
     )
+    if scan_time:
+        record.marked_at = scan_time
+        record.save()
     
     return Response({
         'message': f'Attendance marked for {session.class_obj.class_code}',
