@@ -34,18 +34,19 @@ class _MagicalDashboardCardState extends State<MagicalDashboardCard>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..addStatusListener((status) {
-        if (!mounted || !_isVisible) return;
-        
-        if (status == AnimationStatus.completed) {
-          _pulseController.reverse();
-        } else if (status == AnimationStatus.dismissed) {
-          _pulseController.forward();
-        }
-      });
+    _pulseController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 1500),
+        )..addStatusListener((status) {
+          if (!mounted || !_isVisible) return;
+
+          if (status == AnimationStatus.completed) {
+            _pulseController.reverse();
+          } else if (status == AnimationStatus.dismissed) {
+            _pulseController.forward();
+          }
+        });
     _pulseController.forward();
 
     _shimmerController = AnimationController(
@@ -57,11 +58,11 @@ class _MagicalDashboardCardState extends State<MagicalDashboardCard>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    
+
     // Stop animations before disposing
     _pulseController.stop();
     _shimmerController.stop();
-    
+
     _pulseController.dispose();
     _shimmerController.dispose();
     super.dispose();
@@ -70,8 +71,8 @@ class _MagicalDashboardCardState extends State<MagicalDashboardCard>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
-    if (state == AppLifecycleState.paused || 
+
+    if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       _pauseAnimations();
     } else if (state == AppLifecycleState.resumed) {
@@ -98,7 +99,7 @@ class _MagicalDashboardCardState extends State<MagicalDashboardCard>
 
   void _startShimmer() {
     if (!mounted) return;
-    
+
     if (_shimmerController.status == AnimationStatus.dismissed) {
       _shimmerController.repeat();
     }
@@ -106,7 +107,7 @@ class _MagicalDashboardCardState extends State<MagicalDashboardCard>
 
   void _stopShimmer() {
     if (!mounted) return;
-    
+
     _shimmerController.stop();
     _shimmerController.reset();
   }

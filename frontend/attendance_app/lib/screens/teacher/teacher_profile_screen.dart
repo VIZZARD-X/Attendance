@@ -59,10 +59,10 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
     try {
       // Get user profile
       final profile = await _profileService.getUserProfile();
-      
+
       // Get teacher's classes
       final classes = await _profileService.getTeacherClasses();
-      
+
       // Calculate total students
       int students = 0;
       for (var classData in classes) {
@@ -144,7 +144,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
             ),
           ),
         ),
-        
+
         SafeArea(
           child: Column(
             children: [
@@ -172,7 +172,10 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
                     if (isMobile)
                       Builder(
                         builder: (context) => IconButton(
-                          icon: const Icon(Icons.menu_rounded, color: Colors.white),
+                          icon: const Icon(
+                            Icons.menu_rounded,
+                            color: Colors.white,
+                          ),
                           onPressed: () => Scaffold.of(context).openDrawer(),
                         ),
                       )
@@ -183,7 +186,11 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                          icon: const Icon(
+                            Icons.arrow_back_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                           onPressed: () => Navigator.pop(context),
                           tooltip: 'Back',
                         ),
@@ -205,7 +212,10 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
                           if (!isMobile)
                             const Text(
                               'View your profile details',
-                              style: TextStyle(color: Colors.white70, fontSize: 14),
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
                             ),
                         ],
                       ),
@@ -226,7 +236,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             const SizedBox(height: 20),
-                            
+
                             // Profile Avatar with Halo
                             AnimatedBuilder(
                               animation: _haloAnim,
@@ -249,7 +259,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
                                       radius: isMobile ? 60 : 80,
                                       backgroundColor: Colors.white,
                                       child: Text(
-                                        userName.isNotEmpty ? userName[0].toUpperCase() : 'T',
+                                        userName.isNotEmpty
+                                            ? userName[0].toUpperCase()
+                                            : 'T',
                                         style: TextStyle(
                                           fontSize: isMobile ? 48 : 64,
                                           fontWeight: FontWeight.bold,
@@ -261,141 +273,142 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
                                 );
                               },
                             ),
-                            
+
                             const SizedBox(height: 20),
-                            
+
                             // Name & Role
                             FadeTransition(
                               opacity: _fadeIn,
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      userName,
-                                      style: const TextStyle(
-                                        fontSize: 26,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                        letterSpacing: 0.5,
-                                      ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    userName,
+                                    style: const TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
                                     ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      userRole,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.white70,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              
-                              const SizedBox(height: 30),
-                              
-                              // Stats Cards
-                              Center(
-                                child: Wrap(
-                                  spacing: 18,
-                                  runSpacing: 18,
-                                  alignment: WrapAlignment.center,
-                                  children: [
-                                    _profileStatCard(
-                                      "Classes Managed",
-                                      totalClasses.toString(),
-                                      Colors.orange,
-                                    ),
-                                    _profileStatCard(
-                                      "Total Students",
-                                      totalStudents.toString(),
-                                      Colors.teal,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              
-                              const SizedBox(height: 30),
-                              
-                              // Email Info
-                              FadeTransition(
-                                opacity: _fadeIn,
-                                child: Container(
-                                  padding: const EdgeInsets.all(18),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.white30),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.email_rounded,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            const Text(
-                                              'Email Address',
-                                              style: TextStyle(
-                                                color: Colors.white70,
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              userEmail,
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    userRole,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.white70,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                              
-                              const SizedBox(height: 40),
-                              
-                              // Action Buttons
-                              FadeTransition(
-                                opacity: _fadeIn,
+                            ),
+
+                            const SizedBox(height: 30),
+
+                            // Stats Cards
+                            Center(
+                              child: Wrap(
+                                spacing: 18,
+                                runSpacing: 18,
+                                alignment: WrapAlignment.center,
+                                children: [
+                                  _profileStatCard(
+                                    "Classes Managed",
+                                    totalClasses.toString(),
+                                    Colors.orange,
+                                  ),
+                                  _profileStatCard(
+                                    "Total Students",
+                                    totalStudents.toString(),
+                                    Colors.teal,
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 30),
+
+                            // Email Info
+                            FadeTransition(
+                              opacity: _fadeIn,
+                              child: Container(
+                                padding: const EdgeInsets.all(18),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.white30),
+                                ),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    _profileActionButton(
-                                      Icons.logout,
-                                      "Logout",
-                                      Colors.redAccent,
-                                      _logout,
+                                    const Icon(
+                                      Icons.email_rounded,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Email Address',
+                                            style: TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            userEmail,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
-                              
-                              const SizedBox(height: 40),
-                            ],
-                          ),
+                            ),
+
+                            const SizedBox(height: 40),
+
+                            // Action Buttons
+                            FadeTransition(
+                              opacity: _fadeIn,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _profileActionButton(
+                                    Icons.logout,
+                                    "Logout",
+                                    Colors.redAccent,
+                                    _logout,
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 40),
+                          ],
                         ),
-                ),
-              ],
-            ),
+                      ),
+              ),
+            ],
           ),
-        ],
-      );
+        ),
+      ],
+    );
 
     Widget mobileChild = Scaffold(
       drawer: isMobile ? const TeacherDrawer(currentRoute: 'Profile') : null,
       body: mainContent,
     );
-    
+
     return TeacherWebLayout(
       currentRoute: 'Profile',
       mobileChild: mobileChild,
@@ -408,9 +421,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
       width: 140,
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [color.withOpacity(0.85), color],
-        ),
+        gradient: LinearGradient(colors: [color.withOpacity(0.85), color]),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -452,9 +463,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen>
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 6,
       ),
       icon: Icon(icon, size: 20, color: Colors.white),

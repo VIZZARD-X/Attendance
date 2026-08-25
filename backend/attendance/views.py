@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from datetime import timedelta
 
 
@@ -213,7 +214,6 @@ def get_class_students(request, class_id):
                 'id': student.id,
                 'username': student.username,
                 'email': student.email,
-                'roll_no': profile.roll_no,
                 'enrolled_at': enrollment.enrolled_at
             })
         except StudentProfile.DoesNotExist:
@@ -221,7 +221,6 @@ def get_class_students(request, class_id):
                 'id': student.id,
                 'username': student.username,
                 'email': student.email,
-                'roll_no': 'N/A',
                 'enrolled_at': enrollment.enrolled_at
             })
     
@@ -291,43 +290,32 @@ def add_student_to_class(request, class_id):
                     student=existing_user
                 )
                 
-                try:
-                    roll_no = existing_user.student_profile.roll_no
-                except:
-                    roll_no = 'N/A'
-                
                 return Response({
-                    'message': f"Student {existing_user.username} enrolled successfully",
+                    'message': f'Student {existing_user.username} successfully added to class',
                     'student': {
                         'id': existing_user.id,
                         'username': existing_user.username,
                         'email': existing_user.email,
-                        'roll_no': roll_no,
                         'status': 'existing'
                     }
                 }, status=status.HTTP_201_CREATED)
-            
+                
             else:
                 # New student - create user and profile
-                required_for_new = ['name', 'password', 'rollNo']
+                required_for_new = ['name', 'password']
                 for field in required_for_new:
                     if field not in student_data:
                         return Response(
-                            {'error': f'Missing required field for new student: {field}'},
+                            {'error': f"Missing required field: {field} for new student"},
                             status=status.HTTP_400_BAD_REQUEST
                         )
                 
-                # Check if roll number exists
-                if StudentProfile.objects.filter(roll_no=student_data['rollNo']).exists():
-                    return Response(
-                        {'error': f"Roll number {student_data['rollNo']} already exists"},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-                
-                # Generate unique username from email
+                # Generate unique username
+                email = student_data['email']
                 username = email.split('@')[0]
                 base_username = username
                 counter = 1
+                
                 while User.objects.filter(username=username).exists():
                     username = f"{base_username}{counter}"
                     counter += 1
@@ -340,25 +328,23 @@ def add_student_to_class(request, class_id):
                     role='student'
                 )
                 
-                # Create student profile (FIXED)
+                # Create profile
                 StudentProfile.objects.create(
-                    student=student,  # ✅ Correct field name
-                    roll_no=student_data['rollNo']
+                    student=student
                 )
                 
-                # Enroll in class
+                # Create enrollment
                 Enrollment.objects.create(
                     class_obj=class_obj,
                     student=student
                 )
                 
                 return Response({
-                    'message': f"New student {student_data['name']} created and enrolled",
+                    'message': f'New student {username} created and added to class',
                     'student': {
                         'id': student.id,
                         'username': student.username,
                         'email': student.email,
-                        'roll_no': student_data['rollNo'],
                         'status': 'new'
                     }
                 }, status=status.HTTP_201_CREATED)
@@ -425,13 +411,8 @@ def create_session(request):
     
     class_id = serializer.validated_data['class_id']
     duration_minutes = serializer.validated_data['duration_minutes']
-    reference_image = request.FILES.get('reference_image')
-
-    class_type = serializer.validated_data.get('class_type', 'online')
-
-    
-    # Reference image is uploaded later for offline sessions via a separate endpoint.
-    # Online sessions don't require it at all.
+    class_type = serializer.validated_data.get('class_type', 'qr')
+    start_time = serializer.validated_data.get('start_time') or timezone.now()
     
     try:
         class_obj = Class.objects.get(id=class_id, teacher=user)
@@ -442,8 +423,13 @@ def create_session(request):
         )
     
     # Calculate end time
-    start_time = timezone.now()
     end_time = start_time + timedelta(minutes=duration_minutes)
+    
+    # If the session end time is already in the past, mark it as completed
+    session_status = 'active'
+    if end_time < timezone.now():
+        session_status = 'completed'
+
     
     # Generate session UUID
     session_uuid = uuid.uuid4()
@@ -452,7 +438,7 @@ def create_session(request):
     import string
     
     instruction_card = None
-    if class_type == 'offline':
+    if class_type == 'pattern':
         from attendance.verification import generate_shape_combo
         shape_combo, instruction_card, pattern_code = generate_shape_combo()
     else:
@@ -480,17 +466,18 @@ def create_session(request):
         session_id=session_uuid,
         class_obj=class_obj,
         teacher=user,
+        start_time=start_time,
         duration_minutes=duration_minutes,
         end_time=end_time,
         qr_code_data=json.dumps(qr_data),
-        reference_image=reference_image,
         class_type=class_type,
 
         pattern_code=pattern_code,
         instruction_card=instruction_card,
         shape_data=shape_combo,
-        status='active'
+        status=session_status
     )
+
     
     response_serializer = SessionSerializer(session)
     return Response({
@@ -616,19 +603,22 @@ def mark_attendance(request, session_id):
             status=status.HTTP_404_NOT_FOUND
         )
     
-    # Check if session is active
-    if session.status != 'active':
-        return Response(
-            {'error': 'This session has ended'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    is_offline_sync = request.data.get('is_offline_sync', False)
     
-    # Check if session has expired
-    if not session.is_active:
-        return Response(
-            {'error': f'Session expired at {session.end_time.strftime("%I:%M %p")}'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    # Check if session is active (unless offline sync)
+    if not is_offline_sync:
+        if session.status != 'active':
+            return Response(
+                {'error': 'This session has ended'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if session has expired
+        if not session.is_active:
+            return Response(
+                {'error': f'Session expired at {session.end_time.strftime("%I:%M %p")}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
     
     # Check if student is enrolled in the class
     if not Enrollment.objects.filter(class_obj=session.class_obj, student=user).exists():
@@ -637,9 +627,30 @@ def mark_attendance(request, session_id):
             status=status.HTTP_403_FORBIDDEN
         )
     
+    # Check 24-hour expiration for offline syncs
+    if is_offline_sync:
+        time_diff = timezone.now() - session.start_time
+        if time_diff.total_seconds() > (24 * 3600):
+            return Response(
+                {'error': 'Sync window expired. Attendance must be synced within 24 hours.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
     # Check if already marked
     existing_record = AttendanceRecord.objects.filter(session=session, student=user).first()
     if existing_record:
+        if is_offline_sync and existing_record.status == 'absent':
+            # Allow offline sync to overwrite 'absent' with 'present'
+            existing_record.status = 'present'
+            existing_record.marked_at = timezone.now()
+            existing_record.save()
+            return Response({
+                'message': f'Attendance marked for {session.class_obj.class_code}',
+                'class': session.class_obj.class_name,
+                'marked_at': existing_record.marked_at,
+                'status': 'present'
+            }, status=status.HTTP_200_OK)
+
         return Response({
             'error': 'Attendance already marked',
             'marked_at': existing_record.marked_at,
@@ -664,7 +675,7 @@ def mark_attendance(request, session_id):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def upload_reference_image(request, session_id):
-    """Teacher uploads the reference pattern image for offline session"""
+    """Teacher uploads the reference pattern image for pattern session"""
     user = request.user
     
     if user.role != 'teacher':
@@ -766,7 +777,7 @@ def verify_image(request):
         )
 
     try:
-        if session.class_type == 'offline':
+        if session.class_type == 'pattern':
             if not session.pattern_code:
                 return Response(
                     {'error': 'Session has no pattern code for verification'},
@@ -832,6 +843,225 @@ def verify_image(request):
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
+def sync_offline_session(request):
+    """Teacher syncs an offline session creation and upload reference."""
+    user = request.user
+    if user.role != 'teacher':
+        return Response({'error': 'Only teachers can sync offline sessions'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        class_id = request.data.get('class_id')
+        class_type = request.data.get('class_type', 'qr')
+        duration_minutes = request.data.get('duration_minutes')
+        start_time_str = request.data.get('start_time')
+        end_time_str = request.data.get('end_time')
+        shape_data_str = request.data.get('shape_data')
+        reference_image = request.FILES.get('reference_image')
+
+        if not all([class_id, start_time_str, end_time_str, duration_minutes]):
+            return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.utils.dateparse import parse_datetime
+        start_time = parse_datetime(start_time_str)
+        end_time = parse_datetime(end_time_str)
+        
+        class_obj = Class.objects.get(id=class_id)
+        
+        session_uuid_str = request.data.get('session_id')
+        if not session_uuid_str:
+            return Response({'error': 'Missing session_id'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        session_uuid = uuid.UUID(session_uuid_str)
+        
+        existing_session = AttendanceSession.objects.filter(session_id=session_uuid).first()
+
+        if existing_session:
+            # Maybe update reference image if missing
+            if reference_image and not existing_session.reference_image:
+                existing_session.reference_image = reference_image
+                existing_session.save()
+            return Response({'message': 'Session already synced'}, status=status.HTTP_201_CREATED)
+
+        shape_data = None
+        pattern_code = None
+        instruction_card = None
+
+        if shape_data_str:
+            try:
+                shape_data = json.loads(shape_data_str)
+                pattern_code = shape_data.get('number')
+                outer = shape_data.get('outer')
+                inner = shape_data.get('inner', 'none')
+                if inner != 'none':
+                    instruction_card = f"Draw a large {outer}. Inside it, draw a smaller {inner}. Finally, write the number '{pattern_code}' inside the {inner}."
+                else:
+                    instruction_card = f"Draw a large {outer}. Finally, write the number '{pattern_code}' inside the {outer}."
+            except Exception:
+                pass
+
+        qr_data = {
+            'session_id': str(session_uuid),
+            'class_id': class_obj.id,
+            'class_code': class_obj.class_code,
+            'class_name': class_obj.class_name,
+            'semester': class_obj.semester,
+            'teacher': user.username,
+            'start_time': start_time.isoformat(),
+            'end_time': end_time.isoformat(),
+            'duration': duration_minutes,
+            'class_type': class_type,
+            'pattern_code': pattern_code
+        }
+
+        session = AttendanceSession(
+            session_id=session_uuid,
+            class_obj=class_obj,
+            teacher=user,
+            duration_minutes=duration_minutes,
+            class_type=class_type,
+            pattern_code=pattern_code,
+            instruction_card=instruction_card,
+            shape_data=shape_data,
+            qr_code_data=json.dumps(qr_data),
+            status='completed' # Offline sessions are synced after they finish usually
+        )
+        # Override start_time and end_time, which might be auto_now_add
+        session.start_time = start_time
+        session.end_time = end_time
+        
+        if reference_image:
+            session.reference_image = reference_image
+            
+        session.save()
+
+        # Update start_time because auto_now_add overrides it on save
+        AttendanceSession.objects.filter(session_id=session_uuid).update(
+            start_time=start_time,
+            end_time=end_time
+        )
+        
+        # Reload session to have correct times
+        session = AttendanceSession.objects.get(session_id=session_uuid)
+
+        # Bulk mark absent students (or present if > 24 hours)
+        enrolled_students = Enrollment.objects.filter(
+            class_obj=class_obj
+        ).select_related('student')
+        
+        already_marked = AttendanceRecord.objects.filter(
+            session=session
+        ).values_list('student_id', flat=True)
+        
+        absent_students = enrolled_students.exclude(
+            student_id__in=already_marked
+        )
+        
+        # 24-hour rule check
+        time_diff = timezone.now() - session.start_time
+        is_expired = time_diff.total_seconds() > (24 * 3600)
+        default_status = 'present' if is_expired else 'absent'
+        
+        absent_records = []
+        for enrollment in absent_students:
+            absent_records.append(
+                AttendanceRecord(
+                    session=session,
+                    student=enrollment.student,
+                    status=default_status
+                )
+            )
+        
+        if absent_records:
+            AttendanceRecord.objects.bulk_create(absent_records)
+
+        return Response({'message': 'Offline session synced successfully'}, status=status.HTTP_201_CREATED)
+    except Class.DoesNotExist:
+        return Response({'error': 'Class not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        import traceback
+        return Response({'error': str(e), 'trace': traceback.format_exc()}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def sync_offline_pattern(request):
+    """Student syncs an offline pattern scan."""
+    user = request.user
+    if user.role != 'student':
+        return Response({'error': 'Only students can sync attendance'}, status=status.HTTP_403_FORBIDDEN)
+
+    timestamp_str = request.data.get('timestamp')
+    student_image = request.FILES.get('student_image')
+
+    if not timestamp_str or not student_image:
+        return Response({'error': 'timestamp and student_image are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    scan_time = parse_datetime(timestamp_str)
+    if not scan_time:
+        return Response({'error': 'Invalid timestamp format'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Find the session active at that time for this student
+    enrolled_class_ids = Enrollment.objects.filter(student=user).values_list('class_obj_id', flat=True)
+    
+    session = AttendanceSession.objects.filter(
+        class_obj_id__in=enrolled_class_ids,
+        class_type='pattern',
+        start_time__lte=scan_time,
+        end_time__gte=scan_time
+    ).order_by('-start_time').first()
+
+    if not session:
+        return Response({'error': f'No active pattern session found for you at {scan_time.strftime("%I:%M %p")}'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Check 24-hour expiration for offline pattern syncs
+    time_diff = timezone.now() - session.start_time
+    if time_diff.total_seconds() > (24 * 3600):
+        return Response(
+            {'error': 'Sync window expired. Attendance must be synced within 24 hours.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        if not session.reference_image:
+            return Response({'error': 'Teacher has not uploaded the reference image yet'}, status=status.HTTP_400_BAD_REQUEST)
+
+        existing_record = AttendanceRecord.objects.filter(session=session, student=user).first()
+        if existing_record:
+            if existing_record.status == 'pending_review':
+                existing_record.delete()
+            elif existing_record.status == 'absent':
+                existing_record.delete()  # Will recreate below with 'present' or 'pending_review'
+            else:
+                return Response({'error': 'Attendance already marked', 'marked_at': existing_record.marked_at, 'status': existing_record.status}, status=status.HTTP_400_BAD_REQUEST)
+
+        from attendance.verification import verify_offline_code
+        
+        # Focal distance not recorded offline, pass default or assume None
+        matched, final_score, reasons = verify_offline_code(
+            session.pattern_code, session.reference_image, student_image, False
+        )
+        
+        status_val = 'present' if matched else 'pending_review'
+
+        record = AttendanceRecord.objects.create(
+            session=session,
+            student=user,
+            status=status_val,
+            verification_score=final_score,
+            verification_reasons=json.dumps(reasons)
+        )
+
+        if not matched:
+            return Response({'status': 'fail', 'error': f'Verification failed. Reasons: {", ".join(reasons)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'status': 'pass', 'message': f'Offline attendance synced for {session.class_obj.class_code}'}, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        import traceback
+        return Response({'error': f"Backend Error: {str(e)}", 'trace': traceback.format_exc()}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
 def end_session(request, session_id):
     """Teacher ends an active session and marks absent students"""
     user = request.user
@@ -848,6 +1078,29 @@ def end_session(request, session_id):
         )
     
     if session.status != 'active':
+        if session.status == 'completed':
+            # This happens if the session was created offline and synced in the background
+            enrolled_students = Enrollment.objects.filter(
+                class_obj=session.class_obj
+            ).select_related('student')
+            total_students = enrolled_students.count()
+            present_count = AttendanceRecord.objects.filter(session=session, status='present').count()
+            absent_count = total_students - present_count
+            attendance_rate = round((present_count / total_students * 100), 2) if total_students > 0 else 0
+            
+            return Response({
+                'success': True,
+                'message': 'Session already synced and ended',
+                'session': SessionSerializer(session).data,
+                'statistics': {
+                    'total_students': total_students,
+                    'present': present_count,
+                    'absent': absent_count,
+                    'attendance_rate': attendance_rate,
+                    'auto_marked_absent': 0
+                }
+            }, status=status.HTTP_200_OK)
+
         return Response(
             {'error': 'Session is not active'},
             status=status.HTTP_400_BAD_REQUEST
@@ -912,6 +1165,88 @@ def end_session(request, session_id):
             'attendance_rate': attendance_rate,
             'auto_marked_absent': auto_marked_count
         }
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def cancel_session(request, session_id):
+    """Teacher cancels/aborts a session and deletes all associated records"""
+    user = request.user
+    
+    try:
+        session = AttendanceSession.objects.get(
+            session_id=session_id,
+            teacher=user
+        )
+    except AttendanceSession.DoesNotExist:
+        return Response(
+            {'error': 'Session not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Delete the session (cascade will delete attendance records automatically)
+    session.delete()
+    
+    return Response({
+        'success': True,
+        'message': 'Session successfully cancelled and deleted.'
+    }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def mark_all_present_session(request, session_id):
+    """Teacher marks all enrolled students as present in an active session"""
+    user = request.user
+    
+    try:
+        session = AttendanceSession.objects.get(
+            session_id=session_id,
+            teacher=user
+        )
+    except AttendanceSession.DoesNotExist:
+        return Response(
+            {'error': 'Session not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    if session.status != 'active':
+        return Response(
+            {'error': 'Session is not active'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    enrolled_students = Enrollment.objects.filter(
+        class_obj=session.class_obj
+    ).select_related('student')
+    
+    # Update existing attendance records
+    existing_records = AttendanceRecord.objects.filter(session=session)
+    existing_student_ids = list(existing_records.values_list('student_id', flat=True))
+    
+    # Update all existing to present
+    existing_records.update(status='present')
+    
+    # Create records for students who haven't been marked yet
+    new_records = []
+    for enrollment in enrolled_students:
+        if enrollment.student.id not in existing_student_ids:
+            new_records.append(
+                AttendanceRecord(
+                    session=session,
+                    student=enrollment.student,
+                    status='present',
+                    marked_at=timezone.now()
+                )
+            )
+            
+    if new_records:
+        AttendanceRecord.objects.bulk_create(new_records)
+        
+    return Response({
+        'success': True,
+        'message': 'All students marked as present.'
     }, status=status.HTTP_200_OK)
 
 
@@ -1024,17 +1359,14 @@ def check_student_by_email(request):
         # Try to get student profile
         try:
             profile = user.student_profile
-            roll_no = profile.roll_no
         except StudentProfile.DoesNotExist:
-            roll_no = None
+            profile = None
         
         return Response({
-            'exists': True,
-            'student': {
+            'user': {
                 'id': user.id,
                 'username': user.username,
                 'email': user.email,
-                'roll_no': roll_no,
             }
         }, status=status.HTTP_200_OK)
         
@@ -1059,19 +1391,8 @@ def update_student_in_class(request, class_id, student_id):
         class_obj = Class.objects.get(id=class_id, teacher=user)
         enrollment = Enrollment.objects.get(class_obj=class_obj, student_id=student_id)
         
-        # Update student profile
-        profile = enrollment.student.student_profile
-        roll_no = request.data.get('roll_no')
         
-        if roll_no:
-            # Check if roll number already exists
-            if StudentProfile.objects.filter(roll_no=roll_no).exclude(student=enrollment.student).exists():
-                return Response(
-                    {'error': 'Roll number already exists'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            profile.roll_no = roll_no
-            profile.save()
+        profile.save()
         
         return Response({'message': 'Student updated successfully'})
     
@@ -1320,16 +1641,10 @@ def get_session_attendance_details(request, session_id):
         student = enrollment.student
         record = attendance_map.get(student.id)
         
-        try:
-            roll_no = student.student_profile.roll_no
-        except StudentProfile.DoesNotExist:
-            roll_no = 'N/A'
-        
         students_data.append({
             'id': student.id,
             'username': student.username,
             'email': student.email,
-            'roll_no': roll_no,
             'status': record.status if record else 'absent',
             'marked_at': record.marked_at.isoformat() if record and record.marked_at else None,
             'record_id': record.id if record else None,
@@ -1404,3 +1719,70 @@ def assetlinks_json(request):
             ]
         }
     }], safe=False)
+@api_view(['PATCH'])
+@permission_classes([permissions.IsAuthenticated])
+def edit_session(request, session_id):
+    """Edit session start time, duration, and status"""
+    try:
+        session = AttendanceSession.objects.get(session_id=session_id, teacher=request.user)
+    except AttendanceSession.DoesNotExist:
+        return Response({'error': 'Session not found or unauthorized'}, status=status.HTTP_404_NOT_FOUND)
+    
+    start_time = request.data.get('start_time')
+    duration_minutes = request.data.get('duration_minutes')
+    new_status = request.data.get('status')
+    
+    if start_time:
+        from dateutil.parser import parse
+        try:
+            session.start_time = parse(start_time)
+        except ValueError:
+            return Response({'error': 'Invalid start_time format'}, status=status.HTTP_400_BAD_REQUEST)
+            
+    if duration_minutes:
+        try:
+            session.duration_minutes = int(duration_minutes)
+        except ValueError:
+            return Response({'error': 'Invalid duration format'}, status=status.HTTP_400_BAD_REQUEST)
+            
+    # Recalculate end_time
+    session.end_time = session.start_time + timedelta(minutes=session.duration_minutes)
+    
+    if new_status and new_status in dict(AttendanceSession.STATUS_CHOICES).keys():
+        session.status = new_status
+        
+    session.save()
+    serializer = SessionSerializer(session)
+    return Response({'message': 'Session updated successfully', 'session': serializer.data})
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def update_session_attendance(request, session_id):
+    """Bulk update attendance records for a session"""
+    try:
+        session = AttendanceSession.objects.get(session_id=session_id, teacher=request.user)
+    except AttendanceSession.DoesNotExist:
+        return Response({'error': 'Session not found or unauthorized'}, status=status.HTTP_404_NOT_FOUND)
+        
+    attendance_data = request.data.get('attendance', []) # Expected list of dicts: [{'student_id': 1, 'status': 'present'}, ...]
+    if not isinstance(attendance_data, list):
+        return Response({'error': 'attendance must be a list of updates'}, status=status.HTTP_400_BAD_REQUEST)
+        
+    # Get all enrollments for this class to ensure students are actually enrolled
+    enrolled_student_ids = list(Enrollment.objects.filter(class_obj=session.class_obj).values_list('student_id', flat=True))
+    
+    updated_records = 0
+    for record_data in attendance_data:
+        student_id = record_data.get('student_id')
+        new_status = record_data.get('status')
+        if student_id not in enrolled_student_ids or new_status not in ['present', 'absent']:
+            continue
+            
+        record, created = AttendanceRecord.objects.update_or_create(
+            session=session,
+            student_id=student_id,
+            defaults={'status': new_status, 'marked_at': timezone.now()}
+        )
+        updated_records += 1
+        
+    return Response({'message': f'Successfully updated {updated_records} records'})

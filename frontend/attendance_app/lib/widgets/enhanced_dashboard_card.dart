@@ -34,20 +34,21 @@ class _EnhancedDashboardCardState extends State<EnhancedDashboardCard>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-      lowerBound: 0.985,
-      upperBound: 1.02,
-    )..addStatusListener((status) {
-        if (!mounted || !_isVisible) return;
-        
-        if (status == AnimationStatus.completed) {
-          _pulseController.reverse();
-        } else if (status == AnimationStatus.dismissed) {
-          _pulseController.forward();
-        }
-      });
+    _pulseController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 1200),
+          lowerBound: 0.985,
+          upperBound: 1.02,
+        )..addStatusListener((status) {
+          if (!mounted || !_isVisible) return;
+
+          if (status == AnimationStatus.completed) {
+            _pulseController.reverse();
+          } else if (status == AnimationStatus.dismissed) {
+            _pulseController.forward();
+          }
+        });
     _pulseController.forward();
 
     _shimmerController = AnimationController(
@@ -69,8 +70,8 @@ class _EnhancedDashboardCardState extends State<EnhancedDashboardCard>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
-    if (state == AppLifecycleState.paused || 
+
+    if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
       _pauseAnimations();
     } else if (state == AppLifecycleState.resumed) {
@@ -110,7 +111,9 @@ class _EnhancedDashboardCardState extends State<EnhancedDashboardCard>
         ? (isMobile ? 1.015 : 1.04)
         : 1.0;
     final double lift = (_hover || _pressed) ? -8 : 0;
-    final double radius = isMobile ? 12 : 24; // Increased radius to match design
+    final double radius = isMobile
+        ? 12
+        : 24; // Increased radius to match design
 
     final primaryColor = widget.gradientColors.first;
 
@@ -137,9 +140,9 @@ class _EnhancedDashboardCardState extends State<EnhancedDashboardCard>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(radius),
           gradient: LinearGradient(
-            colors: widget.gradientColors.map((c) => 
-              c.withOpacity((_hover || _pressed) ? 1.0 : 0.9)
-            ).toList(),
+            colors: widget.gradientColors
+                .map((c) => c.withOpacity((_hover || _pressed) ? 1.0 : 0.9))
+                .toList(),
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -152,10 +155,7 @@ class _EnhancedDashboardCardState extends State<EnhancedDashboardCard>
               offset: const Offset(0, 8),
             ),
           ],
-          border: Border.all(
-            color: Colors.white.withOpacity(0.2),
-            width: 1,
-          ),
+          border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
         ),
         padding: EdgeInsets.all(isMobile ? 16 : 24),
         child: Stack(

@@ -147,7 +147,10 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       backgroundColor: Colors.transparent,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
+        icon: const Icon(
+          Icons.arrow_back_rounded,
+          color: _AppColors.textPrimary,
+        ),
         onPressed: () => Navigator.pop(context),
       ),
       title: Row(
@@ -160,7 +163,11 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
               shape: BoxShape.circle,
             ),
             padding: const EdgeInsets.all(8),
-            child: const Icon(Icons.person_rounded, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.person_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           const Expanded(
@@ -193,7 +200,11 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
             ),
             borderRadius: BorderRadius.circular(63.5),
           ),
-          child: const Icon(Icons.person_rounded, color: Colors.white, size: 38),
+          child: const Icon(
+            Icons.person_rounded,
+            color: Colors.white,
+            size: 38,
+          ),
         ),
         const SizedBox(width: 20),
         Expanded(
@@ -212,21 +223,24 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
               const SizedBox(height: 4),
               const Text(
                 'Manage teacher login access',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: _AppColors.textMuted,
-                ),
+                style: TextStyle(fontSize: 16, color: _AppColors.textMuted),
               ),
             ],
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.person_add_alt_1_rounded, color: _AppColors.tealDark),
+          icon: const Icon(
+            Icons.person_add_alt_1_rounded,
+            color: _AppColors.tealDark,
+          ),
           onPressed: _showAddTeacherDialog,
           tooltip: 'Add Teacher',
         ),
         IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: _AppColors.textPrimary,
+          ),
           onPressed: () => Navigator.pop(context),
           tooltip: 'Back',
         ),
@@ -251,7 +265,11 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
               ),
               borderRadius: BorderRadius.circular(24),
             ),
-            child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
+            child: const Icon(
+              Icons.person_rounded,
+              color: Colors.white,
+              size: 26,
+            ),
           ),
           IconButton(
             icon: Icon(
@@ -290,8 +308,10 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       child: ListTile(
         leading: Icon(icon, color: Colors.white70, size: isMobile ? 24 : 20),
         title: showLabel
-            ? Text(title,
-                style: const TextStyle(color: Colors.white, fontSize: 14))
+            ? Text(
+                title,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+              )
             : null,
         onTap: () {
           if (title == 'Back' || title == 'Dashboard') {
@@ -339,8 +359,16 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                 ],
               ),
             ),
-            _buildSidebarItem(Icons.dashboard_rounded, 'Dashboard', isMobile: true),
-            _buildSidebarItem(Icons.lock_reset_rounded, 'Reset Login', isMobile: true),
+            _buildSidebarItem(
+              Icons.dashboard_rounded,
+              'Dashboard',
+              isMobile: true,
+            ),
+            _buildSidebarItem(
+              Icons.lock_reset_rounded,
+              'Reset Login',
+              isMobile: true,
+            ),
             _buildSidebarItem(Icons.person_rounded, 'Teachers', isMobile: true),
             const Divider(color: Colors.white24),
             _buildSidebarItem(Icons.arrow_back_rounded, 'Back', isMobile: true),
@@ -357,10 +385,17 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
         children: [
           if (isMobile)
             IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
+              icon: const Icon(
+                Icons.arrow_back_rounded,
+                color: _AppColors.textPrimary,
+              ),
               onPressed: () => Navigator.pop(context),
             ),
-          const Icon(Icons.person_rounded, color: _AppColors.tealDark, size: 32),
+          const Icon(
+            Icons.person_rounded,
+            color: _AppColors.tealDark,
+            size: 32,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -373,7 +408,10 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.person_add_alt_1_rounded, color: _AppColors.tealDark),
+            icon: const Icon(
+              Icons.person_add_alt_1_rounded,
+              color: _AppColors.tealDark,
+            ),
             onPressed: _showAddTeacherDialog,
             tooltip: 'Add Teacher',
           ),
@@ -399,7 +437,10 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
             prefixIcon: const Icon(Icons.search, color: _AppColors.tealDark),
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: const BorderSide(color: _AppColors.tealDark),
@@ -441,7 +482,9 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
         final table = Container(
           decoration: ShapeDecoration(
             color: const Color(0xFFF8F8F8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
+            ),
           ),
           child: Column(
             children: [
@@ -450,11 +493,8 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                 child: ListView.builder(
                   padding: EdgeInsets.zero,
                   itemCount: filtered.length,
-                  itemBuilder: (context, index) => _buildTableRow(
-                    filtered[index],
-                    index + 1,
-                    isTablet,
-                  ),
+                  itemBuilder: (context, index) =>
+                      _buildTableRow(filtered[index], index + 1, isTablet),
                 ),
               ),
             ],
@@ -536,7 +576,11 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
     );
   }
 
-  Widget _buildTableRow(Map<String, dynamic> teacher, int index, bool isMobile) {
+  Widget _buildTableRow(
+    Map<String, dynamic> teacher,
+    int index,
+    bool isMobile,
+  ) {
     final name = teacher['full_name'] ?? 'Unknown';
     final email = teacher['email'] ?? '';
     final hasAccess = teacher['is_active'] == true;
@@ -554,10 +598,7 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
             alignment: Alignment.center,
             child: Text(
               '$index',
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w400,
-              ),
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w400),
             ),
           ),
           Expanded(
@@ -597,14 +638,26 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                   shape: OvalBorder(),
                 ),
                 child: hasAccess
-                    ? Icon(Icons.check, color: Colors.white, size: isMobile ? 18 : 22)
-                    : Icon(Icons.close, color: Colors.white, size: isMobile ? 18 : 22),
+                    ? Icon(
+                        Icons.check,
+                        color: Colors.white,
+                        size: isMobile ? 18 : 22,
+                      )
+                    : Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: isMobile ? 18 : 22,
+                      ),
               ),
             ),
           ),
           if (!isMobile) ...[
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red, size: 22),
+              icon: const Icon(
+                Icons.delete_outline,
+                color: Colors.red,
+                size: 22,
+              ),
               onPressed: () => _showDeleteTeacherDialog(teacher),
               tooltip: 'Delete teacher',
             ),
@@ -682,7 +735,10 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: hasAccess
                               ? const Color(0xFFE8F5E9)
@@ -703,13 +759,20 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                       const Spacer(),
                       IconButton(
                         visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                          size: 20,
+                        ),
                         onPressed: () => _showDeleteTeacherDialog(teacher),
                         tooltip: 'Delete teacher',
                       ),
                       IconButton(
                         visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.more_vert, color: _AppColors.textMuted),
+                        icon: const Icon(
+                          Icons.more_vert,
+                          color: _AppColors.textMuted,
+                        ),
                         onPressed: () => _showAccessDialog(teacher),
                       ),
                     ],
@@ -767,8 +830,13 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Text('Add Teacher', style: TextStyle(fontWeight: FontWeight.bold)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text(
+                'Add Teacher',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -778,8 +846,13 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                       decoration: InputDecoration(
                         labelText: 'Name',
                         prefixIcon: const Icon(Icons.person_outline, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -789,8 +862,13 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                       decoration: InputDecoration(
                         labelText: 'Email',
                         prefixIcon: const Icon(Icons.email_outlined, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -800,8 +878,13 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                       decoration: InputDecoration(
                         labelText: 'Password (min 6 chars)',
                         prefixIcon: const Icon(Icons.lock_outline, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
                       ),
                     ),
                   ],
@@ -820,10 +903,14 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                           final email = emailController.text.trim();
                           final password = passwordController.text;
 
-                          if (name.isEmpty || email.isEmpty || password.isEmpty) {
+                          if (name.isEmpty ||
+                              email.isEmpty ||
+                              password.isEmpty) {
                             ScaffoldMessenger.of(this.context).showSnackBar(
                               const SnackBar(
-                                content: Text('Name, email, and password are required'),
+                                content: Text(
+                                  'Name, email, and password are required',
+                                ),
                                 backgroundColor: Colors.red,
                               ),
                             );
@@ -864,7 +951,10 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Text('Create'),
                 ),
@@ -883,7 +973,10 @@ class _TeacherListScreenState extends State<TeacherListScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Teacher', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Delete Teacher',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: Text(
           'Permanently delete $name?\n\nAll their data will be removed. This cannot be undone.',
         ),

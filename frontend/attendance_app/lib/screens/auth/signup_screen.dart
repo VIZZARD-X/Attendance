@@ -8,8 +8,7 @@ class SignUpPage extends StatefulWidget {
   State<SignUpPage> createState() => _SignUpPageState();
 }
 
-class _SignUpPageState extends State<SignUpPage>
-    with TickerProviderStateMixin {
+class _SignUpPageState extends State<SignUpPage> with TickerProviderStateMixin {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -106,14 +105,15 @@ class _SignUpPageState extends State<SignUpPage>
                                 gradient: const LinearGradient(
                                   colors: [
                                     Color(0xFF007C91),
-                                    Color(0xFF0097A7)
+                                    Color(0xFF0097A7),
                                   ],
                                 ),
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF007C91)
-                                        .withOpacity(0.3),
+                                    color: const Color(
+                                      0xFF007C91,
+                                    ).withOpacity(0.3),
                                     blurRadius: 20,
                                     offset: const Offset(0, 10),
                                   ),
@@ -221,8 +221,9 @@ class _SignUpPageState extends State<SignUpPage>
                                   ),
                                 ],
                               ),
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
                               child: DropdownButtonFormField<String>(
                                 value: _selectedRole,
                                 decoration: InputDecoration(
@@ -236,19 +237,30 @@ class _SignUpPageState extends State<SignUpPage>
                                   ),
                                 ),
                                 dropdownColor: Colors.white,
-                                items: [
-                                  {'value': 'student', 'label': 'Student'},
-                                  {'value': 'teacher', 'label': 'Teacher'},
-                                  {'value': 'admin', 'label': 'Admin'},
-                                ]
-                                    .map((role) => DropdownMenuItem(
-                                          value: role['value'],
-                                          child: Text(
-                                            role['label']!,
-                                            style: const TextStyle(fontSize: 16),
+                                items:
+                                    [
+                                          {
+                                            'value': 'student',
+                                            'label': 'Student',
+                                          },
+                                          {
+                                            'value': 'teacher',
+                                            'label': 'Teacher',
+                                          },
+                                          {'value': 'admin', 'label': 'Admin'},
+                                        ]
+                                        .map(
+                                          (role) => DropdownMenuItem(
+                                            value: role['value'],
+                                            child: Text(
+                                              role['label']!,
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                              ),
+                                            ),
                                           ),
-                                        ))
-                                    .toList(),
+                                        )
+                                        .toList(),
                                 onChanged: (value) {
                                   setState(() {
                                     _selectedRole = value!;
@@ -269,19 +281,20 @@ class _SignUpPageState extends State<SignUpPage>
                                     colors: _isFormValid
                                         ? [
                                             const Color(0xFF007C91),
-                                            const Color(0xFF0097A7)
+                                            const Color(0xFF0097A7),
                                           ]
                                         : [
                                             Colors.grey[400]!,
-                                            Colors.grey[500]!
+                                            Colors.grey[500]!,
                                           ],
                                   ),
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: _isFormValid
                                       ? [
                                           BoxShadow(
-                                            color: const Color(0xFF007C91)
-                                                .withOpacity(0.4),
+                                            color: const Color(
+                                              0xFF007C91,
+                                            ).withOpacity(0.4),
                                             blurRadius: 15,
                                             offset: const Offset(0, 8),
                                           ),
@@ -289,7 +302,9 @@ class _SignUpPageState extends State<SignUpPage>
                                       : [],
                                 ),
                                 child: ElevatedButton(
-                                  onPressed: _isFormValid ? _handleSignUp : null,
+                                  onPressed: _isFormValid
+                                      ? _handleSignUp
+                                      : null,
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.transparent,
                                     shadowColor: Colors.transparent,
@@ -304,7 +319,8 @@ class _SignUpPageState extends State<SignUpPage>
                                           child: CircularProgressIndicator(
                                             valueColor:
                                                 AlwaysStoppedAnimation<Color>(
-                                                    Colors.white),
+                                                  Colors.white,
+                                                ),
                                             strokeWidth: 2.5,
                                           ),
                                         )
@@ -336,7 +352,9 @@ class _SignUpPageState extends State<SignUpPage>
                                 TextButton(
                                   onPressed: () {
                                     Navigator.pushReplacementNamed(
-                                        context, '/login');
+                                      context,
+                                      '/login',
+                                    );
                                   },
                                   child: const Text(
                                     'Login',
@@ -459,19 +477,14 @@ class _SignUpPageState extends State<SignUpPage>
             const Icon(Icons.error_outline_rounded, color: Colors.white),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(fontSize: 15),
-              ),
+              child: Text(message, style: const TextStyle(fontSize: 15)),
             ),
           ],
         ),
         backgroundColor: Colors.red.shade600,
         duration: const Duration(seconds: 4),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
     );
@@ -485,19 +498,14 @@ class _SignUpPageState extends State<SignUpPage>
             const Icon(Icons.check_circle_outline_rounded, color: Colors.white),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(fontSize: 15),
-              ),
+              child: Text(message, style: const TextStyle(fontSize: 15)),
             ),
           ],
         ),
         backgroundColor: Colors.green.shade600,
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
     );

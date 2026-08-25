@@ -47,6 +47,26 @@ class _TeacherDrawerState extends State<TeacherDrawer> {
   }
 
   void _logout() async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     final authService = AuthService();
     await authService.logout();
     if (mounted) {
@@ -55,7 +75,8 @@ class _TeacherDrawerState extends State<TeacherDrawer> {
   }
 
   void _handleCardTap(String title) async {
-    if (title == widget.currentRoute) return; // Do nothing if already on the route
+    if (title == widget.currentRoute)
+      return; // Do nothing if already on the route
 
     if (title == 'Create Session') {
       final classService = ClassService();
@@ -64,30 +85,38 @@ class _TeacherDrawerState extends State<TeacherDrawer> {
         if (classes.isEmpty) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('No classes found. Please create a class first.')),
+              const SnackBar(
+                content: Text('No classes found. Please create a class first.'),
+              ),
             );
           }
           return;
         }
 
-        final subjects = classes.map((c) => {
-          'id': c['id'].toString(),
-          'code': c['class_code'] as String,
-          'name': c['class_name'] as String,
-          'semester': c['semester'] as String,
-        }).toList();
+        final subjects = classes
+            .map(
+              (c) => {
+                'id': c['id'].toString(),
+                'code': c['class_code'] as String,
+                'name': c['class_name'] as String,
+                'semester': c['semester'] as String,
+              },
+            )
+            .toList();
 
         if (mounted) {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => SessionPage(subjects: subjects)),
+            MaterialPageRoute(
+              builder: (context) => SessionPage(subjects: subjects),
+            ),
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error loading classes: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error loading classes: $e')));
         }
       }
       return;
@@ -151,7 +180,11 @@ class _TeacherDrawerState extends State<TeacherDrawer> {
                   const CircleAvatar(
                     radius: 30,
                     backgroundColor: Colors.white,
-                    child: Icon(Icons.person, size: 35, color: Color(0xFF007C91)),
+                    child: Icon(
+                      Icons.person,
+                      size: 35,
+                      color: Color(0xFF007C91),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(
@@ -171,14 +204,19 @@ class _TeacherDrawerState extends State<TeacherDrawer> {
                 ],
               ),
             ),
-            ...dashboardCards.map((card) => _buildDrawerItem(
-                  card['icon'] as IconData,
-                  card['title'] as String,
-                )),
+            ...dashboardCards.map(
+              (card) => _buildDrawerItem(
+                card['icon'] as IconData,
+                card['title'] as String,
+              ),
+            ),
             const Divider(color: Colors.white24),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.white70),
-              title: const Text('Logout', style: TextStyle(color: Colors.white)),
+              title: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.white),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 _logout();

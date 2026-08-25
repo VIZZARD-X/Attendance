@@ -107,7 +107,7 @@ class StudentProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = StudentProfile
-        fields = ('student', 'username', 'email', 'roll_no')
+        fields = ('student', 'username', 'email')
         read_only_fields = ('student',)
 
 
@@ -116,18 +116,11 @@ class StudentCreateSerializer(serializers.Serializer):  # Changed from ModelSeri
     name = serializers.CharField(max_length=150)
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, min_length=6, style={'input_type': 'password'})
-    rollNo = serializers.CharField(max_length=20)
 
     def validate_email(self, value):
         """Check if email already exists"""
         if User.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError(f"Email {value} already exists.")
-        return value
-    
-    def validate_rollNo(self, value):
-        """Check if roll number already exists"""
-        if StudentProfile.objects.filter(roll_no=value).exists():
-            raise serializers.ValidationError(f"Roll number {value} already exists.")
         return value
 
 
@@ -135,12 +128,11 @@ class StudentDetailSerializer(serializers.ModelSerializer):
     """Serializer for student details in class"""
     username = serializers.CharField(source='student.username', read_only=True)  # Fixed: was 'student.username'
     email = serializers.EmailField(source='student.email', read_only=True)  # Fixed: was 'student.email'
-    roll_no = serializers.CharField(read_only=True)
     user_id = serializers.IntegerField(source='student.id', read_only=True)  # Fixed: was 'student.id'
 
     class Meta:
         model = StudentProfile
-        fields = ('user_id', 'username', 'email', 'roll_no')
+        fields = ('user_id', 'username', 'email')
 
 
 class ClassSerializer(serializers.ModelSerializer):
@@ -165,15 +157,13 @@ class ClassSerializer(serializers.ModelSerializer):
                 students.append({
                     'user_id': student.id,
                     'username': student.username,
-                    'email': student.email,
-                    'roll_no': profile.roll_no
+                    'email': student.email
                 })
             except StudentProfile.DoesNotExist:
                 students.append({
                     'user_id': student.id,
                     'username': student.username,
-                    'email': student.email,
-                    'roll_no': 'N/A'
+                    'email': student.email
                 })
         return students
 
@@ -246,8 +236,7 @@ class CreateClassSerializer(serializers.Serializer):  # Changed from ModelSerial
                 
                 # Create StudentProfile
                 StudentProfile.objects.create(
-                    student=user,
-                    roll_no=student_data['rollNo']
+                    student=user
                 )
                 
                 # Create Enrollment
@@ -268,7 +257,8 @@ class CreateSessionSerializer(serializers.Serializer):
     """Serializer for creating attendance session"""
     class_id = serializers.IntegerField()
     duration_minutes = serializers.IntegerField(min_value=1, max_value=300)
-    class_type = serializers.ChoiceField(choices=['online', 'offline'], default='online')
+    class_type = serializers.ChoiceField(choices=['qr', 'pattern'], default='qr')
+    start_time = serializers.DateTimeField(required=False, allow_null=True)
 
     
     def validate_class_id(self, value):
@@ -312,42 +302,29 @@ class AttendanceRecordSerializer(serializers.ModelSerializer):
     """Serializer for attendance records"""
     student_name = serializers.CharField(source='student.username', read_only=True)
     student_email = serializers.CharField(source='student.email', read_only=True)
-    roll_no = serializers.SerializerMethodField()
     
     class Meta:
         model = AttendanceRecord
-        fields = ['id', 'student_name', 'student_email', 'roll_no', 'status', 'marked_at', 'verification_score', 'verification_reasons']
-    
-    def get_roll_no(self, obj):
-        try:
-            return obj.student.student_profile.roll_no
-        except:
-            return 'N/A'
-        
+        fields = ['id', 'student_name', 'student_email', 'status', 'marked_at', 'verification_score', 'verification_reasons']
 
 class TeacherAttendanceHistorySerializer(serializers.ModelSerializer):
     """Serializer for teacher viewing attendance records"""
     student_name = serializers.CharField(source='student.username', read_only=True)
     student_email = serializers.CharField(source='student.email', read_only=True)
-    roll_no = serializers.SerializerMethodField()
     class_code = serializers.CharField(source='session.class_obj.class_code', read_only=True)
     class_name = serializers.CharField(source='session.class_obj.class_name', read_only=True)
     semester = serializers.CharField(source='session.class_obj.semester', read_only=True)
     session_date = serializers.DateTimeField(source='session.start_time', read_only=True)
     
+    session_id = serializers.UUIDField(source='session.session_id', read_only=True)
+
     class Meta:
         model = AttendanceRecord
         fields = [
-            'id', 'student_name', 'student_email', 'roll_no',
+            'id', 'session_id', 'student_name', 'student_email',
             'class_code', 'class_name', 'semester',
             'session_date', 'status', 'marked_at'
         ]
-    
-    def get_roll_no(self, obj):
-        try:
-            return obj.student.student_profile.roll_no
-        except:
-            return 'N/A'
 
 
 class UpdateAttendanceStatusSerializer(serializers.Serializer):

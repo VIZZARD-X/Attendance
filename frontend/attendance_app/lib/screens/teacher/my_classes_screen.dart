@@ -20,7 +20,6 @@ class MyClassesScreen extends StatefulWidget {
 
 class _MyClassesScreenState extends State<MyClassesScreen>
     with SingleTickerProviderStateMixin {
-
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
   bool isLoading = false;
@@ -55,30 +54,32 @@ class _MyClassesScreenState extends State<MyClassesScreen>
 
     try {
       final loadedClasses = await _classService.getMyClasses();
-      
+
       if (mounted) {
         // ✨ EXACT DASHBOARD COLOR PALETTE
         final colorPalette = [
-          Colors.cyan,        // Class Insights
-          Colors.green,       // My Classes
-          Colors.orange,      // Create Session
-          Colors.purple,      // Announcements
-          Colors.indigo,      // Reports Export
-          Colors.teal,        // Attendance
-          Colors.deepOrange,  // Resources
-          Colors.blueGrey,    // Settings
+          Colors.cyan, // Class Insights
+          Colors.green, // My Classes
+          Colors.orange, // Create Session
+          Colors.purple, // Announcements
+          Colors.indigo, // Reports Export
+          Colors.teal, // Attendance
+          Colors.deepOrange, // Resources
+          Colors.blueGrey, // Settings
         ];
-        
+
         setState(() {
           classes = loadedClasses.asMap().entries.map((entry) {
             final index = entry.key;
             final c = entry.value;
-            
+
             return {
               'id': c['id'],
               'code': c['class_code'],
               'name': c['class_name'],
-              'semester': c['semester'].toString().length == 1 ? 'Semester ${c['semester']}' : c['semester'],
+              'semester': c['semester'].toString().length == 1
+                  ? 'Semester ${c['semester']}'
+                  : c['semester'],
               'students': c['student_count'] ?? 0,
               'color': colorPalette[index % colorPalette.length],
             };
@@ -104,7 +105,9 @@ class _MyClassesScreenState extends State<MyClassesScreen>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: Row(
             children: [
               Container(
@@ -115,7 +118,11 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                   ),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+                child: const Icon(
+                  Icons.add_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -156,7 +163,11 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                   },
                   decoration: InputDecoration(
                     labelText: 'Semester *',
-                    prefixIcon: const Icon(Icons.calendar_today_rounded, color: Color(0xFF007C91), size: 22),
+                    prefixIcon: const Icon(
+                      Icons.calendar_today_rounded,
+                      color: Color(0xFF007C91),
+                      size: 22,
+                    ),
                     filled: true,
                     fillColor: Colors.grey.shade50,
                     border: OutlineInputBorder(
@@ -169,7 +180,10 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF007C91), width: 2),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF007C91),
+                        width: 2,
+                      ),
                     ),
                   ),
                 ),
@@ -181,7 +195,10 @@ class _MyClassesScreenState extends State<MyClassesScreen>
               onPressed: () => Navigator.pop(context),
               child: Text(
                 'Cancel',
-                style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             Container(
@@ -216,7 +233,10 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -285,7 +305,9 @@ class _MyClassesScreenState extends State<MyClassesScreen>
 
         if (studentsAdded == true) {
           await _loadClasses();
-          _showSuccessSnackBar('Class created and students added successfully!');
+          _showSuccessSnackBar(
+            'Class created and students added successfully!',
+          );
         } else {
           await _loadClasses();
         }
@@ -315,7 +337,11 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                 color: Colors.red.shade50,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 24),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.red.shade700,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
             const Text(
@@ -333,7 +359,10 @@ class _MyClassesScreenState extends State<MyClassesScreen>
             onPressed: () => Navigator.pop(context, false),
             child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           ElevatedButton.icon(
@@ -367,13 +396,13 @@ class _MyClassesScreenState extends State<MyClassesScreen>
   void _showClassDetails(Map<String, dynamic> classData) async {
     // Load students first
     setState(() => isLoading = true);
-    
+
     final students = await _classService.getClassStudents(classData['id']);
-    
+
     setState(() => isLoading = false);
-    
+
     if (!mounted) return;
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -400,7 +429,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  
+
                   // Header with class info
                   Container(
                     padding: const EdgeInsets.all(24),
@@ -417,26 +446,17 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                     child: Column(
                       children: [
                         Text(
-                          classData['code'],
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
                           classData['name'],
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.1,
                           ),
                         ),
                         const SizedBox(height: 16),
-                        
+
                         // Tab Bar
                         Container(
                           decoration: BoxDecoration(
@@ -466,24 +486,20 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                             ],
                           ),
                         ),
-                       ],
-                     ),
+                      ],
+                    ),
                   ),
                   // },
-                  
+
                   // Tab Views
                   Expanded(
                     child: TabBarView(
                       children: [
                         // Overview Tab
                         _buildOverviewTab(classData),
-                        
+
                         // Students Tab
-                        _buildStudentsTab(
-                          classData,
-                          students,
-                          setModalState,
-                        ),
+                        _buildStudentsTab(classData, students, setModalState),
                       ],
                     ),
                   ),
@@ -537,9 +553,8 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AddStudentsScreen(
-                        classId: classData['id'],
-                      ),
+                      builder: (context) =>
+                          AddStudentsScreen(classId: classData['id']),
                     ),
                   ).then((_) => _loadClasses());
                 },
@@ -581,9 +596,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.grey.shade50,
-            border: Border(
-              bottom: BorderSide(color: Colors.grey.shade200),
-            ),
+            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
           ),
           child: Row(
             children: [
@@ -603,9 +616,8 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AddStudentsScreen(
-                        classId: classData['id'],
-                      ),
+                      builder: (context) =>
+                          AddStudentsScreen(classId: classData['id']),
                     ),
                   ).then((value) async {
                     await _loadClasses();
@@ -632,7 +644,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
             ],
           ),
         ),
-        
+
         // Students list
         Expanded(
           child: students.isEmpty
@@ -660,9 +672,8 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => AddStudentsScreen(
-                                classId: classData['id'],
-                              ),
+                              builder: (context) =>
+                                  AddStudentsScreen(classId: classData['id']),
                             ),
                           ).then((_) => _loadClasses());
                         },
@@ -682,7 +693,8 @@ class _MyClassesScreenState extends State<MyClassesScreen>
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: students.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final student = students[index];
                     return _buildStudentCard(
@@ -691,7 +703,8 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                       setModalState,
                       () async {
                         // Reload students after delete
-                        final updatedStudents = await _classService.getClassStudents(classData['id']);
+                        final updatedStudents = await _classService
+                            .getClassStudents(classData['id']);
                         setModalState(() {
                           students.clear();
                           students.addAll(updatedStudents);
@@ -727,7 +740,10 @@ class _MyClassesScreenState extends State<MyClassesScreen>
         ],
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
         leading: CircleAvatar(
           backgroundColor: const Color(0xFF007C91),
           radius: 24,
@@ -742,10 +758,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
         ),
         title: Text(
           student['username'] ?? 'Unknown',
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 15,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -758,29 +771,10 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                 Expanded(
                   child: Text(
                     student['email'] ?? '',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                'Roll: ${student['roll_no'] ?? 'N/A'}',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[700],
-                ),
-              ),
             ),
           ],
         ),
@@ -793,21 +787,11 @@ class _MyClassesScreenState extends State<MyClassesScreen>
             PopupMenuItem(
               child: Row(
                 children: [
-                  Icon(Icons.edit_outlined, color: Colors.blue.shade700, size: 20),
-                  const SizedBox(width: 12),
-                  const Text('Edit Roll No'),
-                ],
-              ),
-              onTap: () {
-                Future.delayed(Duration.zero, () {
-                  _showEditStudentDialog(student, classId, onDelete);
-                });
-              },
-            ),
-            PopupMenuItem(
-              child: Row(
-                children: [
-                  Icon(Icons.delete_outline, color: Colors.red.shade700, size: 20),
+                  Icon(
+                    Icons.delete_outline,
+                    color: Colors.red.shade700,
+                    size: 20,
+                  ),
                   const SizedBox(width: 12),
                   const Text('Remove'),
                 ],
@@ -820,121 +804,6 @@ class _MyClassesScreenState extends State<MyClassesScreen>
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // Edit Student Dialog (NEW)
-  void _showEditStudentDialog(
-    Map<String, dynamic> student,
-    int classId,
-    VoidCallback onUpdate,
-  ) {
-    final rollNoController = TextEditingController(
-      text: student['roll_no'] ?? '',
-    );
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.edit, color: Colors.blue.shade700, size: 22),
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              'Edit Student',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              student['username'] ?? '',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              student['email'] ?? '',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: rollNoController,
-              decoration: InputDecoration(
-                labelText: 'Roll Number',
-                prefixIcon: const Icon(Icons.badge_outlined),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: Color(0xFF007C91),
-                    width: 2,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (rollNoController.text.isEmpty) {
-                _showErrorSnackBar('Roll number cannot be empty');
-                return;
-              }
-              
-              Navigator.pop(context);
-              
-              // Note: You'll need to implement this in backend
-              // For now, we'll just show a message
-              //_showInfoSnackBar(
-               // 'Edit functionality requires backend update endpoint',
-              //);
-              
-              //Future implementation:
-              final success = await _classService.updateStudentInClass(
-                classId: classId,
-                studentId: student['id'],
-                rollNo: rollNoController.text,
-              );
-              
-              if (success) {
-                onUpdate();
-                _showSuccessSnackBar('Student updated successfully');
-              } else {
-                _showErrorSnackBar('Failed to update student');
-              }
-              
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF007C91),
-            ),
-            child: const Text('Save Changes'),
-          ),
-        ],
       ),
     );
   }
@@ -957,7 +826,11 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                 color: Colors.red.shade50,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(Icons.warning_amber, color: Colors.red.shade700, size: 22),
+              child: Icon(
+                Icons.warning_amber,
+                color: Colors.red.shade700,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             const Text(
@@ -978,12 +851,12 @@ class _MyClassesScreenState extends State<MyClassesScreen>
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              
+
               final success = await _classService.removeStudentFromClass(
                 classId,
                 student['id'],
               );
-              
+
               if (success) {
                 onDelete();
                 _showSuccessSnackBar('Student removed from class');
@@ -991,9 +864,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                 _showErrorSnackBar('Failed to remove student');
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Remove'),
           ),
         ],
@@ -1001,7 +872,6 @@ class _MyClassesScreenState extends State<MyClassesScreen>
     );
   }
 
-  
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1112,8 +982,10 @@ class _MyClassesScreenState extends State<MyClassesScreen>
     final screenW = MediaQuery.of(context).size.width;
     final isMobile = screenW < 600;
     final isTablet = screenW >= 600 && screenW < 1024;
-    
-    final crossAxisCount = isMobile ? 1 : (isTablet ? 2 : (screenW < 1400 ? 3 : 4));
+
+    final crossAxisCount = isMobile
+        ? 1
+        : (isTablet ? 2 : (screenW < 1400 ? 3 : 4));
     final cardPadding = isMobile ? 12.0 : (isTablet ? 16.0 : 20.0);
     final gridSpacing = isMobile ? 12.0 : (isTablet ? 16.0 : 18.0);
     final cardAspectRatio = isMobile ? 1.4 : (isTablet ? 1.15 : 1.25);
@@ -1138,9 +1010,13 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                     ),
                   )
                 : classes.isEmpty
-                    ? _buildEmptyState()
-                    : _buildClassesGrid(
-                        crossAxisCount, cardPadding, gridSpacing, cardAspectRatio),
+                ? _buildEmptyState()
+                : _buildClassesGrid(
+                    crossAxisCount,
+                    cardPadding,
+                    gridSpacing,
+                    cardAspectRatio,
+                  ),
           ),
         ],
       ),
@@ -1148,9 +1024,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
 
     Widget mobileChild = Scaffold(
       drawer: isMobile ? const TeacherDrawer(currentRoute: 'My Classes') : null,
-      body: SafeArea(
-        child: mainContent,
-      ),
+      body: SafeArea(child: mainContent),
     );
 
     return TeacherWebLayout(
@@ -1195,7 +1069,11 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                icon: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
                 onPressed: () => Navigator.pop(context),
                 tooltip: 'Back',
               ),
@@ -1217,10 +1095,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                 if (!isMobile)
                   const Text(
                     'Manage your classes and students',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
                   ),
               ],
             ),
@@ -1231,7 +1106,11 @@ class _MyClassesScreenState extends State<MyClassesScreen>
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
-              icon: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+              icon: const Icon(
+                Icons.add_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
               onPressed: _showCreateClassDialog,
               tooltip: 'Create Class',
             ),
@@ -1298,7 +1177,11 @@ class _MyClassesScreenState extends State<MyClassesScreen>
   }
 
   Widget _buildClassesGrid(
-      int crossAxisCount, double padding, double spacing, double aspectRatio) {
+    int crossAxisCount,
+    double padding,
+    double spacing,
+    double aspectRatio,
+  ) {
     return FadeTransition(
       opacity: _fadeAnimation,
       child: GridView.builder(
@@ -1326,10 +1209,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              classData['color'].withOpacity(0.88),
-              Colors.white,
-            ],
+            colors: [classData['color'].withOpacity(0.88), Colors.white],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -1378,14 +1258,22 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                         ),
                       ),
                       PopupMenuButton(
-                        icon: Icon(Icons.more_vert_rounded, color: Colors.grey[700]),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        icon: Icon(
+                          Icons.more_vert_rounded,
+                          color: Colors.grey[700],
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         itemBuilder: (context) => [
                           PopupMenuItem(
                             child: Row(
                               children: [
-                                Icon(Icons.person_add_rounded,
-                                    color: const Color(0xFF007C91), size: 20),
+                                Icon(
+                                  Icons.person_add_rounded,
+                                  color: const Color(0xFF007C91),
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 12),
                                 const Text('Add Students'),
                               ],
@@ -1406,23 +1294,31 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                           PopupMenuItem(
                             child: Row(
                               children: [
-                                Icon(Icons.share_rounded,
-                                    color: Colors.green.shade600, size: 20),
+                                Icon(
+                                  Icons.share_rounded,
+                                  color: Colors.green.shade600,
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 12),
                                 const Text('Share Link'),
                               ],
                             ),
                             onTap: () {
-                              final appUrl = 'https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net';
-                              final shareText = "Join my class '${classData['name']}' on Attendance App!\nClick here to join: $appUrl/#/join/${classData['code']}";
+                              final appUrl =
+                                  'https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net';
+                              final shareText =
+                                  "Join my class '${classData['name']}' on Attendance App!\nClick here to join: $appUrl/#/join/${classData['code']}";
                               Share.share(shareText);
                             },
                           ),
                           PopupMenuItem(
                             child: Row(
                               children: [
-                                Icon(Icons.delete_rounded,
-                                    color: Colors.red.shade600, size: 20),
+                                Icon(
+                                  Icons.delete_rounded,
+                                  color: Colors.red.shade600,
+                                  size: 20,
+                                ),
                                 const SizedBox(width: 12),
                                 const Text('Delete'),
                               ],
@@ -1436,13 +1332,16 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                   const Spacer(),
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      classData['semester'],
+                      'Semester ${classData['semester']}',
                       style: const TextStyle(
                         color: Colors.black87,
                         fontSize: 11,
@@ -1452,7 +1351,10 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                   ),
                   const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(20),
@@ -1486,7 +1388,11 @@ class _MyClassesScreenState extends State<MyClassesScreen>
     );
   }
 
-  Widget _buildSidebarItem(IconData icon, String title, {bool isMobile = false}) {
+  Widget _buildSidebarItem(
+    IconData icon,
+    String title, {
+    bool isMobile = false,
+  }) {
     return ListTile(
       leading: Icon(icon, color: Colors.white70),
       title: (isSidebarExpanded || isMobile)
@@ -1494,7 +1400,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
           : null,
       onTap: () {
         if (isMobile) Navigator.pop(context);
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('$title clicked'),

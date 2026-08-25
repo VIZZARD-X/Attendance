@@ -60,10 +60,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
     try {
       // Get user profile
       final profile = await _profileService.getUserProfile();
-      
+
       // Get enrolled classes
       final classes = await _profileService.getStudentClasses();
-      
+
       // Get attendance stats
       final stats = await _profileService.getStudentStats();
 
@@ -146,7 +146,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
               ),
             ),
           ),
-          
+
           SafeArea(
             child: Column(
               children: [
@@ -173,7 +173,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
                       if (isMobile)
                         Builder(
                           builder: (context) => IconButton(
-                            icon: const Icon(Icons.menu_rounded, color: Colors.white),
+                            icon: const Icon(
+                              Icons.menu_rounded,
+                              color: Colors.white,
+                            ),
                             onPressed: () => Scaffold.of(context).openDrawer(),
                           ),
                         )
@@ -184,7 +187,11 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: IconButton(
-                            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                            icon: const Icon(
+                              Icons.arrow_back_rounded,
+                              color: Colors.white,
+                              size: 24,
+                            ),
                             onPressed: () => Navigator.pop(context),
                             tooltip: 'Back',
                           ),
@@ -206,7 +213,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
                             if (!isMobile)
                               const Text(
                                 'View your profile details',
-                                style: TextStyle(color: Colors.white70, fontSize: 14),
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                ),
                               ),
                           ],
                         ),
@@ -227,7 +237,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               const SizedBox(height: 20),
-                              
+
                               // Profile Avatar with Halo
                               AnimatedBuilder(
                                 animation: _haloAnim,
@@ -240,7 +250,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
                                         shape: BoxShape.circle,
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.white.withOpacity(0.5),
+                                            color: Colors.white.withOpacity(
+                                              0.5,
+                                            ),
                                             blurRadius: 20,
                                             spreadRadius: 8,
                                           ),
@@ -250,7 +262,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
                                         radius: isMobile ? 60 : 80,
                                         backgroundColor: Colors.white,
                                         child: Text(
-                                          userName.isNotEmpty ? userName[0].toUpperCase() : 'S',
+                                          userName.isNotEmpty
+                                              ? userName[0].toUpperCase()
+                                              : 'S',
                                           style: TextStyle(
                                             fontSize: isMobile ? 48 : 64,
                                             fontWeight: FontWeight.bold,
@@ -262,9 +276,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
                                   );
                                 },
                               ),
-                              
+
                               const SizedBox(height: 20),
-                              
+
                               // Name & Role
                               FadeTransition(
                                 opacity: _fadeIn,
@@ -291,9 +305,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
                                   ],
                                 ),
                               ),
-                              
+
                               const SizedBox(height: 30),
-                              
+
                               // Stats Cards
                               Center(
                                 child: Wrap(
@@ -324,9 +338,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
                                   ],
                                 ),
                               ),
-                              
+
                               const SizedBox(height: 30),
-                              
+
                               // Email Info
                               FadeTransition(
                                 opacity: _fadeIn,
@@ -347,7 +361,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             const Text(
                                               'Email Address',
@@ -372,9 +387,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
                                   ),
                                 ),
                               ),
-                              
+
                               const SizedBox(height: 40),
-                              
+
                               // Action Buttons
                               FadeTransition(
                                 opacity: _fadeIn,
@@ -390,7 +405,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
                                   ],
                                 ),
                               ),
-                              
+
                               const SizedBox(height: 40),
                             ],
                           ),
@@ -409,9 +424,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
       width: 140,
       padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [color.withOpacity(0.85), color],
-        ),
+        gradient: LinearGradient(colors: [color.withOpacity(0.85), color]),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -453,9 +466,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen>
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 6,
       ),
       icon: Icon(icon, size: 20, color: Colors.white),

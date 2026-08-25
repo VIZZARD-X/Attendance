@@ -5,6 +5,9 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../services/session_service.dart';
 import '../common/custom_camera_screen.dart';
 import '../../widgets/pattern_painter.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../services/sync_service.dart';
+import '../../widgets/offline_indicator.dart';
 
 class SessionActiveScreen extends StatefulWidget {
   final Map<String, dynamic> sessionData;
@@ -22,29 +25,51 @@ class SessionActiveScreen extends StatefulWidget {
 
 class _SessionActiveScreenState extends State<SessionActiveScreen> {
   final SessionService _sessionService = SessionService();
-  
+
   Timer? _countdownTimer;
   Timer? _refreshTimer;
   int remainingSeconds = 0;
-  
+
   List<Map<String, dynamic>> students = [];
   Map<String, dynamic> statistics = {};
   bool isLoading = true;
   bool isUploadingReference = false;
   String? referenceImagePath;
 
-
   static const _channel = MethodChannel('attendance_app/camera');
+  StreamSubscription? _syncSubscription;
+  StreamSubscription? _connectivitySubscription;
 
   @override
   void initState() {
     super.initState();
     _initializeSession();
     _startAutoRefresh();
+    _syncSubscription = SyncService().onSyncComplete.listen((_) {
+      if (mounted) {
+        setState(() {
+          widget.sessionData['is_offline'] = false;
+        });
+        _fetchAttendanceData(showLoading: false);
+      }
+    });
+    
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((result) {
+      if (mounted) {
+        final isOffline = result.isEmpty || result.contains(ConnectivityResult.none);
+        if (isOffline && widget.sessionData['is_offline'] == false) {
+          setState(() {
+            widget.sessionData['is_offline'] = true;
+          });
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    _syncSubscription?.cancel();
+    _connectivitySubscription?.cancel();
     _countdownTimer?.cancel();
     _refreshTimer?.cancel();
     super.dispose();
@@ -52,20 +77,21 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
 
   void _initializeSession() {
     // CHANGE THIS: Use IST fields if available, fallback to original
-    final startTimeStr = widget.sessionData['start_time_ist'] ?? 
-                        widget.sessionData['start_time'];
-    final endTimeStr = widget.sessionData['end_time_ist'] ?? 
-                      widget.sessionData['end_time'];
-    
+    final startTimeStr =
+        widget.sessionData['start_time_ist'] ??
+        widget.sessionData['start_time'];
+    final endTimeStr =
+        widget.sessionData['end_time_ist'] ?? widget.sessionData['end_time'];
+
     // Parse as UTC then convert to local
     DateTime startTime;
     DateTime endTime;
-    
+
     try {
       // Parse the ISO string (includes timezone offset)
       startTime = DateTime.parse(startTimeStr);
       endTime = DateTime.parse(endTimeStr);
-      
+
       // If no timezone info, assume it's UTC and convert to local
       if (!startTimeStr.contains('+') && !startTimeStr.contains('Z')) {
         startTime = DateTime.parse(startTimeStr).toUtc().toLocal();
@@ -76,13 +102,13 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
       startTime = DateTime.now();
       endTime = DateTime.now().add(const Duration(hours: 1));
     }
-    
+
     print('Start Time: $startTime'); // Debug
-    print('End Time: $endTime');     // Debug
+    print('End Time: $endTime'); // Debug
     print('Current Time: ${DateTime.now()}'); // Debug
-    
+
     final duration = endTime.difference(DateTime.now());
-    
+
     setState(() {
       remainingSeconds = duration.inSeconds > 0 ? duration.inSeconds : 0;
     });
@@ -118,12 +144,16 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
         widget.sessionData['session_id'],
       );
 
-      if (result != null && result['success'] == true && mounted) {
+      if (!mounted) return;
+      
+      if (result != null && result['success'] == true) {
         setState(() {
           students = List<Map<String, dynamic>>.from(result['students'] ?? []);
           statistics = result['statistics'] ?? {};
           isLoading = false;
         });
+      } else {
+        setState(() => isLoading = false);
       }
     } catch (e) {
       if (mounted) {
@@ -189,28 +219,45 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
     );
 
     if (confirm == true) {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      final isOffline =
+          connectivityResult.isEmpty ||
+          connectivityResult.contains(ConnectivityResult.none);
+
+      if (isOffline) {
+        if (mounted) {
+          Navigator.pop(context);
+          _showSuccessSnackBar(
+            'Session ended offline. It will sync automatically when internet is restored.',
+          );
+        }
+        return;
+      }
+
       // Show loading
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      final result = await _sessionService.endSession(widget.sessionData['session_id']);
-      
+      final result = await _sessionService.endSession(
+        widget.sessionData['session_id'],
+      );
+
       if (mounted) {
         Navigator.pop(context); // Close loading
-        
+
         if (result['success'] == true) {
           final stats = result['statistics'] ?? {};
-          
+
           // Show statistics dialog
           await showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               title: Row(
                 children: [
                   Container(
@@ -231,18 +278,34 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildStatRow('Total Students', '${stats['total_students'] ?? 0}', 
-                    Icons.people, const Color(0xFF007C91)),
+                  _buildStatRow(
+                    'Total Students',
+                    '${stats['total_students'] ?? 0}',
+                    Icons.people,
+                    const Color(0xFF007C91),
+                  ),
                   const SizedBox(height: 12),
-                  _buildStatRow('Present', '${stats['present'] ?? 0}', 
-                    Icons.check_circle, Colors.green),
+                  _buildStatRow(
+                    'Present',
+                    '${stats['present'] ?? 0}',
+                    Icons.check_circle,
+                    Colors.green,
+                  ),
                   const SizedBox(height: 12),
-                  _buildStatRow('Absent', '${stats['absent'] ?? 0}', 
-                    Icons.cancel, Colors.red),
+                  _buildStatRow(
+                    'Absent',
+                    '${stats['absent'] ?? 0}',
+                    Icons.cancel,
+                    Colors.red,
+                  ),
                   const SizedBox(height: 12),
-                  _buildStatRow('Attendance Rate', '${stats['attendance_rate'] ?? 0}%', 
-                    Icons.trending_up, Colors.orange),
-                  
+                  _buildStatRow(
+                    'Attendance Rate',
+                    '${stats['attendance_rate'] ?? 0}%',
+                    Icons.trending_up,
+                    Colors.orange,
+                  ),
+
                   if ((stats['auto_marked_absent'] ?? 0) > 0) ...[
                     const Divider(height: 24),
                     Container(
@@ -254,7 +317,11 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.orange.shade700,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -280,7 +347,10 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF007C91),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -292,6 +362,99 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
           );
         } else {
           _showErrorSnackBar(result['message'] ?? 'Failed to end session');
+        }
+      }
+    }
+  }
+
+  Future<void> _cancelSession() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Cancel Session?'),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to cancel and delete this session? All attendance records will be permanently removed. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep Session'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete Session'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final result = await _sessionService.deleteSession(widget.sessionData['session_id']);
+      if (mounted) {
+        Navigator.pop(context); // close loader
+        if (result['success'] == true) {
+          Navigator.pop(context); // close active screen
+        } else {
+          _showErrorSnackBar(result['message'] ?? 'Failed to delete session');
+        }
+      }
+    }
+  }
+
+  Future<void> _markAllPresent() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Mark All Present'),
+        content: const Text('Are you sure you want to mark all enrolled students in this class as present?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF007C91),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Mark All Present'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final result = await _sessionService.markAllPresent(widget.sessionData['session_id']);
+      if (mounted) {
+        Navigator.pop(context); // close loader
+        if (result['success'] == true) {
+          _showSuccessSnackBar(result['message'] ?? 'Marked all present');
+          _fetchAttendanceData(showLoading: false);
+        } else {
+          _showErrorSnackBar(result['message'] ?? 'Failed to mark all present');
         }
       }
     }
@@ -312,10 +475,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
         Expanded(
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey.shade700,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
           ),
         ),
         Text(
@@ -369,7 +529,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
     final hours = seconds ~/ 3600;
     final minutes = (seconds % 3600) ~/ 60;
     final secs = seconds % 60;
-    
+
     if (hours > 0) {
       return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
     }
@@ -390,12 +550,17 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Active Session: ${widget.sessionData['class_code']}${widget.sessionData['class_type'] == 'offline' ? ' (Offline Mode)' : ''}',
+              'Active Session: ${widget.sessionData['class_code']}${widget.sessionData['class_type'] == 'pattern' ? ' (Pattern Mode)' : ''}',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              overflow: TextOverflow.ellipsis,
             ),
             Text(
               widget.sessionData['class_name'] ?? '',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.normal,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -403,6 +568,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          const OfflineIndicator(),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => _fetchAttendanceData(),
@@ -413,13 +579,56 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
             onPressed: _endSession,
             tooltip: 'End Session',
           ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'cancel') {
+                _cancelSession();
+              } else if (value == 'mark_all') {
+                _markAllPresent();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'mark_all',
+                child: Row(
+                  children: [
+                    Icon(Icons.done_all, color: Colors.green),
+                    SizedBox(width: 8),
+                    Text('Mark All Present'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'cancel',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_forever, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Cancel Session', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : isMobile
-              ? _buildMobileLayout()
-              : _buildDesktopLayout(isDesktop),
+      body: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please end the session to exit.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        },
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : isMobile
+            ? _buildMobileLayout()
+            : _buildDesktopLayout(isDesktop),
+      ),
     );
   }
 
@@ -433,9 +642,14 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
             const SizedBox(height: 16),
             _buildQRSection(size: 200),
             const SizedBox(height: 16),
-            _buildStatisticsCard(),
             const SizedBox(height: 16),
-            _buildStudentsList(isMobile: true),
+              if (widget.sessionData['is_offline'] == true && students.isEmpty)
+                _buildOfflinePlaceholder()
+              else ...[
+                _buildStatisticsCard(),
+              const SizedBox(height: 16),
+              _buildStudentsList(isMobile: true),
+            ]
           ],
         ),
       ),
@@ -460,7 +674,10 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
                     const SizedBox(height: 32),
                     _buildQRSection(size: isDesktop ? 400 : 300),
                     const SizedBox(height: 24),
-                    _buildStatisticsCard(),
+                    if (widget.sessionData['is_offline'] == true && students.isEmpty)
+                      _buildOfflinePlaceholder()
+                    else
+                      _buildStatisticsCard(),
                   ],
                 ),
               ),
@@ -472,10 +689,13 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
         Container(width: 1, color: Colors.grey[300]),
 
         // RIGHT SIDE - Students List
-        Expanded(
-          flex: isDesktop ? 3 : 4,
-          child: _buildStudentsList(isMobile: false),
-        ),
+        if (widget.sessionData['is_offline'] == true && students.isEmpty)
+          const Expanded(flex: 3, child: SizedBox.shrink())
+        else
+          Expanded(
+            flex: isDesktop ? 3 : 4,
+            child: _buildStudentsList(isMobile: false),
+          ),
       ],
     );
   }
@@ -490,10 +710,11 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: (remainingSeconds > 60
-                    ? const Color(0xFF00838f)
-                    : Colors.orange)
-                .withOpacity(0.3),
+            color:
+                (remainingSeconds > 60
+                        ? const Color(0xFF00838f)
+                        : Colors.orange)
+                    .withOpacity(0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -525,8 +746,9 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => const CustomCameraScreen(
-            title: 'Capture Reference Board',
-            helperText: 'Capture the entire whiteboard with the drawn pattern clearly visible.',
+            title: 'Capture Pattern',
+            helperText:
+                'Capture the entire whiteboard with the drawn pattern clearly visible.',
           ),
         ),
       );
@@ -536,20 +758,36 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
     }
 
     if (imagePath == null) return;
-    
+
     setState(() => isUploadingReference = true);
-    
+
     try {
-      final result = await _sessionService.uploadReferenceImage(
-        widget.sessionData['session_id'],
-        imagePath,
-      );
-      
-      if (result['success'] == true) {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      final isOffline =
+          connectivityResult.isEmpty ||
+          connectivityResult.contains(ConnectivityResult.none);
+
+      if (isOffline) {
+        await SyncService().updateSessionReferenceImage(
+          widget.sessionData['session_id'],
+          imagePath,
+        );
         setState(() => referenceImagePath = imagePath);
-        _showSuccessSnackBar('Reference image uploaded successfully');
+        _showSuccessSnackBar(
+          'Reference image saved offline. It will sync automatically when internet is restored.',
+        );
       } else {
-        _showErrorSnackBar(result['message'] ?? 'Upload failed');
+        final result = await _sessionService.uploadReferenceImage(
+          widget.sessionData['session_id'],
+          imagePath,
+        );
+
+        if (result['success'] == true) {
+          setState(() => referenceImagePath = imagePath);
+          _showSuccessSnackBar('Reference image uploaded successfully');
+        } else {
+          _showErrorSnackBar(result['message'] ?? 'Upload failed');
+        }
       }
     } catch (e) {
       _showErrorSnackBar('Upload error: $e');
@@ -559,7 +797,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
   }
 
   Widget _buildQRSection({required double size}) {
-    final isOffline = widget.sessionData['class_type'] == 'offline';
+    final isPattern = widget.sessionData['class_type'] == 'pattern';
     final patternCode = widget.sessionData['pattern_code'] ?? '??';
 
     return Container(
@@ -578,10 +816,13 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
       ),
       child: Column(
         children: [
-          if (isOffline) ...[
+          if (isPattern) ...[
             if (widget.sessionData['shape_data'] != null)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 24,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF0FDF4),
                   borderRadius: BorderRadius.circular(16),
@@ -592,14 +833,19 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
                   height: 200,
                   child: CustomPaint(
                     painter: PatternPainter(
-                      shapeData: widget.sessionData['shape_data'] as Map<String, dynamic>,
+                      shapeData:
+                          widget.sessionData['shape_data']
+                              as Map<String, dynamic>,
                     ),
                   ),
                 ),
               )
             else
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF0FDF4),
                   borderRadius: BorderRadius.circular(16),
@@ -642,8 +888,19 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
                   ],
                 ),
                 child: isUploadingReference
-                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : Icon(referenceImagePath != null ? Icons.check : Icons.upload, color: Colors.white, size: 28),
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Icon(
+                        referenceImagePath != null ? Icons.check : Icons.upload,
+                        color: Colors.white,
+                        size: 28,
+                      ),
               ),
             ),
             const SizedBox(height: 16),
@@ -676,13 +933,11 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
           const SizedBox(height: 8),
           Text(
             "Session ID: ${widget.sessionData['session_id'].toString().substring(0, 8)}......",
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(fontSize: 13, color: Colors.grey[500]),
           ),
-          if (isOffline) ...[
+          if (isPattern) ...[
             const SizedBox(height: 20),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -704,6 +959,39 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
       ),
     );
   }
+  Widget _buildOfflinePlaceholder() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.cloud_off_rounded, size: 48, color: Colors.orange.shade400),
+          const SizedBox(height: 16),
+          const Text(
+            'Offline Session',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Student list and statistics are unavailable while offline. They will be calculated automatically once the session is synced to the server.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.orange.shade800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildStatisticsCard() {
     final total = statistics['total'] ?? 0;
@@ -714,9 +1002,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue.shade50, Colors.white],
-        ),
+        gradient: LinearGradient(colors: [Colors.blue.shade50, Colors.white]),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.blue.shade200),
       ),
@@ -744,7 +1030,9 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
             value: total > 0 ? present / total : 0,
             backgroundColor: Colors.grey[300],
             valueColor: AlwaysStoppedAnimation<Color>(
-              rate >= 75 ? Colors.green : (rate >= 50 ? Colors.orange : Colors.red),
+              rate >= 75
+                  ? Colors.green
+                  : (rate >= 50 ? Colors.orange : Colors.red),
             ),
             minHeight: 10,
             borderRadius: BorderRadius.circular(5),
@@ -776,22 +1064,14 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
             color: color,
           ),
         ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
-        ),
+        Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
       ],
     );
   }
 
   Widget _buildStudentsList({bool isMobile = false}) {
     if (students.isEmpty) {
-      return const Center(
-        child: Text('No students enrolled in this class'),
-      );
+      return const Center(child: Text('No students enrolled in this class'));
     }
 
     return ListView.builder(
@@ -816,10 +1096,15 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
             ),
           ),
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
             leading: CircleAvatar(
               radius: 24,
-              backgroundColor: isPresent ? Colors.green.shade100 : Colors.red.shade100,
+              backgroundColor: isPresent
+                  ? Colors.green.shade100
+                  : Colors.red.shade100,
               child: Icon(
                 isPresent ? Icons.check_circle_rounded : Icons.cancel_rounded,
                 color: isPresent ? Colors.green : Colors.red,
@@ -828,19 +1113,12 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
             ),
             title: Text(
               student['username'] ?? 'Unknown',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 4),
-                Text(
-                  'Roll No: ${student['roll_no'] ?? 'N/A'}',
-                  style: TextStyle(color: Colors.grey[700]),
-                ),
                 if (hasRecord && student['marked_at'] != null)
                   Text(
                     'Marked at: ${DateTime.parse(student['marked_at']).toLocal().toString().substring(11, 16)}',
@@ -859,10 +1137,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
                 IconButton(
                   onPressed: isPresent
                       ? null
-                      : () => _manualMarkAttendance(
-                            student['id'],
-                            'present',
-                          ),
+                      : () => _manualMarkAttendance(student['id'], 'present'),
                   icon: const Icon(Icons.check_circle_rounded),
                   color: Colors.green,
                   tooltip: 'Mark Present',
@@ -877,10 +1152,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
                 IconButton(
                   onPressed: !isPresent
                       ? null
-                      : () => _manualMarkAttendance(
-                            student['id'],
-                            'absent',
-                          ),
+                      : () => _manualMarkAttendance(student['id'], 'absent'),
                   icon: const Icon(Icons.cancel_rounded),
                   color: Colors.red,
                   tooltip: 'Mark Absent',
@@ -897,5 +1169,4 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
       },
     );
   }
-
 }

@@ -6,8 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../services/attendance_service.dart';
 import '../../services/session_service.dart';
+import '../../services/sync_service.dart';
+import '../../widgets/offline_indicator.dart';
 
 class QRScannerScreen extends StatefulWidget {
   const QRScannerScreen({super.key});
@@ -16,29 +19,30 @@ class QRScannerScreen extends StatefulWidget {
   State<QRScannerScreen> createState() => _QRScannerScreenState();
 }
 
-class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingObserver {
+class _QRScannerScreenState extends State<QRScannerScreen>
+    with WidgetsBindingObserver {
   final AttendanceService _attendanceService = AttendanceService();
   final SessionService _sessionService = SessionService();
-  
-  // Scanner for Online mode (forced flash via returnImage maybe not needed, but we force torch on)
+
+  // Scanner for QR mode (forced flash via returnImage maybe not needed, but we force torch on)
   late final MobileScannerController _scannerController;
-  
-  // Camera for Offline mode capture
+
+  // Camera for Pattern mode capture
   CameraController? _cameraController;
-  
+
   bool isProcessing = false;
   bool hasScanned = false;
   String? scannedData;
-  bool isOfflineMode = false;
+  bool isPatternMode = false;
   bool _cameraPermissionGranted = false;
-  
+
   bool _isCameraInitializing = false;
   bool _isSwitchingMode = false;
 
   // Zoom control variables for both modes
   double _baseZoomLevel = 1.0;
   double _currentZoomLevel = 1.0;
-  
+
   // Camera package zoom bounds
   double _minAvailableZoom = 1.0;
   double _maxAvailableZoom = 1.0;
@@ -63,15 +67,15 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
+
     if (state == AppLifecycleState.resumed) {
-      if (!isOfflineMode) {
+      if (!isPatternMode) {
         _scannerController.start();
       } else {
-        _initializeOfflineCamera();
+        _initializePatternCamera();
       }
     } else {
-      if (!isOfflineMode) {
+      if (!isPatternMode) {
         _scannerController.stop();
       } else if (_cameraController != null) {
         _cameraController!.dispose();
@@ -98,11 +102,13 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
       builder: (context) => AlertDialog(
         title: const Text('Camera Permission Required'),
         content: const Text(
-            'This app needs camera access to scan QR codes for attendance. Please grant camera permission in app settings.'),
+          'This app needs camera access to scan QR codes for attendance. Please grant camera permission in app settings.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
@@ -115,9 +121,9 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
     );
   }
 
-  Future<void> _initializeOfflineCamera() async {
+  Future<void> _initializePatternCamera() async {
     if (_isCameraInitializing) return;
-    
+
     setState(() {
       _isCameraInitializing = true;
     });
@@ -125,13 +131,13 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) return;
-      
+
       final backCamera = cameras.firstWhere(
         (c) => c.lensDirection == CameraLensDirection.back,
         orElse: () => cameras.first,
       );
 
-      // Using veryHigh (1080p) instead of max. 'max' pushes 4K/50MP raw frames into 
+      // Using veryHigh (1080p) instead of max. 'max' pushes 4K/50MP raw frames into
       // Flutter's rendering engine, which absolutely destroys the framerate and aspect ratio!
       _cameraController = CameraController(
         backCamera,
@@ -140,22 +146,22 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
       );
 
       await _cameraController!.initialize();
-      
+
       // Get zoom limits
       _minAvailableZoom = await _cameraController!.getMinZoomLevel();
       _maxAvailableZoom = await _cameraController!.getMaxZoomLevel();
       _currentZoomLevel = _minAvailableZoom;
-      
     } catch (e) {
-      debugPrint('Error initializing camera for offline capture: $e');
+      debugPrint('Error initializing camera for pattern capture: $e');
     } finally {
       if (mounted) {
         setState(() {
           _isCameraInitializing = false;
         });
-        
+
         // Force flash ON using a robust retry loop
-        if (_cameraController != null && _cameraController!.value.isInitialized) {
+        if (_cameraController != null &&
+            _cameraController!.value.isInitialized) {
           _enforceTorch(_cameraController!);
         }
       }
@@ -163,10 +169,10 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
   }
 
   Future<void> _enforceTorch(CameraController controller) async {
-    // Retry up to 5 times (2.5 seconds total) because Android camera 
+    // Retry up to 5 times (2.5 seconds total) because Android camera
     // hardware takes progressively longer to wake up after rapid toggles
     for (int i = 0; i < 5; i++) {
-      if (!mounted || !isOfflineMode || _cameraController == null) return;
+      if (!mounted || !isPatternMode || _cameraController == null) return;
       try {
         await controller.setFlashMode(FlashMode.torch);
         debugPrint('Flash torch enforced successfully on attempt ${i + 1}');
@@ -179,20 +185,20 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
   }
 
   void _toggleMode(bool val) async {
-    if (val == isOfflineMode || _isSwitchingMode) return;
-    
+    if (val == isPatternMode || _isSwitchingMode) return;
+
     setState(() {
       _isSwitchingMode = true;
-      isOfflineMode = val;
+      isPatternMode = val;
     });
 
     try {
-      if (isOfflineMode) {
-        // Switch to Offline Mode
+      if (isPatternMode) {
+        // Switch to Pattern Mode
         await _scannerController.stop();
-        await _initializeOfflineCamera();
+        await _initializePatternCamera();
       } else {
-        // Switch to Online Mode
+        // Switch to QR Mode
         if (_cameraController != null) {
           await _cameraController!.dispose();
           _cameraController = null;
@@ -207,18 +213,20 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
       }
     }
   }
-  
+
   void _handleScaleStart(ScaleStartDetails details) {
     _baseZoomLevel = _currentZoomLevel;
   }
 
   void _handleScaleUpdate(ScaleUpdateDetails details) async {
-    if (isOfflineMode && _cameraController != null) {
+    if (isPatternMode && _cameraController != null) {
       // Handle camera package zoom
-      _currentZoomLevel = (_baseZoomLevel * details.scale)
-          .clamp(_minAvailableZoom, _maxAvailableZoom);
+      _currentZoomLevel = (_baseZoomLevel * details.scale).clamp(
+        _minAvailableZoom,
+        _maxAvailableZoom,
+      );
       await _cameraController!.setZoomLevel(_currentZoomLevel);
-    } else if (!isOfflineMode) {
+    } else if (!isPatternMode) {
       // Handle mobile_scanner zoom (0.0 to 1.0 ratio typically in newer versions)
       // We estimate standard clamp logic here
       _currentZoomLevel = (_baseZoomLevel * details.scale).clamp(1.0, 5.0);
@@ -230,7 +238,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
   }
 
   Future<void> _handleQRCode(String qrData) async {
-    if (isProcessing || hasScanned || isOfflineMode) return;
+    if (isProcessing || hasScanned || isPatternMode) return;
 
     setState(() {
       isProcessing = true;
@@ -239,19 +247,42 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
 
     try {
       final dynamic decoded = jsonDecode(qrData);
-      
+
       if (decoded is! Map<String, dynamic>) {
         _showError('Invalid QR code format. Not an attendance code.');
         setState(() => isProcessing = false);
         return;
       }
-      
+
       final data = decoded;
       final sessionId = data['session_id'];
 
       if (sessionId == null) {
         _showError('Invalid QR code');
         setState(() => isProcessing = false);
+        return;
+      }
+
+      final connectivityResults = await Connectivity().checkConnectivity();
+      final isNetworkOffline =
+          connectivityResults.isEmpty ||
+          connectivityResults.contains(ConnectivityResult.none);
+      
+      final isOfflineSession = data['is_offline'] == true;
+      final isOffline = isNetworkOffline || isOfflineSession;
+
+      if (isOffline) {
+        final timestamp = DateTime.now().toUtc().toIso8601String();
+        await SyncService().enqueueQRScan(sessionId, timestamp);
+
+        setState(() {
+          hasScanned = true;
+          isProcessing = false;
+        });
+
+        _showSuccessDialog(
+          'Offline Mode: QR scan saved locally. It will sync automatically when internet is restored.',
+        );
         return;
       }
 
@@ -274,8 +305,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
     }
   }
 
-  Future<void> _handleOfflineCapture() async {
-    if (isProcessing || _cameraController == null || !_cameraController!.value.isInitialized) return;
+  Future<void> _handlePatternCapture() async {
+    if (isProcessing ||
+        _cameraController == null ||
+        !_cameraController!.value.isInitialized)
+      return;
     setState(() => isProcessing = true);
 
     try {
@@ -283,12 +317,29 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
       try {
         await _cameraController!.setFlashMode(FlashMode.torch);
       } catch (_) {}
-      
+
       final XFile picture = await _cameraController!.takePicture();
       final String imagePath = picture.path;
-      
+
       // Pause preview immediately so the user knows photo was taken
       await _cameraController!.pausePreview();
+
+      final connectivityResults = await Connectivity().checkConnectivity();
+      final isOffline =
+          connectivityResults.isEmpty ||
+          connectivityResults.contains(ConnectivityResult.none);
+
+      if (isOffline) {
+        final timestamp = DateTime.now().toUtc().toIso8601String();
+        await SyncService().enqueuePatternScan(imagePath, timestamp);
+        if (mounted) {
+          setState(() => hasScanned = true);
+          _showSuccessDialog(
+            'Saved offline. Will sync automatically when internet is restored.',
+          );
+        }
+        return;
+      }
 
       // Fetch active sessions
       List<Map<String, dynamic>> sessions = [];
@@ -300,22 +351,28 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
         await _cameraController!.resumePreview();
         return;
       }
-      
-      final offlineSessions = sessions.where((s) => s['class_type'] == 'offline').toList();
 
-      if (offlineSessions.isEmpty) {
-        _showError('No active offline session found. Ask your teacher to start an offline session.');
+      final patternSessions = sessions
+          .where((s) => s['class_type'] == 'pattern')
+          .toList();
+
+      if (patternSessions.isEmpty) {
+        _showError(
+          'No active pattern session found. Ask your teacher to start an pattern session.',
+        );
         setState(() => isProcessing = false);
         await _cameraController!.resumePreview();
         return;
       }
 
-      final session = offlineSessions.first;
-      
+      final session = patternSessions.first;
+
       // Check if teacher has uploaded the reference image yet
       // has_reference_image is null on older backends - only block if explicitly false
       if (session['has_reference_image'] == false) {
-        _showError('Teacher has not uploaded the board photo yet. Please wait and try again.');
+        _showError(
+          'Teacher has not uploaded the board photo yet. Please wait and try again.',
+        );
         setState(() => isProcessing = false);
         await _cameraController!.resumePreview();
         return;
@@ -332,7 +389,9 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
       if (mounted) {
         if (result['success']) {
           setState(() => hasScanned = true);
-          _showSuccessDialog(result['message'] ?? 'Attendance marked successfully');
+          _showSuccessDialog(
+            result['message'] ?? 'Attendance marked successfully',
+          );
         } else {
           _showError(result['message'] ?? 'Verification failed');
           setState(() => isProcessing = false);
@@ -343,7 +402,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
       if (mounted) {
         _showError('Error: $e');
         setState(() => isProcessing = false);
-        if (_cameraController != null && _cameraController!.value.isInitialized) {
+        if (_cameraController != null &&
+            _cameraController!.value.isInitialized) {
           _cameraController!.resumePreview();
         }
       }
@@ -379,21 +439,31 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                  color: Colors.green.shade100, shape: BoxShape.circle),
-              child:
-                  Icon(Icons.check_circle, color: Colors.green.shade600, size: 60),
+                color: Colors.green.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.check_circle,
+                color: Colors.green.shade600,
+                size: 60,
+              ),
             ),
             const SizedBox(height: 16),
-            const Text('Success!',
-                style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1F2937))),
+            const Text(
+              'Success!',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1F2937),
+              ),
+            ),
           ],
         ),
-        content: Text(message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 16)),
+        content: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 16),
+        ),
         actions: [
           SizedBox(
             width: double.infinity,
@@ -407,11 +477,13 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: const Text('Done',
-                  style:
-                      TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Done',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],
@@ -464,7 +536,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                     onPressed: () => Navigator.pop(context),
                     tooltip: 'Back',
                   ),
@@ -472,27 +548,36 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
-                  isOfflineMode ? 'Capture Pattern' : 'Scan QR Code',
+                  isPatternMode ? 'Scan Pattern' : 'Scan QR',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  const OfflineIndicator(),
+                  const SizedBox(width: 8),
                   Text(
-                    isOfflineMode ? 'Offline' : 'Online',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                    isPatternMode ? 'Pattern' : 'QR',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                   Switch(
-                    value: isOfflineMode,
+                    value: isPatternMode,
                     activeThumbColor: Colors.orange,
                     activeTrackColor: Colors.orange.withValues(alpha: 0.5),
                     inactiveThumbColor: Colors.greenAccent,
-                    inactiveTrackColor: Colors.greenAccent.withValues(alpha: 0.3),
+                    inactiveTrackColor: Colors.greenAccent.withValues(
+                      alpha: 0.3,
+                    ),
                     onChanged: _toggleMode,
                   ),
                 ],
@@ -509,14 +594,15 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
               child: GestureDetector(
                 onScaleStart: _handleScaleStart,
                 onScaleUpdate: _handleScaleUpdate,
-                child: isOfflineMode
-                    ? (_cameraController != null && _cameraController!.value.isInitialized
-                        ? CameraPreview(_cameraController!)
-                        : const Center(child: CircularProgressIndicator()))
+                child: isPatternMode
+                    ? (_cameraController != null &&
+                              _cameraController!.value.isInitialized
+                          ? CameraPreview(_cameraController!)
+                          : const Center(child: CircularProgressIndicator()))
                     : MobileScanner(
                         controller: _scannerController,
                         onDetect: (capture) {
-                          if (isOfflineMode) return;
+                          if (isPatternMode) return;
                           final List<Barcode> barcodes = capture.barcodes;
                           for (final barcode in barcodes) {
                             if (barcode.rawValue != null) {
@@ -607,16 +693,17 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
                 color: Colors.black.withOpacity(0.7),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: isOfflineMode
+              child: isPatternMode
                   ? Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text(
                           'Capture Board Pattern',
                           style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold),
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         const Text(
@@ -628,18 +715,22 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: isProcessing ? null : _handleOfflineCapture,
+                            onPressed: isProcessing
+                                ? null
+                                : _handlePatternCapture,
                             icon: const Icon(Icons.camera_alt),
-                            label: Text(isProcessing
-                                ? 'Processing...'
-                                : 'Capture Pattern'),
+                            label: Text(
+                              isProcessing
+                                  ? 'Processing...'
+                                  : 'Capture Pattern',
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.orange.shade400,
                               foregroundColor: Colors.white,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12)),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                           ),
                         ),
@@ -652,8 +743,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
                           hasScanned
                               ? Icons.check_circle
                               : (isProcessing
-                                  ? Icons.hourglass_empty
-                                  : Icons.qr_code_scanner),
+                                    ? Icons.hourglass_empty
+                                    : Icons.qr_code_scanner),
                           color: hasScanned
                               ? Colors.green
                               : (isProcessing ? Colors.orange : Colors.white),
@@ -664,8 +755,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
                           hasScanned
                               ? 'Attendance Marked Successfully!'
                               : (isProcessing
-                                  ? 'Verifying...'
-                                  : 'Position QR code within the frame'),
+                                    ? 'Verifying...'
+                                    : 'Position QR code within the frame'),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Colors.white,
@@ -692,19 +783,23 @@ class _QRScannerScreenState extends State<QRScannerScreen> with WidgetsBindingOb
           height: 30,
           decoration: BoxDecoration(
             border: Border(
-              top: alignment == Alignment.topLeft ||
+              top:
+                  alignment == Alignment.topLeft ||
                       alignment == Alignment.topRight
                   ? const BorderSide(color: Colors.green, width: 4)
                   : BorderSide.none,
-              bottom: alignment == Alignment.bottomLeft ||
+              bottom:
+                  alignment == Alignment.bottomLeft ||
                       alignment == Alignment.bottomRight
                   ? const BorderSide(color: Colors.green, width: 4)
                   : BorderSide.none,
-              left: alignment == Alignment.topLeft ||
+              left:
+                  alignment == Alignment.topLeft ||
                       alignment == Alignment.bottomLeft
                   ? const BorderSide(color: Colors.green, width: 4)
                   : BorderSide.none,
-              right: alignment == Alignment.topRight ||
+              right:
+                  alignment == Alignment.topRight ||
                       alignment == Alignment.bottomRight
                   ? const BorderSide(color: Colors.green, width: 4)
                   : BorderSide.none,

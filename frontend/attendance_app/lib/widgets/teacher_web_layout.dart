@@ -40,7 +40,6 @@ class TeacherWebLayout extends StatefulWidget {
 }
 
 class _TeacherWebLayoutState extends State<TeacherWebLayout> {
-
   PageRouteBuilder _fadeRoute(Widget page) {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
@@ -50,6 +49,7 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
       transitionDuration: const Duration(milliseconds: 150),
     );
   }
+
   final AuthService _authService = AuthService();
   final ClassService _classService = ClassService();
 
@@ -59,7 +59,10 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
     DashboardCardData(title: 'Dashboard', icon: Icons.dashboard_rounded),
     DashboardCardData(title: 'My Classes', icon: Icons.people_alt_rounded),
     DashboardCardData(title: 'Create Session', icon: Icons.timer_rounded),
-    DashboardCardData(title: 'Attendance History', icon: Icons.check_circle_rounded),
+    DashboardCardData(
+      title: 'Attendance History',
+      icon: Icons.check_circle_rounded,
+    ),
     DashboardCardData(title: 'Profile', icon: Icons.person_rounded),
   ];
 
@@ -102,7 +105,7 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
   Future<void> _navigateToCreateSession() async {
     try {
       final classes = await _classService.getMyClasses();
-      
+
       if (!mounted) return;
       if (classes.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -115,12 +118,16 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
         return;
       }
 
-      final subjects = classes.map((c) => {
-        'id'      : c['id'].toString(),
-        'code'    : c['class_code'] as String,
-        'name'    : c['class_name'] as String,
-        'semester': c['semester']   as String,
-      }).toList();
+      final subjects = classes
+          .map(
+            (c) => {
+              'id': c['id'].toString(),
+              'code': c['class_code'] as String,
+              'name': c['class_name'] as String,
+              'semester': c['semester'] as String,
+            },
+          )
+          .toList();
 
       if (!mounted) return;
       await Navigator.pushReplacement(
@@ -143,7 +150,7 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title:   const Text('Logout'),
+        title: const Text('Logout'),
         content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
@@ -183,23 +190,36 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
-              onTap: () => title == 'Logout' ? _logout() : _handleCardTap(title),
+              onTap: () =>
+                  title == 'Logout' ? _logout() : _handleCardTap(title),
               child: Container(
                 height: 48,
-                padding: EdgeInsets.symmetric(horizontal: showLabel ? 12.0 : 0.0),
+                padding: EdgeInsets.symmetric(
+                  horizontal: showLabel ? 12.0 : 0.0,
+                ),
                 child: Row(
-                  mainAxisAlignment: showLabel ? MainAxisAlignment.start : MainAxisAlignment.center,
+                  mainAxisAlignment: showLabel
+                      ? MainAxisAlignment.start
+                      : MainAxisAlignment.center,
                   children: [
-                    Icon(icon, color: isSelected ? _AppColors.tealDark : Colors.white70, size: 24),
+                    Icon(
+                      icon,
+                      color: isSelected ? _AppColors.tealDark : Colors.white70,
+                      size: 24,
+                    ),
                     if (showLabel) ...[
                       const SizedBox(width: 16),
                       Expanded(
                         child: Text(
                           title,
                           style: TextStyle(
-                            color: isSelected ? _AppColors.tealDark : Colors.white70, 
+                            color: isSelected
+                                ? _AppColors.tealDark
+                                : Colors.white70,
                             fontSize: 14,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -226,7 +246,7 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
             color: Colors.black26,
             blurRadius: 10,
             offset: Offset(2, 0),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -263,7 +283,7 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
 
   @override
   Widget build(BuildContext context) {
-    final screenW  = MediaQuery.of(context).size.width;
+    final screenW = MediaQuery.of(context).size.width;
     final isDesktop = screenW >= 1024;
 
     if (kIsWeb && isDesktop) {
@@ -277,9 +297,7 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
                 child: widget.desktopBody,
               ),
             ),
-            SafeArea(
-              child: _buildDesktopSidebar(),
-            ),
+            SafeArea(child: _buildDesktopSidebar()),
           ],
         ),
       );
@@ -288,4 +306,3 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
     return widget.mobileChild;
   }
 }
-

@@ -11,10 +11,11 @@ class StudentMyClassesScreen extends StatefulWidget {
   State<StudentMyClassesScreen> createState() => _StudentMyClassesScreenState();
 }
 
-class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with SingleTickerProviderStateMixin {
+class _StudentMyClassesScreenState extends State<StudentMyClassesScreen>
+    with SingleTickerProviderStateMixin {
   final ClassService _classService = ClassService();
   late AnimationController _animationController;
-  
+
   List<Map<String, dynamic>> enrolledClasses = [];
   bool isLoading = true;
   String? errorMessage;
@@ -43,7 +44,7 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
 
     try {
       final classes = await _classService.getStudentEnrolledClasses();
-      
+
       if (mounted) {
         setState(() {
           enrolledClasses = classes;
@@ -131,7 +132,11 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                icon: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
                 onPressed: () => Navigator.pop(context),
                 tooltip: 'Back',
               ),
@@ -239,7 +244,10 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: const Color(0xFF007C91),
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -313,19 +321,20 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
             ),
           ),
           child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.2),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: _animationController,
-                curve: Interval(
-                  (index / enrolledClasses.length) * 0.5,
-                  1.0,
-                  curve: Curves.easeOut,
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, 0.2),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: _animationController,
+                    curve: Interval(
+                      (index / enrolledClasses.length) * 0.5,
+                      1.0,
+                      curve: Curves.easeOut,
+                    ),
+                  ),
                 ),
-              ),
-            ),
             child: _buildModernClassCard(enrolledClasses[index], isMobile),
           ),
         );
@@ -415,7 +424,7 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 18),
 
                 // Info chips
@@ -425,12 +434,11 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
                   children: [
                     _buildInfoChip(
                       Icons.calendar_month_rounded,
-                      semester.toString().toLowerCase().startsWith('semester') ? semester.toString() : 'Semester $semester',
+                      semester.toString().toLowerCase().startsWith('semester')
+                          ? semester.toString()
+                          : 'Semester $semester',
                     ),
-                    _buildInfoChip(
-                      Icons.person_outline_rounded,
-                      teacherName,
-                    ),
+                    _buildInfoChip(Icons.person_outline_rounded, teacherName),
                   ],
                 ),
 
@@ -544,7 +552,7 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            
+
             // Header with class info
             Container(
               padding: const EdgeInsets.all(24),
@@ -629,7 +637,10 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen> with Si
                             ),
                           );
                         },
-                        icon: const Icon(Icons.history_rounded, color: Colors.white),
+                        icon: const Icon(
+                          Icons.history_rounded,
+                          color: Colors.white,
+                        ),
                         label: const Text(
                           'View Attendance History',
                           style: TextStyle(

@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/dashboard/student_dashboard.dart';
 import '../screens/student/my_classes_screen.dart';
 import '../screens/student/qr_scanner_screen.dart';
-import '../screens/student/offline_sessions_screen.dart';
+import '../screens/student/pattern_sessions_screen.dart';
 import '../screens/student/attendance_history_screen.dart';
 import '../screens/student/student_profile_screen.dart';
 import '../services/auth_service.dart';
@@ -47,6 +47,26 @@ class _StudentDrawerState extends State<StudentDrawer> {
   }
 
   void _logout() async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     final authService = AuthService();
     await authService.logout();
     if (mounted) {
@@ -55,7 +75,8 @@ class _StudentDrawerState extends State<StudentDrawer> {
   }
 
   void _handleCardTap(String title) {
-    if (title == widget.currentRoute) return; // Do nothing if already on the route
+    if (title == widget.currentRoute)
+      return; // Do nothing if already on the route
 
     Widget? nextScreen;
     switch (title) {
@@ -128,7 +149,11 @@ class _StudentDrawerState extends State<StudentDrawer> {
                   const CircleAvatar(
                     radius: 30,
                     backgroundColor: Colors.white,
-                    child: Icon(Icons.school, size: 35, color: Color(0xFF007C91)),
+                    child: Icon(
+                      Icons.school,
+                      size: 35,
+                      color: Color(0xFF007C91),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(
@@ -148,14 +173,19 @@ class _StudentDrawerState extends State<StudentDrawer> {
                 ],
               ),
             ),
-            ...dashboardCards.map((card) => _buildDrawerItem(
-                  card['icon'] as IconData,
-                  card['title'] as String,
-                )),
+            ...dashboardCards.map(
+              (card) => _buildDrawerItem(
+                card['icon'] as IconData,
+                card['title'] as String,
+              ),
+            ),
             const Divider(color: Colors.white24),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.white70),
-              title: const Text('Logout', style: TextStyle(color: Colors.white)),
+              title: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.white),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 _logout();

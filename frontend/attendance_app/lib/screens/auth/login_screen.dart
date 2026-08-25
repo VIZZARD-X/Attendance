@@ -10,7 +10,6 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
-  
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -39,14 +38,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   @override
   void dispose() {
     _fadeController.dispose();
-    _emailController.dispose();  
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
   bool get _isFormValid =>
-      _emailController.text.isNotEmpty &&  
-      _passwordController.text.isNotEmpty;
+      _emailController.text.isNotEmpty && _passwordController.text.isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -70,9 +68,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               opacity: _fadeAnimation,
               child: SingleChildScrollView(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isDesktop ? 0 : 24,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: isDesktop ? 0 : 24),
                   child: Container(
                     constraints: BoxConstraints(
                       maxWidth: isDesktop ? 450 : double.infinity,
@@ -96,12 +92,17 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFF007C91), Color(0xFF0097A7)],
+                                  colors: [
+                                    Color(0xFF007C91),
+                                    Color(0xFF0097A7),
+                                  ],
                                 ),
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF007C91).withOpacity(0.3),
+                                    color: const Color(
+                                      0xFF007C91,
+                                    ).withOpacity(0.3),
                                     blurRadius: 20,
                                     offset: const Offset(0, 10),
                                   ),
@@ -135,12 +136,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             ),
                             const SizedBox(height: 40),
 
-                            
                             _buildTextField(
                               controller: _emailController,
-                              hint: 'Email',  
-                              icon: Icons.email_outlined,  
-                              keyboardType: TextInputType.emailAddress,  // ✅ ADDED
+                              hint: 'Email',
+                              icon: Icons.email_outlined,
+                              keyboardType:
+                                  TextInputType.emailAddress, // ✅ ADDED
                             ),
                             const SizedBox(height: 20),
 
@@ -177,16 +178,20 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     colors: _isFormValid
                                         ? [
                                             const Color(0xFF007C91),
-                                            const Color(0xFF0097A7)
+                                            const Color(0xFF0097A7),
                                           ]
-                                        : [Colors.grey[400]!, Colors.grey[500]!],
+                                        : [
+                                            Colors.grey[400]!,
+                                            Colors.grey[500]!,
+                                          ],
                                   ),
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: _isFormValid
                                       ? [
                                           BoxShadow(
-                                            color: const Color(0xFF007C91)
-                                                .withOpacity(0.4),
+                                            color: const Color(
+                                              0xFF007C91,
+                                            ).withOpacity(0.4),
                                             blurRadius: 15,
                                             offset: const Offset(0, 8),
                                           ),
@@ -209,7 +214,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                           child: CircularProgressIndicator(
                                             valueColor:
                                                 AlwaysStoppedAnimation<Color>(
-                                                    Colors.white),
+                                                  Colors.white,
+                                                ),
                                             strokeWidth: 2.5,
                                           ),
                                         )
@@ -270,14 +276,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     );
   }
 
-  
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
     required IconData icon,
     bool obscureText = false,
     Widget? suffixIcon,
-    TextInputType keyboardType = TextInputType.text,  
+    TextInputType keyboardType = TextInputType.text,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -294,7 +299,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       child: TextField(
         controller: controller,
         obscureText: obscureText,
-        keyboardType: keyboardType,  
+        keyboardType: keyboardType,
         onChanged: (_) => setState(() {}),
         style: const TextStyle(fontSize: 16),
         decoration: InputDecoration(
@@ -323,9 +328,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     setState(() => _isLoading = true);
 
     try {
-      // 
+      //
       final result = await _authService.login(
-        _emailController.text.trim(), 
+        _emailController.text.trim(),
         _passwordController.text.trim(),
       );
 
@@ -340,14 +345,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         switch (role.toLowerCase()) {
           case 'teacher':
             Navigator.pushReplacementNamed(context, '/teacher');
-            
-            _showSuccessSnackBar(
-                'Welcome back, ${_emailController.text}!');
+
+            _showSuccessSnackBar('Welcome back, ${_emailController.text}!');
             break;
           case 'student':
             Navigator.pushReplacementNamed(context, '/student');
-            _showSuccessSnackBar(
-                'Welcome back, ${_emailController.text}!');
+            _showSuccessSnackBar('Welcome back, ${_emailController.text}!');
             break;
           case 'admin':
             Navigator.pushReplacementNamed(context, '/admin');
@@ -358,7 +361,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             break;
         }
       } else {
-        _showErrorSnackBar('Invalid email or password');  
+        _showErrorSnackBar('Invalid email or password');
       }
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
@@ -391,19 +394,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             const Icon(Icons.error_outline_rounded, color: Colors.white),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(fontSize: 15),
-              ),
+              child: Text(message, style: const TextStyle(fontSize: 15)),
             ),
           ],
         ),
         backgroundColor: Colors.red.shade600,
         duration: const Duration(seconds: 4),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
     );
@@ -417,19 +415,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             const Icon(Icons.check_circle_outline_rounded, color: Colors.white),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(fontSize: 15),
-              ),
+              child: Text(message, style: const TextStyle(fontSize: 15)),
             ),
           ],
         ),
         backgroundColor: Colors.green.shade600,
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
     );

@@ -10,7 +10,7 @@ import 'package:path_provider/path_provider.dart';
 class CustomCameraScreen extends StatefulWidget {
   final String title;
   final String helperText;
-  
+
   const CustomCameraScreen({
     super.key,
     required this.title,
@@ -26,7 +26,7 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
   List<CameraDescription>? _cameras;
   bool _isInitializing = true;
   bool _isTakingPicture = false;
-  
+
   double _minZoomLevel = 1.0;
   double _maxZoomLevel = 1.0;
   double _currentZoomLevel = 1.0;
@@ -65,10 +65,10 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
 
       // Force Flash ON for better structural capture and flash reflection test
       await _controller!.setFlashMode(FlashMode.always);
-      
+
       // Auto focus
       await _controller!.setFocusMode(FocusMode.auto);
-      
+
       _minZoomLevel = await _controller!.getMinZoomLevel();
       _maxZoomLevel = await _controller!.getMaxZoomLevel();
       _currentZoomLevel = _minZoomLevel;
@@ -90,10 +90,10 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
     );
   }
 
-
-
   Future<void> _takePicture() async {
-    if (_controller == null || !_controller!.value.isInitialized || _isTakingPicture) {
+    if (_controller == null ||
+        !_controller!.value.isInitialized ||
+        _isTakingPicture) {
       return;
     }
 
@@ -103,9 +103,9 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
       await _controller!.setFlashMode(FlashMode.always);
       final XFile rawImage = await _controller!.takePicture();
       final bytes = await rawImage.readAsBytes();
-      
+
       final tempDir = await getTemporaryDirectory();
-      
+
       // Run heavy image processing in a background isolate
       // This prevents the camera preview from freezing and throwing BLASTBufferQueue errors
       String finalImagePath = await compute(_processImageInBackground, {
@@ -114,11 +114,11 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
         'height': 0,
         'tempPath': tempDir.path,
       });
-      
+
       if (finalImagePath.isEmpty) {
         finalImagePath = rawImage.path; // fallback
       }
-      
+
       if (mounted) {
         Navigator.pop(context, finalImagePath);
       }
@@ -175,11 +175,12 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
               _baseZoomLevel = _currentZoomLevel;
             },
             onScaleUpdate: (details) async {
-              if (_controller == null || !_controller!.value.isInitialized) return;
-              
+              if (_controller == null || !_controller!.value.isInitialized)
+                return;
+
               double targetZoom = _baseZoomLevel * details.scale;
               targetZoom = targetZoom.clamp(_minZoomLevel, _maxZoomLevel);
-              
+
               if (targetZoom != _currentZoomLevel) {
                 setState(() => _currentZoomLevel = targetZoom);
                 await _controller!.setZoomLevel(targetZoom);
@@ -187,7 +188,7 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
             },
             child: CameraPreview(_controller!),
           ),
-          
+
           // Dark Overlay with Cutout
           IgnorePointer(
             child: ColorFiltered(
@@ -195,9 +196,7 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
               child: Stack(
                 children: [
                   Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.transparent,
-                    ),
+                    decoration: const BoxDecoration(color: Colors.transparent),
                     child: Align(
                       alignment: Alignment.center,
                       child: Container(
@@ -214,7 +213,7 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
               ),
             ),
           ),
-          
+
           // Targeting Box Border
           IgnorePointer(
             child: Center(
@@ -238,7 +237,10 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
               children: [
                 const SizedBox(height: 60),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black54,
                     borderRadius: BorderRadius.circular(20),
@@ -250,7 +252,7 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
                   ),
                 ),
                 const Spacer(),
-                
+
                 // Capture Button Area
                 Container(
                   padding: const EdgeInsets.all(24),
@@ -275,9 +277,11 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
                                 shape: BoxShape.circle,
                                 color: Colors.white,
                               ),
-                              child: _isTakingPicture 
-                                ? const CircularProgressIndicator(color: Colors.black)
-                                : null,
+                              child: _isTakingPicture
+                                  ? const CircularProgressIndicator(
+                                      color: Colors.black,
+                                    )
+                                  : null,
                             ),
                           ),
                         ),
@@ -304,16 +308,23 @@ Future<String> _processImageInBackground(Map<String, dynamic> params) async {
   img.Image? decodedImage = img.decodeImage(bytes);
   if (decodedImage != null) {
     decodedImage = img.bakeOrientation(decodedImage);
-    
+
     int size = math.min(decodedImage.width, decodedImage.height);
     int cropSize = (size * 0.75).toInt();
     int x = (decodedImage.width - cropSize) ~/ 2;
     int y = (decodedImage.height - cropSize) ~/ 2;
-    
-    img.Image cropped = img.copyCrop(decodedImage, x: x, y: y, width: cropSize, height: cropSize);
+
+    img.Image cropped = img.copyCrop(
+      decodedImage,
+      x: x,
+      y: y,
+      width: cropSize,
+      height: cropSize,
+    );
     final croppedBytes = img.encodeJpg(cropped, quality: 95);
-    
-    final finalImagePath = '$tempDirPath/cropped_board_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+    final finalImagePath =
+        '$tempDirPath/cropped_board_${DateTime.now().millisecondsSinceEpoch}.jpg';
     await File(finalImagePath).writeAsBytes(croppedBytes);
     return finalImagePath;
   }

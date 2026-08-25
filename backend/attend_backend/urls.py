@@ -33,6 +33,12 @@ from attendance.views import (
     get_student_active_sessions,
     join_class_by_code,
     assetlinks_json,
+    sync_offline_pattern,
+    sync_offline_session,
+    cancel_session,
+    mark_all_present_session,
+    edit_session,
+    update_session_attendance,
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 from django.views.static import serve as static_serve
@@ -75,12 +81,18 @@ urlpatterns = [
     # Session management
     path('api/v1/sessions/create/', create_session, name='create_session'),
     path('api/v1/sessions/verify-image/', verify_image, name='verify_image'),
+    path('api/v1/sessions/sync-offline-pattern/', sync_offline_pattern, name='sync_offline_pattern'),
+    path('api/v1/sessions/sync-offline-session/', sync_offline_session, name='sync_offline_session'),
     path('api/v1/sessions/<uuid:session_id>/upload-reference/', upload_reference_image, name='upload_reference_image'),
     path('api/v1/sessions/active/', get_active_sessions, name='active_sessions'),
     path('api/v1/sessions/student-active/', get_student_active_sessions, name='student_active_sessions'),
     path('api/v1/sessions/<uuid:session_id>/', get_session_details, name='session_details'),
     path('api/v1/sessions/<uuid:session_id>/mark/', mark_attendance, name='mark_attendance'),
     path('api/v1/sessions/<uuid:session_id>/end/', end_session, name='end_session'),
+    path('api/v1/sessions/<uuid:session_id>/delete/', cancel_session, name='cancel_session'),
+    path('api/v1/sessions/<uuid:session_id>/mark-all-present/', mark_all_present_session, name='mark_all_present_session'),
+    path('api/v1/sessions/<uuid:session_id>/edit/', edit_session, name='edit_session'),
+    path('api/v1/sessions/<uuid:session_id>/attendance/update-bulk/', update_session_attendance, name='update_session_attendance'),
 
     # Manual mark attendance
     path('api/v1/sessions/<uuid:session_id>/mark-student/', manual_mark_attendance, name='manual_mark_attendance'),

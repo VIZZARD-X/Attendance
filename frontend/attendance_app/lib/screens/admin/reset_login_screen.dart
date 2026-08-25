@@ -82,7 +82,11 @@ class _ResetLoginScreenState extends State<ResetLoginScreen> {
                           ),
                           borderRadius: BorderRadius.circular(63.5),
                         ),
-                        child: const Icon(Icons.lock_reset_rounded, color: Colors.white, size: 38),
+                        child: const Icon(
+                          Icons.lock_reset_rounded,
+                          color: Colors.white,
+                          size: 38,
+                        ),
                       ),
                       const SizedBox(width: 20),
                       Expanded(
@@ -91,20 +95,48 @@ class _ResetLoginScreenState extends State<ResetLoginScreen> {
                           children: [
                             const Text(
                               'Login Reset',
-                              style: TextStyle(color: _AppColors.tealDark, fontSize: 38, fontFamily: 'Inter', fontWeight: FontWeight.w700),
+                              style: TextStyle(
+                                color: _AppColors.tealDark,
+                                fontSize: 38,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
-                            const Text('Reset Login Access', style: TextStyle(fontSize: 16, color: _AppColors.textMuted, fontFamily: 'Inter')),
+                            const Text(
+                              'Reset Login Access',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: _AppColors.textMuted,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      IconButton(icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary), onPressed: () => Navigator.pop(context), tooltip: 'Back'),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: _AppColors.textPrimary,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        tooltip: 'Back',
+                      ),
                     ],
                   ),
                   const SizedBox(height: 32),
                   if (_isLoading)
-                    const Center(child: Padding(padding: EdgeInsets.only(top: 40), child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal))))
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 40),
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            _AppColors.teal,
+                          ),
+                        ),
+                      ),
+                    )
                   else
                     _buildCards(false),
                 ],
@@ -121,7 +153,16 @@ class _ResetLoginScreenState extends State<ResetLoginScreen> {
                   _buildHeaderSection(isMobile),
                   const SizedBox(height: 24),
                   if (_isLoading)
-                    const Center(child: Padding(padding: EdgeInsets.only(top: 40), child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal))))
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 40),
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            _AppColors.teal,
+                          ),
+                        ),
+                      ),
+                    )
                   else
                     _buildCards(isMobile),
                 ],
@@ -133,9 +174,7 @@ class _ResetLoginScreenState extends State<ResetLoginScreen> {
       backgroundColor: _AppColors.background,
       appBar: _buildTopBar(isMobile),
       drawer: _buildMobileDrawer(),
-      body: SafeArea(
-        child: mainContent,
-      ),
+      body: SafeArea(child: mainContent),
     );
 
     return AdminWebLayout(
@@ -150,24 +189,37 @@ class _ResetLoginScreenState extends State<ResetLoginScreen> {
       backgroundColor: Colors.transparent,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
+        icon: const Icon(
+          Icons.arrow_back_rounded,
+          color: _AppColors.textPrimary,
+        ),
         onPressed: () => Navigator.pop(context),
       ),
       title: Row(
         children: [
           Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [_AppColors.tealDark, _AppColors.teal]),
+              gradient: LinearGradient(
+                colors: [_AppColors.tealDark, _AppColors.teal],
+              ),
               shape: BoxShape.circle,
             ),
             padding: const EdgeInsets.all(8),
-            child: const Icon(Icons.lock_reset_rounded, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.lock_reset_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
               'Login Reset',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _AppColors.textPrimary,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -184,7 +236,9 @@ class _ResetLoginScreenState extends State<ResetLoginScreen> {
           children: [
             DrawerHeader(
               decoration: const BoxDecoration(
-                gradient: LinearGradient(colors: [_AppColors.tealDark, _AppColors.teal]),
+                gradient: LinearGradient(
+                  colors: [_AppColors.tealDark, _AppColors.teal],
+                ),
               ),
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,16 +247,30 @@ class _ResetLoginScreenState extends State<ResetLoginScreen> {
                   CircleAvatar(
                     radius: 30,
                     backgroundColor: Colors.white,
-                    child: Icon(Icons.lock_reset_rounded, size: 35, color: _AppColors.tealDark),
+                    child: Icon(
+                      Icons.lock_reset_rounded,
+                      size: 35,
+                      color: _AppColors.tealDark,
+                    ),
                   ),
                   SizedBox(height: 10),
-                  Text('Login Reset', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(
+                    'Login Reset',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.white70),
-              title: const Text('Logout', style: TextStyle(color: Colors.white)),
+              title: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.white),
+              ),
               onTap: () {
                 // back / logout
               },
@@ -218,10 +286,17 @@ class _ResetLoginScreenState extends State<ResetLoginScreen> {
       children: [
         if (isMobile)
           IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
+            icon: const Icon(
+              Icons.arrow_back_rounded,
+              color: _AppColors.textPrimary,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
-        const Icon(Icons.lock_reset_rounded, color: _AppColors.tealDark, size: 32),
+        const Icon(
+          Icons.lock_reset_rounded,
+          color: _AppColors.tealDark,
+          size: 32,
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(

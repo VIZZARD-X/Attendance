@@ -88,9 +88,9 @@ def seed_database(reset=False, default_password="password123"):
 
     # 3. Create Students
     students_data = [
-        {'email': 'student@example.com', 'username': 'john_student', 'roll_no': 'TEST001', 'first_name': 'John', 'last_name': 'Doe'},
-        {'email': 'alice@example.com', 'username': 'alice_student', 'roll_no': 'TEST002', 'first_name': 'Alice', 'last_name': 'Johnson'},
-        {'email': 'bob@example.com', 'username': 'bob_student', 'roll_no': 'TEST003', 'first_name': 'Bob', 'last_name': 'Williams'},
+        {'email': 'student@example.com', 'username': 'john_student', 'first_name': 'John', 'last_name': 'Doe'},
+        {'email': 'alice@example.com', 'username': 'alice_student', 'first_name': 'Alice', 'last_name': 'Johnson'},
+        {'email': 'bob@example.com', 'username': 'bob_student', 'first_name': 'Bob', 'last_name': 'Williams'},
     ]
     students = {}
     for s_info in students_data:
@@ -106,12 +106,12 @@ def seed_database(reset=False, default_password="password123"):
         s_user.set_password(default_password)
         s_user.save()
 
-        StudentProfile.objects.update_or_create(
-            student=s_user,
-            defaults={'roll_no': s_info['roll_no']}
+        # Update or create student profile
+        s_profile, created = StudentProfile.objects.get_or_create(
+            student=s_user
         )
         students[s_info['email']] = s_user
-        print(f"  [{'Created' if created else 'Updated'}] Student: {s_user.email} ({s_info['roll_no']})")
+        print(f"  [{'Created' if created else 'Updated'}] Student: {s_user.email}")
 
     # 4. Create Classes
     classes_data = [

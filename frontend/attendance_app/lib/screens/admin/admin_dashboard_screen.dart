@@ -195,32 +195,29 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       currentRoute: 'Dashboard',
       mobileChild: mobileChild,
       desktopBody: Stack(
-        children: [
-          mainContent,
-          if (_isLoading) _buildLoadingOverlay(),
-        ],
+        children: [mainContent, if (_isLoading) _buildLoadingOverlay()],
       ),
     );
   }
 
   Widget _buildLoadingOverlay() => Container(
-        color: Colors.black26,
-        child: const Center(
-          child: Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Loading...'),
-                ],
-              ),
-            ),
+    color: Colors.black26,
+    child: const Center(
+      child: Card(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading...'),
+            ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _buildSectionHeader() {
     return Column(
@@ -238,11 +235,23 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         const SizedBox(height: 18),
         Row(
           children: [
-            Container(width: 30, height: 4, decoration: BoxDecoration(color: _AppColors.tealDark, borderRadius: BorderRadius.circular(2))),
+            Container(
+              width: 30,
+              height: 4,
+              decoration: BoxDecoration(
+                color: _AppColors.tealDark,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             const SizedBox(width: 8),
             const Text(
               'Quick Actions',
-              style: TextStyle(fontSize: 16, color: _AppColors.textMuted, fontWeight: FontWeight.w600, fontFamily: 'Inter'),
+              style: TextStyle(
+                fontSize: 16,
+                color: _AppColors.textMuted,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Inter',
+              ),
             ),
           ],
         ),
@@ -275,7 +284,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
               ),
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
-                BoxShadow(color: card.color.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6)),
+                BoxShadow(
+                  color: card.color.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
               ],
             ),
             child: Stack(
@@ -283,7 +296,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 Positioned(
                   right: -20,
                   top: -20,
-                  child: Icon(card.icon, size: 100, color: Colors.white.withOpacity(0.15)),
+                  child: Icon(
+                    card.icon,
+                    size: 100,
+                    color: Colors.white.withOpacity(0.15),
+                  ),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(20),
@@ -292,20 +309,32 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     children: [
                       Container(
                         padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(16)),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         child: Icon(card.icon, color: Colors.white, size: 28),
                       ),
                       const Spacer(),
                       Text(
                         card.title,
-                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Inter'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Inter',
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         card.subtitle,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.black, fontSize: 14, fontFamily: 'Inter'),
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 14,
+                          fontFamily: 'Inter',
+                        ),
                       ),
                     ],
                   ),
@@ -326,17 +355,27 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         children: [
           Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [_AppColors.tealDark, _AppColors.teal]),
+              gradient: LinearGradient(
+                colors: [_AppColors.tealDark, _AppColors.teal],
+              ),
               shape: BoxShape.circle,
             ),
             padding: const EdgeInsets.all(8),
-            child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.admin_panel_settings_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               'Welcome, $_username',
-              style: TextStyle(fontSize: isMobile ? 16 : 18, fontWeight: FontWeight.bold, color: _AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: isMobile ? 16 : 18,
+                fontWeight: FontWeight.bold,
+                color: _AppColors.textPrimary,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -359,7 +398,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             ),
             borderRadius: BorderRadius.circular(63.5),
           ),
-          child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 38),
+          child: const Icon(
+            Icons.admin_panel_settings_rounded,
+            color: Colors.white,
+            size: 38,
+          ),
         ),
         const SizedBox(width: 20),
         Expanded(
@@ -368,13 +411,22 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             children: [
               Text(
                 'Welcome, $_username',
-                style: const TextStyle(color: _AppColors.tealDark, fontSize: 38, fontFamily: 'Inter', fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  color: _AppColors.tealDark,
+                  fontSize: 38,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
               const Text(
                 'Admin Panel',
-                style: TextStyle(fontSize: 16, color: _AppColors.textMuted, fontFamily: 'Inter'),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: _AppColors.textMuted,
+                  fontFamily: 'Inter',
+                ),
               ),
             ],
           ),
@@ -395,7 +447,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           children: [
             DrawerHeader(
               decoration: const BoxDecoration(
-                gradient: LinearGradient(colors: [_AppColors.tealDark, _AppColors.teal]),
+                gradient: LinearGradient(
+                  colors: [_AppColors.tealDark, _AppColors.teal],
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -404,19 +458,30 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   const CircleAvatar(
                     radius: 30,
                     backgroundColor: Colors.white,
-                    child: Icon(Icons.admin_panel_settings_rounded, size: 35, color: _AppColors.tealDark),
+                    child: Icon(
+                      Icons.admin_panel_settings_rounded,
+                      size: 35,
+                      color: _AppColors.tealDark,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     _username,
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
             ),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.white70),
-              title: const Text('Logout', style: TextStyle(color: Colors.white)),
+              title: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.white),
+              ),
               onTap: _logout,
             ),
           ],

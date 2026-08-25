@@ -118,31 +118,71 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                         width: 76,
                         height: 76,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(colors: [_AppColors.tealDark, _AppColors.teal], begin: Alignment.topCenter, end: Alignment.bottomCenter),
+                          gradient: const LinearGradient(
+                            colors: [_AppColors.tealDark, _AppColors.teal],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
                           borderRadius: BorderRadius.circular(63.5),
                         ),
-                        child: const Icon(Icons.people_alt_rounded, color: Colors.white, size: 38),
+                        child: const Icon(
+                          Icons.people_alt_rounded,
+                          color: Colors.white,
+                          size: 38,
+                        ),
                       ),
                       const SizedBox(width: 20),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Manage Students', style: TextStyle(color: _AppColors.tealDark, fontSize: 38, fontFamily: 'Inter', fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis),
+                            const Text(
+                              'Manage Students',
+                              style: TextStyle(
+                                color: _AppColors.tealDark,
+                                fontSize: 38,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                             const SizedBox(height: 4),
-                            const Text('View and manage students by semester', style: TextStyle(fontSize: 16, color: _AppColors.textMuted, fontFamily: 'Inter')),
+                            const Text(
+                              'View and manage students by semester',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: _AppColors.textMuted,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      IconButton(icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary), onPressed: () => Navigator.pop(context), tooltip: 'Back'),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: _AppColors.textPrimary,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        tooltip: 'Back',
+                      ),
                     ],
                   ),
                   const SizedBox(height: 32),
                   _isLoading
-                      ? const Center(child: Padding(padding: EdgeInsets.only(top: 60), child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal))))
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 60),
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                _AppColors.teal,
+                              ),
+                            ),
+                          ),
+                        )
                       : _semesters.isEmpty
-                          ? _buildEmptyState()
-                          : _buildSemesterGrid(3, false),
+                      ? _buildEmptyState()
+                      : _buildSemesterGrid(3, false),
                 ],
               ),
             ),
@@ -157,10 +197,19 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                   _buildHeaderSection(isMobile),
                   const SizedBox(height: 24),
                   _isLoading
-                      ? const Center(child: Padding(padding: EdgeInsets.only(top: 60), child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal))))
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 60),
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                _AppColors.teal,
+                              ),
+                            ),
+                          ),
+                        )
                       : _semesters.isEmpty
-                          ? _buildEmptyState()
-                          : _buildSemesterGrid(crossAxisCount, isMobile),
+                      ? _buildEmptyState()
+                      : _buildSemesterGrid(crossAxisCount, isMobile),
                 ],
               ),
             ),
@@ -170,11 +219,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
       backgroundColor: _AppColors.background,
       appBar: _buildTopBar(isMobile),
       drawer: _buildMobileDrawer(),
-      body: Stack(
-        children: [
-          SafeArea(child: mainContent),
-        ],
-      ),
+      body: Stack(children: [SafeArea(child: mainContent)]),
     );
 
     return AdminWebLayout(
@@ -189,24 +234,37 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
       backgroundColor: Colors.transparent,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
+        icon: const Icon(
+          Icons.arrow_back_rounded,
+          color: _AppColors.textPrimary,
+        ),
         onPressed: () => Navigator.pop(context),
       ),
       title: Row(
         children: [
           Container(
             decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [_AppColors.tealDark, _AppColors.teal]),
+              gradient: LinearGradient(
+                colors: [_AppColors.tealDark, _AppColors.teal],
+              ),
               shape: BoxShape.circle,
             ),
             padding: const EdgeInsets.all(8),
-            child: const Icon(Icons.people_alt_rounded, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.people_alt_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
               'Manage Students',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _AppColors.textPrimary,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -253,18 +311,33 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.dashboard_rounded, color: Colors.white70),
-              title: const Text('Dashboard', style: TextStyle(color: Colors.white)),
+              leading: const Icon(
+                Icons.dashboard_rounded,
+                color: Colors.white70,
+              ),
+              title: const Text(
+                'Dashboard',
+                style: TextStyle(color: Colors.white),
+              ),
               onTap: () => Navigator.pushReplacementNamed(context, '/admin'),
             ),
             ListTile(
-              leading: const Icon(Icons.people_alt_rounded, color: Colors.white70),
-              title: const Text('Students', style: TextStyle(color: Colors.white)),
+              leading: const Icon(
+                Icons.people_alt_rounded,
+                color: Colors.white70,
+              ),
+              title: const Text(
+                'Students',
+                style: TextStyle(color: Colors.white),
+              ),
               onTap: () {},
             ),
             const Divider(color: Colors.white24),
             ListTile(
-              leading: const Icon(Icons.arrow_back_rounded, color: Colors.white70),
+              leading: const Icon(
+                Icons.arrow_back_rounded,
+                color: Colors.white70,
+              ),
               title: const Text('Back', style: TextStyle(color: Colors.white)),
               onTap: () => Navigator.pop(context),
             ),
@@ -279,10 +352,17 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
       children: [
         if (isMobile)
           IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
+            icon: const Icon(
+              Icons.arrow_back_rounded,
+              color: _AppColors.textPrimary,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
-        const Icon(Icons.people_alt_rounded, color: _AppColors.tealDark, size: 32),
+        const Icon(
+          Icons.people_alt_rounded,
+          color: _AppColors.tealDark,
+          size: 32,
+        ),
         const SizedBox(width: 12),
         Text(
           'Manage Students',
@@ -312,7 +392,8 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
         crossAxisSpacing: isCompact ? 16 : 55,
         childAspectRatio: childAspectRatio,
       ),
-      itemBuilder: (context, idx) => _buildSemesterCard(_semesters[idx], isCompact),
+      itemBuilder: (context, idx) =>
+          _buildSemesterCard(_semesters[idx], isCompact),
     );
   }
 
@@ -321,11 +402,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.school_outlined,
-            size: 80,
-            color: Colors.grey.shade300,
-          ),
+          Icon(Icons.school_outlined, size: 80, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           const Text(
             'No classes found',
@@ -338,10 +415,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
           const SizedBox(height: 8),
           const Text(
             'Create classes to see semester summaries',
-            style: TextStyle(
-              fontSize: 14,
-              color: _AppColors.textMuted,
-            ),
+            style: TextStyle(fontSize: 14, color: _AppColors.textMuted),
           ),
         ],
       ),

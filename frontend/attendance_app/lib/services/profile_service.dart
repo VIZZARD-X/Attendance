@@ -2,10 +2,10 @@ import 'package:dio/dio.dart';
 
 import '../config/api_config.dart';
 import 'storage_service.dart';
+import '../core/api_client.dart';
 
 class ProfileService {
-  final Dio _dio = Dio();
-  
+  final Dio _dio = ApiClient().dio;
 
   ProfileService() {
     _dio.options.baseUrl = ApiConfig.baseUrl;
@@ -25,9 +25,7 @@ class ProfileService {
 
       final response = await _dio.get(
         '/auth/me/',
-        options: Options(
-          headers: ApiConfig.authHeaders(token),
-        ),
+        options: Options(headers: ApiConfig.authHeaders(token)),
       );
 
       return response.data;
@@ -48,14 +46,13 @@ class ProfileService {
 
       final response = await _dio.get(
         '/students/my-classes/',
-        options: Options(
-          headers: ApiConfig.authHeaders(token),
-        ),
+        options: Options(headers: ApiConfig.authHeaders(token)),
       );
 
       return (response.data['classes'] as List?)
-          ?.map((e) => Map<String, dynamic>.from(e))
-          .toList() ?? [];
+              ?.map((e) => Map<String, dynamic>.from(e))
+              .toList() ??
+          [];
     } on DioException catch (e) {
       print('Error getting student classes: ${e.message}');
       return [];
@@ -70,14 +67,13 @@ class ProfileService {
 
       final response = await _dio.get(
         '/classes/',
-        options: Options(
-          headers: ApiConfig.authHeaders(token),
-        ),
+        options: Options(headers: ApiConfig.authHeaders(token)),
       );
 
       return (response.data['classes'] as List?)
-          ?.map((e) => Map<String, dynamic>.from(e))
-          .toList() ?? [];
+              ?.map((e) => Map<String, dynamic>.from(e))
+              .toList() ??
+          [];
     } on DioException catch (e) {
       print('Error getting teacher classes: ${e.message}');
       return [];
@@ -92,19 +88,21 @@ class ProfileService {
 
       final response = await _dio.get(
         '/students/my-attendance/',
-        options: Options(
-          headers: ApiConfig.authHeaders(token),
-        ),
+        options: Options(headers: ApiConfig.authHeaders(token)),
       );
 
-      final attendance = (response.data['attendance'] as List?)
-          ?.map((e) => Map<String, dynamic>.from(e))
-          .toList() ?? [];
+      final attendance =
+          (response.data['attendance'] as List?)
+              ?.map((e) => Map<String, dynamic>.from(e))
+              .toList() ??
+          [];
 
       final total = attendance.length;
       final present = attendance.where((a) => a['status'] == 'present').length;
       final absent = total - present;
-      final rate = total > 0 ? (present / total * 100).toStringAsFixed(1) : '0.0';
+      final rate = total > 0
+          ? (present / total * 100).toStringAsFixed(1)
+          : '0.0';
 
       return {
         'total': total,
@@ -114,12 +112,7 @@ class ProfileService {
       };
     } on DioException catch (e) {
       print('Error getting student stats: ${e.message}');
-      return {
-        'total': 0,
-        'present': 0,
-        'absent': 0,
-        'attendance_rate': '0.0',
-      };
+      return {'total': 0, 'present': 0, 'absent': 0, 'attendance_rate': '0.0'};
     }
   }
 }

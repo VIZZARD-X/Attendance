@@ -16,7 +16,7 @@ void main() async {
   await StorageService.init();
 
   String initialRoute = '/login';
-  
+
   // Try to get initial link from AppLinks
   try {
     final appLinks = AppLinks();
@@ -83,7 +83,7 @@ class _MyAppState extends State<MyApp> {
       if (uri.path.startsWith('/join/')) {
         final code = uri.path.split('/join/').last;
         await StorageService.write(key: 'pending_join_code', value: code);
-        
+
         if (navigatorKey.currentState != null) {
           String nextRoute = '/login';
           final userJson = await StorageService.read(key: 'user');
@@ -119,10 +119,7 @@ class _MyAppState extends State<MyApp> {
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Attendance App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
+      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       initialRoute: widget.initialRoute,
       routes: {
         '/login': (context) => const LoginPage(),
@@ -132,7 +129,7 @@ class _MyAppState extends State<MyApp> {
         '/teacher/my-classes': (context) => const MyClassesScreen(),
         '/admin': (context) => const AdminDashboardPage(),
         '/teacher/create-session': (context) => const SessionPage(
-            // Add required subjects parameter later use backend (for testing)
+          // Add required subjects parameter later use backend (for testing)
           subjects: [
             {'code': 'CS101', 'name': 'Computer Science'},
             {'code': 'MA102', 'name': 'Mathematics'},
@@ -150,16 +147,15 @@ class _MyAppState extends State<MyApp> {
           StorageService.write(key: 'pending_join_code', value: code);
           // Redirect based on role
           return MaterialPageRoute(
-            builder: (_) => widget.initialRoute == '/student' 
-                ? const StudentDashboardPage() 
+            builder: (_) => widget.initialRoute == '/student'
+                ? const StudentDashboardPage()
                 : const LoginPage(),
           );
         }
         return null;
       },
-      onUnknownRoute: (settings) => MaterialPageRoute(
-        builder: (_) => const LoginPage(),
-      ),
+      onUnknownRoute: (settings) =>
+          MaterialPageRoute(builder: (_) => const LoginPage()),
     );
   }
 }

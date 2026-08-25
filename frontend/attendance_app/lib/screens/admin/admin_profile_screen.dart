@@ -110,7 +110,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
                     physics: const BouncingScrollPhysics(),
                     child: Padding(
                       padding: EdgeInsets.all(isMobile ? 16 : 40),
-                      child: isDesktop ? _buildDesktopContent() : _buildMobileContent(isMobile),
+                      child: isDesktop
+                          ? _buildDesktopContent()
+                          : _buildMobileContent(isMobile),
                     ),
                   ),
           ),
@@ -118,9 +120,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
       ),
     );
 
-    Widget mobileChild = Scaffold(
-      body: SafeArea(child: mainContent),
-    );
+    Widget mobileChild = Scaffold(body: SafeArea(child: mainContent));
 
     return AdminWebLayout(
       currentRoute: 'Profile',
@@ -141,7 +141,9 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
                           physics: const BouncingScrollPhysics(),
                           child: Padding(
                             padding: EdgeInsets.all(isMobile ? 16 : 40),
-                            child: isDesktop ? _buildDesktopContent() : _buildMobileContent(isMobile),
+                            child: isDesktop
+                                ? _buildDesktopContent()
+                                : _buildMobileContent(isMobile),
                           ),
                         ),
                 ),
@@ -379,9 +381,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
       padding: const EdgeInsets.all(24),
       decoration: ShapeDecoration(
         color: const Color(0x33FAE6E6),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -416,9 +416,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
       padding: EdgeInsets.all(isCompact ? 26 : 28),
       decoration: ShapeDecoration(
         color: const Color(0x33C1FEFE),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(23),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(23)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -442,7 +440,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
                 color: Color(0xFF44B3B9),
                 shape: OvalBorder(),
               ),
-              child: const Icon(Icons.edit_rounded, color: Colors.white, size: 22),
+              child: const Icon(
+                Icons.edit_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
           ),
         ],
@@ -472,7 +474,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen>
                 color: Color(0xFF44B3B9),
                 shape: OvalBorder(),
               ),
-              child: const Icon(Icons.email_rounded, color: Colors.white, size: 24),
+              child: const Icon(
+                Icons.email_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 20),
             Expanded(

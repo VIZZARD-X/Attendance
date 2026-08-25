@@ -6,11 +6,21 @@ class PatternPainter extends CustomPainter {
 
   PatternPainter({required this.shapeData});
 
-  void _drawShape(Canvas canvas, String shape, Offset center, double radius, Paint paint) {
+  void _drawShape(
+    Canvas canvas,
+    String shape,
+    Offset center,
+    double radius,
+    Paint paint,
+  ) {
     if (shape == 'circle') {
       canvas.drawCircle(center, radius, paint);
     } else if (shape == 'square') {
-      final rect = Rect.fromCenter(center: center, width: radius * 1.7, height: radius * 1.7);
+      final rect = Rect.fromCenter(
+        center: center,
+        width: radius * 1.7,
+        height: radius * 1.7,
+      );
       canvas.drawRect(rect, paint);
     } else if (shape == 'diamond') {
       final path = Path();
@@ -23,10 +33,14 @@ class PatternPainter extends CustomPainter {
     } else {
       // Polygon drawing logic
       int sides = 3;
-      if (shape == 'triangle') sides = 3;
-      else if (shape == 'pentagon') sides = 5;
-      else if (shape == 'hexagon') sides = 6;
-      else return; // fallback
+      if (shape == 'triangle')
+        sides = 3;
+      else if (shape == 'pentagon')
+        sides = 5;
+      else if (shape == 'hexagon')
+        sides = 6;
+      else
+        return; // fallback
 
       final path = Path();
       // Start at top (-pi/2)
@@ -35,7 +49,7 @@ class PatternPainter extends CustomPainter {
         double angle = startAngle + (i * 2 * math.pi / sides);
         // Special case for triangle to shift it down slightly so the centroid looks centered
         double yOffset = (sides == 3) ? radius * 0.2 : 0;
-        
+
         double x = center.dx + radius * math.cos(angle);
         double y = center.dy + radius * math.sin(angle) + yOffset;
         if (i == 0) {
@@ -78,7 +92,9 @@ class PatternPainter extends CustomPainter {
       text: number,
       style: TextStyle(
         color: Colors.black,
-        fontSize: inner != 'none' ? 42 : 56, // smaller if there is an inner shape
+        fontSize: inner != 'none'
+            ? 42
+            : 56, // smaller if there is an inner shape
         fontWeight: FontWeight.w900,
         fontFamily: 'Roboto',
       ),
@@ -91,11 +107,14 @@ class PatternPainter extends CustomPainter {
     );
 
     textPainter.layout();
-    
+
     // Draw text vertically and horizontally centered
     textPainter.paint(
       canvas,
-      Offset(center.dx - textPainter.width / 2, center.dy - textPainter.height / 2),
+      Offset(
+        center.dx - textPainter.width / 2,
+        center.dy - textPainter.height / 2,
+      ),
     );
   }
 

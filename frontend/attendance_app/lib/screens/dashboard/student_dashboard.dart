@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/profile_service.dart';
-import '../../widgets/student_drawer.dart';  
+import '../../widgets/student_drawer.dart';
 import '../../widgets/enhanced_dashboard_card.dart';
 import '../student/my_classes_screen.dart';
 import '../student/qr_scanner_screen.dart';
 import '../student/qr_scanner_screen.dart';
 import '../student/attendance_history_screen.dart';
 import '../student/student_profile_screen.dart';
-import '../student/offline_sessions_screen.dart';
+import '../student/pattern_sessions_screen.dart';
 import '../../services/class_service.dart';
 import '../../services/storage_service.dart';
+import '../../widgets/offline_indicator.dart';
 
 class StudentDashboardPage extends StatefulWidget {
   const StudentDashboardPage({super.key});
@@ -21,15 +22,15 @@ class StudentDashboardPage extends StatefulWidget {
 
 class _StudentDashboardPageState extends State<StudentDashboardPage> {
   final AuthService _authService = AuthService();
-  final ProfileService _profileService = ProfileService();  
+  final ProfileService _profileService = ProfileService();
   final ClassService _classService = ClassService();
-  
+
   bool isSidebarExpanded = false;
   String studentName = "Loading...";
   String username = "";
   bool isLoading = true;
   int totalClasses = 0;
-  double attendanceRate = 0.0;  
+  double attendanceRate = 0.0;
 
   // Cache management
   Map<String, dynamic>? _cachedUserData;
@@ -80,15 +81,18 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         await StorageService.delete(key: 'pending_join_code');
         // Show loading
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Joining class $code...')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Joining class $code...')));
         }
         final result = await _classService.joinClass(code);
         if (mounted) {
           if (result['success'] == true) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(result['message']), backgroundColor: Colors.green),
+              SnackBar(
+                content: Text(result['message']),
+                backgroundColor: Colors.green,
+              ),
             );
             await _loadUserData(forceRefresh: true);
             if (mounted) {
@@ -103,7 +107,10 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
             }
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(result['message']), backgroundColor: Colors.red),
+              SnackBar(
+                content: Text(result['message']),
+                backgroundColor: Colors.red,
+              ),
             );
           }
         }
@@ -135,7 +142,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         studentName = _cachedUserData!['first_name'] ?? 'Student';
         username = _cachedUserData!['username'] ?? '';
         totalClasses = _cachedUserData!['total_classes'] ?? 0;
-        attendanceRate = _cachedUserData!['attendance_rate'] ?? 0.0; 
+        attendanceRate = _cachedUserData!['attendance_rate'] ?? 0.0;
         isLoading = false;
       });
       return;
@@ -148,44 +155,47 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     try {
       // Fetch user profile data
       final userData = await _authService.getCurrentUser();
-      
+
       // Fetch student's enrolled classes
       final classes = await _profileService.getStudentClasses();
-      
+
       // Fetch student's attendance statistics
       final stats = await _profileService.getStudentStats();
 
       if (!mounted) return;
 
-      
-      final rate = double.tryParse(stats['attendance_rate']?.toString() ?? '0.0') ?? 0.0;
+      final rate =
+          double.tryParse(stats['attendance_rate']?.toString() ?? '0.0') ?? 0.0;
 
       setState(() {
         _cachedUserData = {
           ...?userData,
           'total_classes': classes.length,
-          'attendance_rate': rate,  
+          'attendance_rate': rate,
         };
         _lastFetch = DateTime.now();
-        
-        studentName = userData?['first_name'] ?? userData?['username'] ?? 'Student';
+
+        studentName =
+            userData?['first_name'] ?? userData?['username'] ?? 'Student';
         username = userData?['username'] ?? '';
-        
+
         // Set real data from backend
         totalClasses = classes.length;
-        attendanceRate = rate; 
-        
+        attendanceRate = rate;
+
         isLoading = false;
       });
-      
-      print('📊 Dashboard Stats: $totalClasses classes, ${attendanceRate.toStringAsFixed(1)}% attendance');
+
+      print(
+        '📊 Dashboard Stats: $totalClasses classes, ${attendanceRate.toStringAsFixed(1)}% attendance',
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
         studentName = 'Error loading';
         username = '';
         totalClasses = 0;
-        attendanceRate = 0.0;  
+        attendanceRate = 0.0;
         isLoading = false;
       });
       print('Error loading user data: $e');
@@ -201,18 +211,16 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
             builder: (context) => const StudentMyClassesScreen(),
           ),
         ).then((_) {
-          _loadUserData(forceRefresh: true);  
+          _loadUserData(forceRefresh: true);
         });
         break;
 
       case 'Scan QR':
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const QRScannerScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const QRScannerScreen()),
         ).then((_) {
-          _loadUserData(forceRefresh: true);  
+          _loadUserData(forceRefresh: true);
         });
         break;
 
@@ -228,18 +236,16 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
       case 'Profile':
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const StudentProfileScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const StudentProfileScreen()),
         ).then((_) {
           _loadUserData(forceRefresh: true);
         });
         break;
 
       default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$title - Coming soon!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$title - Coming soon!')));
     }
   }
 
@@ -288,7 +294,9 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F8FB),
       appBar: isMobile || isTablet ? _buildTopBar(isMobile) : null,
-      drawer: isMobile || isTablet ? const StudentDrawer(currentRoute: 'Dashboard') : null,
+      drawer: isMobile || isTablet
+          ? const StudentDrawer(currentRoute: 'Dashboard')
+          : null,
       body: Stack(
         children: [
           SafeArea(
@@ -312,7 +320,10 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                           Center(
                             child: ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 1100),
-                              child: _buildDashboardGrid(crossAxisCount, isMobile),
+                              child: _buildDashboardGrid(
+                                crossAxisCount,
+                                isMobile,
+                              ),
                             ),
                           ),
                         ],
@@ -323,7 +334,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
               ],
             ),
           ),
-          
+
           // Inline loading indicator
           if (isLoading)
             Container(
@@ -357,7 +368,8 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
           ? null
           : IconButton(
               icon: const Icon(Icons.menu, color: Color(0xFF1F2937)),
-              onPressed: () => setState(() => isSidebarExpanded = !isSidebarExpanded),
+              onPressed: () =>
+                  setState(() => isSidebarExpanded = !isSidebarExpanded),
             ),
       title: Row(
         children: [
@@ -369,7 +381,11 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
               shape: BoxShape.circle,
             ),
             padding: const EdgeInsets.all(8),
-            child: const Icon(Icons.school_rounded, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.school_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -401,6 +417,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         ],
       ),
       actions: [
+        const OfflineIndicator(),
         IconButton(
           icon: const Icon(Icons.refresh, color: Color(0xFF1F2937)),
           onPressed: () => _loadUserData(forceRefresh: true),
@@ -430,7 +447,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         Expanded(
           child: _buildStatCard(
             'Attendance Rate',
-            '${attendanceRate.toStringAsFixed(1)}%',  
+            '${attendanceRate.toStringAsFixed(1)}%',
             Icons.check_circle_rounded,
             [const Color(0xFFA8E6A7), Colors.white],
             const Color(0xFF1EBA57),
@@ -451,7 +468,10 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
   ) {
     return Container(
       height: isMobile ? 100 : 120,
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: isMobile ? 12 : 16),
+      padding: EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: isMobile ? 12 : 16,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: gradientColors,
@@ -459,7 +479,10 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(23), // Matched to Figma 23px
-        border: Border.all(color: borderColor, width: 2), // Matched to Figma 2px
+        border: Border.all(
+          color: borderColor,
+          width: 2,
+        ), // Matched to Figma 2px
         boxShadow: [
           BoxShadow(
             color: borderColor.withOpacity(0.1),
@@ -623,7 +646,11 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     );
   }
 
-  Widget _buildSidebarItem(IconData icon, String title, {bool isMobile = false}) {
+  Widget _buildSidebarItem(
+    IconData icon,
+    String title, {
+    bool isMobile = false,
+  }) {
     return ListTile(
       leading: Icon(icon, color: Colors.white70, size: isMobile ? 24 : 20),
       title: isSidebarExpanded || isMobile

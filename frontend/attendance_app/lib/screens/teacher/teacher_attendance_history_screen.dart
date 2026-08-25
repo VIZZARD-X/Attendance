@@ -8,6 +8,10 @@ import '../../services/auth_service.dart';
 import '../../services/class_service.dart';
 import '../../widgets/teacher_web_layout.dart';
 import '../../widgets/teacher_drawer.dart';
+import 'dart:async';
+import '../../services/sync_service.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'session_edit_screen.dart';
 
 class TeacherAttendanceHistoryScreen extends StatefulWidget {
   const TeacherAttendanceHistoryScreen({super.key});
@@ -36,6 +40,8 @@ class _TeacherAttendanceHistoryScreenState
   DateTime? selectedDateTo;
 
   late AnimationController _animationController;
+  StreamSubscription<void>? _syncSubscription;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   @override
   void initState() {
@@ -45,10 +51,26 @@ class _TeacherAttendanceHistoryScreenState
       duration: const Duration(milliseconds: 300),
     );
     _loadData();
+
+    _syncSubscription = SyncService().onSyncComplete.listen((_) {
+      if (mounted) {
+        _loadAttendanceHistory();
+      }
+    });
+
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
+      if (mounted && results.isNotEmpty && !results.contains(ConnectivityResult.none)) {
+        if (errorMessage != null) {
+          _loadData();
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    _syncSubscription?.cancel();
+    _connectivitySubscription?.cancel();
     _animationController.dispose();
     super.dispose();
   }
@@ -96,9 +118,11 @@ class _TeacherAttendanceHistoryScreenState
 
       if (mounted) {
         setState(() {
-          attendanceRecords = (result['attendance'] as List?)
-              ?.map((e) => Map<String, dynamic>.from(e))
-              .toList() ?? [];
+          attendanceRecords =
+              (result['attendance'] as List?)
+                  ?.map((e) => Map<String, dynamic>.from(e))
+                  .toList() ??
+              [];
           statistics = result['statistics'] ?? {};
           _groupRecordsByClassAndSession();
           isLoading = false;
@@ -109,7 +133,7 @@ class _TeacherAttendanceHistoryScreenState
     } catch (e) {
       if (mounted) {
         setState(() {
-          errorMessage = 'Failed to load attendance: $e';
+          errorMessage = 'You appear to be offline. Please check your connection.';
           isLoading = false;
         });
       }
@@ -118,46 +142,60 @@ class _TeacherAttendanceHistoryScreenState
 
   void _groupRecordsByClassAndSession() {
     groupedData.clear();
-    
+
     for (var record in attendanceRecords) {
-      final classKey = '${record['class_code']} - ${record['class_name']}';
-      
-      // ✅ CHANGED: Convert to local time before parsing
-      final markedAt = DateTime.parse(record['marked_at']).toLocal();
-      
+      final classKey = record['class_name'] ?? 'Unknown Class';
+
+      // Parse with fallback
+      DateTime markedAt;
+      try {
+        markedAt = DateTime.parse(record['marked_at']).toLocal();
+      } catch (e) {
+        markedAt = DateTime.now();
+      }
+
       // Create a unique session key using session_id + datetime
       final sessionId = record['session_id']?.toString() ?? 'unknown';
-      
+
       // Use session_id as primary key, fallback to datetime if no session_id
       String sessionKey;
       if (sessionId != 'unknown' && sessionId.isNotEmpty) {
         sessionKey = sessionId;
       } else {
         // Group by hour if no session_id (rounded to nearest hour)
-        sessionKey = 'datetime_${markedAt.year}-${markedAt.month.toString().padLeft(2, '0')}-${markedAt.day.toString().padLeft(2, '0')}_${markedAt.hour.toString().padLeft(2, '0')}';
+        sessionKey =
+            'datetime_${markedAt.year}-${markedAt.month.toString().padLeft(2, '0')}-${markedAt.day.toString().padLeft(2, '0')}_${markedAt.hour.toString().padLeft(2, '0')}';
       }
-      
+
       if (!groupedData.containsKey(classKey)) {
         groupedData[classKey] = {};
       }
-      
+
       if (!groupedData[classKey]!.containsKey(sessionKey)) {
         groupedData[classKey]![sessionKey] = [];
       }
-      
+
       groupedData[classKey]![sessionKey]!.add(record);
     }
-    
+
     // Sort sessions by datetime (newest first) within each class
     for (var classKey in groupedData.keys) {
       final sortedSessions = Map.fromEntries(
-        groupedData[classKey]!.entries.toList()
-          ..sort((a, b) {
-            // ✅ CHANGED: Convert to local time
-            final dateA = DateTime.parse(a.value.first['marked_at']).toLocal();
-            final dateB = DateTime.parse(b.value.first['marked_at']).toLocal();
-            return dateB.compareTo(dateA); // Descending order
-          }),
+        groupedData[classKey]!.entries.toList()..sort((a, b) {
+          DateTime dateA;
+          DateTime dateB;
+          try {
+            dateA = DateTime.parse(a.value.first['marked_at']).toLocal();
+          } catch (_) {
+            dateA = DateTime.now();
+          }
+          try {
+            dateB = DateTime.parse(b.value.first['marked_at']).toLocal();
+          } catch (_) {
+            dateB = DateTime.now();
+          }
+          return dateB.compareTo(dateA); // Descending order
+        }),
       );
       groupedData[classKey] = sortedSessions;
     }
@@ -240,10 +278,12 @@ class _TeacherAttendanceHistoryScreenState
     );
 
     Widget mobileChild = Scaffold(
-      drawer: isMobile ? const TeacherDrawer(currentRoute: 'Attendance History') : null,
+      drawer: isMobile
+          ? const TeacherDrawer(currentRoute: 'Attendance History')
+          : null,
       body: mainContent,
     );
-    
+
     return TeacherWebLayout(
       currentRoute: 'Attendance History',
       mobileChild: mobileChild,
@@ -286,7 +326,11 @@ class _TeacherAttendanceHistoryScreenState
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                icon: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
                 onPressed: () => Navigator.pop(context),
                 tooltip: 'Back',
               ),
@@ -308,10 +352,7 @@ class _TeacherAttendanceHistoryScreenState
                 if (!isMobile)
                   Text(
                     '${attendanceRecords.length} total records',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
                   ),
               ],
             ),
@@ -388,19 +429,20 @@ class _TeacherAttendanceHistoryScreenState
             ),
           ),
           child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.2),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: _animationController,
-                curve: Interval(
-                  (index / groupedData.length) * 0.5,
-                  1.0,
-                  curve: Curves.easeOut,
+            position:
+                Tween<Offset>(
+                  begin: const Offset(0, 0.2),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: _animationController,
+                    curve: Interval(
+                      (index / groupedData.length) * 0.5,
+                      1.0,
+                      curve: Curves.easeOut,
+                    ),
+                  ),
                 ),
-              ),
-            ),
             child: _buildModernClassCard(
               groupedData.keys.elementAt(index),
               groupedData.values.elementAt(index),
@@ -418,7 +460,9 @@ class _TeacherAttendanceHistoryScreenState
     bool isMobile,
   ) {
     final allRecords = sessions.values.expand((x) => x).toList();
-    final presentCount = allRecords.where((r) => r['status'] == 'present').length;
+    final presentCount = allRecords
+        .where((r) => r['status'] == 'present')
+        .length;
     final attendanceRate = allRecords.isNotEmpty
         ? (presentCount / allRecords.length * 100)
         : 0.0;
@@ -522,28 +566,31 @@ class _TeacherAttendanceHistoryScreenState
     final sessionDateTime = records.isNotEmpty
         ? DateTime.parse(records.first['marked_at']).toLocal()
         : DateTime.now();
-    
+
     final presentCount = records.where((r) => r['status'] == 'present').length;
     final attendanceRate = (presentCount / records.length * 100);
 
     // Determine if this is a session ID or datetime-based key
     final bool hasSessionId = !sessionKey.startsWith('datetime_');
-    
+
     // Format display text based on key type
     String sessionTitle;
     String sessionSubtitle;
-    
+
     if (hasSessionId) {
       // Display session ID (truncated)
-      final displayId = sessionKey.length > 12 
-          ? '${sessionKey.substring(0, 12)}...' 
+      final displayId = sessionKey.length > 12
+          ? '${sessionKey.substring(0, 12)}...'
           : sessionKey;
       sessionTitle = 'Session: $displayId';
-      sessionSubtitle = DateFormat('EEEE, MMM dd, yyyy').format(sessionDateTime);
+      sessionSubtitle = DateFormat(
+        'EEEE, MMM dd, yyyy',
+      ).format(sessionDateTime);
     } else {
       // Display date and time for datetime-based grouping
       sessionTitle = DateFormat('EEEE, MMM dd, yyyy').format(sessionDateTime);
-      sessionSubtitle = 'Session Time: ${DateFormat('hh:mm a').format(sessionDateTime)}';
+      sessionSubtitle =
+          'Session Time: ${DateFormat('hh:mm a').format(sessionDateTime)}';
     }
 
     return Container(
@@ -557,7 +604,33 @@ class _TeacherAttendanceHistoryScreenState
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          childrenPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          childrenPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 4,
+          ),
+          trailing: IconButton(
+            icon: const Icon(Icons.edit, color: Color(0xFF007C91)),
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SessionEditScreen(
+                    sessionData: {
+                      'session_id': hasSessionId ? sessionKey : records.first['session_id'],
+                      'class_id': records.first['class_id'],
+                      'class_name': sessionTitle,
+                      'start_time': records.first['marked_at'],
+                      'duration_minutes': records.first['duration_minutes'] ?? 45,
+                    },
+                  ),
+                ),
+              );
+              if (result == true) {
+                _loadAttendanceHistory();
+              }
+            },
+            tooltip: 'Edit Session',
+          ),
           leading: Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -588,7 +661,9 @@ class _TeacherAttendanceHistoryScreenState
               Row(
                 children: [
                   Icon(
-                    hasSessionId ? Icons.calendar_today_rounded : Icons.access_time_rounded,
+                    hasSessionId
+                        ? Icons.calendar_today_rounded
+                        : Icons.access_time_rounded,
                     size: 12,
                     color: Colors.grey.shade600,
                   ),
@@ -617,22 +692,36 @@ class _TeacherAttendanceHistoryScreenState
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.access_time_rounded, size: 12, color: Colors.grey.shade600),
+                    Icon(
+                      Icons.access_time_rounded,
+                      size: 12,
+                      color: Colors.grey.shade600,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       DateFormat('hh:mm a').format(sessionDateTime),
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                   ],
                 ),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.people_outline_rounded, size: 12, color: Colors.grey.shade600),
+                    Icon(
+                      Icons.people_outline_rounded,
+                      size: 12,
+                      color: Colors.grey.shade600,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       '${records.length} students',
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                   ],
                 ),
@@ -642,14 +731,18 @@ class _TeacherAttendanceHistoryScreenState
                     Icon(
                       Icons.trending_up_rounded,
                       size: 12,
-                      color: attendanceRate >= 75 ? Colors.green : Colors.orange,
+                      color: attendanceRate >= 75
+                          ? Colors.green
+                          : Colors.orange,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '${attendanceRate.toStringAsFixed(1)}%',
                       style: TextStyle(
                         fontSize: 12,
-                        color: attendanceRate >= 75 ? Colors.green : Colors.orange,
+                        color: attendanceRate >= 75
+                            ? Colors.green
+                            : Colors.orange,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -668,10 +761,10 @@ class _TeacherAttendanceHistoryScreenState
 
   Widget _buildModernAttendanceRow(Map<String, dynamic> record, bool isMobile) {
     final isPresent = record['status'] == 'present';
-    
+
     // ✅ ADD THIS: Convert UTC to local time
     final markedAt = DateTime.parse(record['marked_at']).toLocal();
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: EdgeInsets.all(isMobile ? 12 : 14),
@@ -707,7 +800,9 @@ class _TeacherAttendanceHistoryScreenState
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
-                  color: (isPresent ? Colors.green : Colors.red).withOpacity(0.3),
+                  color: (isPresent ? Colors.green : Colors.red).withOpacity(
+                    0.3,
+                  ),
                   blurRadius: 6,
                   offset: const Offset(0, 3),
                 ),
@@ -731,6 +826,8 @@ class _TeacherAttendanceHistoryScreenState
                     fontWeight: FontWeight.bold,
                     color: Colors.grey.shade800,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 6),
                 Wrap(
@@ -740,24 +837,16 @@ class _TeacherAttendanceHistoryScreenState
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.badge_rounded, size: 12, color: Colors.grey.shade500),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Roll: ${record['roll_no'] ?? 'N/A'}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
+                        Icon(
+                          Icons.access_time,
+                          size: 12,
+                          color: Colors.grey.shade500,
                         ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.access_time, size: 12, color: Colors.grey.shade500),
                         const SizedBox(width: 4),
                         Text(
-                          DateFormat('hh:mm a').format(markedAt), // ✅ CHANGED to 12-hour format
+                          DateFormat(
+                            'hh:mm a',
+                          ).format(markedAt), // ✅ CHANGED to 12-hour format
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -831,11 +920,7 @@ class _TeacherAttendanceHistoryScreenState
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 14,
-            color: color ?? const Color(0xFF007C91),
-          ),
+          Icon(icon, size: 14, color: color ?? const Color(0xFF007C91)),
           const SizedBox(width: 5),
           Text(
             label,
@@ -862,11 +947,7 @@ class _TeacherAttendanceHistoryScreenState
               color: Colors.white.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.history_rounded,
-              size: 80,
-              color: Colors.white,
-            ),
+            child: Icon(Icons.history_rounded, size: 80, color: Colors.white),
           ),
           const SizedBox(height: 32),
           Text(
@@ -1059,22 +1140,37 @@ class _FilterDialogState extends State<_FilterDialog> {
             const SizedBox(height: 8),
             Container(
               decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFF007C91).withOpacity(0.3)),
+                border: Border.all(
+                  color: const Color(0xFF007C91).withOpacity(0.3),
+                ),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: DropdownButtonFormField<int>(
                 value: tempClassId,
+                isExpanded: true,
                 decoration: InputDecoration(
                   hintText: 'All Classes',
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
                 items: [
-                  const DropdownMenuItem<int>(value: null, child: Text('All Classes')),
-                  ...widget.classes.map((c) => DropdownMenuItem<int>(
-                        value: c['id'],
-                        child: Text('${c['class_code']} - ${c['class_name']}'),
-                      )),
+                  const DropdownMenuItem<int>(
+                    value: null,
+                    child: Text('All Classes'),
+                  ),
+                  ...widget.classes.map(
+                    (c) => DropdownMenuItem<int>(
+                      value: c['id'],
+                      child: Text(
+                        '${c['class_name']}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
                 ],
                 onChanged: (value) => setState(() => tempClassId = value),
               ),
@@ -1140,7 +1236,9 @@ class _FilterDialogState extends State<_FilterDialog> {
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF007C91),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
           child: const Text('Apply Filters'),

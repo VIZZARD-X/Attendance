@@ -1,11 +1,13 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import '../config/api_config.dart';
 import 'storage_service.dart';
+import '../core/api_client.dart';
 
 class ClassService {
-  final Dio _dio = Dio();
-  
+  final Dio _dio = ApiClient().dio;
+
   final String baseUrl = ApiConfig.baseUrl;
 
   ClassService() {
@@ -22,7 +24,7 @@ class ClassService {
   Future<Map<String, dynamic>?> checkStudentByEmail(String email) async {
     try {
       final token = await _getToken();
-      
+
       if (token == null) {
         throw Exception('Not authenticated');
       }
@@ -30,9 +32,7 @@ class ClassService {
       final response = await _dio.get(
         '/auth/check-student/',
         queryParameters: {'email': email},
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200 && response.data['exists'] == true) {
@@ -56,14 +56,8 @@ class ClassService {
 
       final response = await _dio.post(
         '/classes/',
-        data: {
-          'name': name,
-          'semester': semester,
-          'students': students,
-        },
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        data: {'name': name, 'semester': semester, 'students': students},
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 201) {
@@ -85,10 +79,7 @@ class ClassService {
         }
       }
 
-      return {
-        'success': false,
-        'message': errorMessage,
-      };
+      return {'success': false, 'message': errorMessage};
     }
   }
 
@@ -99,20 +90,31 @@ class ClassService {
 
       final response = await _dio.get(
         '/classes/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200) {
-        return List<Map<String, dynamic>>.from(response.data['classes']);
+        final classes = List<Map<String, dynamic>>.from(response.data['classes']);
+        StorageService.write(key: 'cached_my_classes', value: jsonEncode(classes));
+        return classes;
       }
 
-      return [];
+      return await _getCachedClasses();
     } catch (e) {
       print('Error fetching classes: $e');
-      return [];
+      return await _getCachedClasses();
     }
+  }
+
+  Future<List<Map<String, dynamic>>> _getCachedClasses() async {
+    try {
+      final cachedStr = await StorageService.read(key: 'cached_my_classes');
+      if (cachedStr != null) {
+        final decoded = jsonDecode(cachedStr) as List;
+        return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+      }
+    } catch (_) {}
+    return [];
   }
 
   /// Admin: Get all classes grouped by semester with student counts
@@ -122,9 +124,7 @@ class ClassService {
 
       final response = await _dio.get(
         '/admin/classes/summary/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200) {
@@ -145,9 +145,7 @@ class ClassService {
 
       final response = await _dio.get(
         '/admin/classes/by-semester/$semester/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200) {
@@ -168,9 +166,7 @@ class ClassService {
 
       final response = await _dio.get(
         '/admin/students/by-semester/$semester/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200) {
@@ -191,9 +187,7 @@ class ClassService {
 
       final response = await _dio.get(
         '/admin/teachers/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200) {
@@ -214,9 +208,7 @@ class ClassService {
 
       final response = await _dio.get(
         '/classes/$classId/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200) {
@@ -237,9 +229,7 @@ class ClassService {
 
       final response = await _dio.get(
         '/classes/$classId/students/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200) {
@@ -273,9 +263,7 @@ class ClassService {
           if (name != null) 'name': name,
           if (semester != null) 'semester': semester,
         },
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       return response.statusCode == 200;
@@ -292,9 +280,7 @@ class ClassService {
 
       final response = await _dio.delete(
         '/classes/$classId/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       return response.statusCode == 204 || response.statusCode == 200;
@@ -315,9 +301,7 @@ class ClassService {
       final response = await _dio.post(
         '/classes/$classId/add-student/',
         data: studentData,
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 201) {
@@ -344,9 +328,7 @@ class ClassService {
 
       final response = await _dio.delete(
         '/classes/$classId/remove-student/$studentId/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       return response.statusCode == 200;
@@ -363,9 +345,7 @@ class ClassService {
 
       final response = await _dio.delete(
         '/admin/classes/$classId/remove-student/$studentId/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       return response.statusCode == 200;
@@ -381,7 +361,6 @@ class ClassService {
     required String email,
     required String password,
     required String role,
-    String? rollNo,
   }) async {
     try {
       final token = await _getToken();
@@ -393,11 +372,8 @@ class ClassService {
           'email': email,
           'password': password,
           'role': role,
-          if (rollNo != null && rollNo.isNotEmpty) 'roll_no': rollNo,
         },
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       return response.data;
@@ -416,9 +392,7 @@ class ClassService {
 
       final response = await _dio.delete(
         '/admin/users/$userId/delete/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       return response.data;
@@ -437,9 +411,7 @@ class ClassService {
 
       final response = await _dio.get(
         '/students/my-classes/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200) {
@@ -460,9 +432,7 @@ class ClassService {
 
       final response = await _dio.get(
         '/students/my-attendance/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200) {
@@ -476,24 +446,21 @@ class ClassService {
     }
   }
 
-  /// Update student in class (if you want to edit roll number)
+  /// Update student in class
   Future<bool> updateStudentInClass({
     required int classId,
     required int studentId,
-    required String rollNo,
   }) async {
     try {
       final token = await _getToken();
-      
+
       // You'll need to add this endpoint in backend
       final response = await _dio.put(
         '/classes/$classId/update-student/$studentId/',
-        data: {'roll_no': rollNo},
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        data: {},
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-      
+
       return response.statusCode == 200;
     } catch (e) {
       print('Error updating student: $e');
@@ -501,12 +468,11 @@ class ClassService {
     }
   }
 
-  /// Admin: Update student's name, email, and roll number
+  /// Admin: Update student's name, email
   Future<Map<String, dynamic>> updateStudentDetails({
     required int studentId,
     String? username,
     String? email,
-    String? rollNo,
   }) async {
     try {
       final token = await _getToken();
@@ -516,11 +482,8 @@ class ClassService {
         data: {
           if (username != null) 'username': username,
           if (email != null) 'email': email,
-          if (rollNo != null) 'roll_no': rollNo,
         },
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       return response.data;
@@ -547,9 +510,7 @@ class ClassService {
           if (username != null) 'username': username,
           if (email != null) 'email': email,
         },
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       return response.data;
@@ -578,9 +539,7 @@ class ClassService {
           if (className != null) 'class_name': className,
           if (semester != null) 'semester': semester,
         },
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       return response.data;
@@ -599,9 +558,7 @@ class ClassService {
 
       final response = await _dio.get(
         '/admin/classes/$classId/detail/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200) {
@@ -622,9 +579,7 @@ class ClassService {
 
       final response = await _dio.get(
         '/admin/stats/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200) {
@@ -645,9 +600,7 @@ class ClassService {
 
       final response = await _dio.get(
         '/admin/users/$role/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200) {
@@ -668,9 +621,7 @@ class ClassService {
 
       final response = await _dio.patch(
         '/admin/users/$userId/toggle-access/',
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (response.statusCode == 200) {
@@ -699,7 +650,10 @@ class ClassService {
     } catch (e) {
       print('Error joining class: $e');
       if (e is DioException && e.response != null) {
-        return {'success': false, 'message': e.response?.data['error'] ?? 'Unknown error'};
+        return {
+          'success': false,
+          'message': e.response?.data['error'] ?? 'Unknown error',
+        };
       }
       return {'success': false, 'message': e.toString()};
     }

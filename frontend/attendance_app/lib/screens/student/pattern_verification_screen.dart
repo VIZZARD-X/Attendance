@@ -2,21 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/attendance_service.dart';
 
-class OfflineVerificationScreen extends StatefulWidget {
+class PatternVerificationScreen extends StatefulWidget {
   final String sessionId;
   final String classCode;
 
-  const OfflineVerificationScreen({
+  const PatternVerificationScreen({
     super.key,
     required this.sessionId,
     required this.classCode,
   });
 
   @override
-  State<OfflineVerificationScreen> createState() => _OfflineVerificationScreenState();
+  State<PatternVerificationScreen> createState() =>
+      _PatternVerificationScreenState();
 }
 
-class _OfflineVerificationScreenState extends State<OfflineVerificationScreen> {
+class _PatternVerificationScreenState extends State<PatternVerificationScreen> {
   final AttendanceService _attendanceService = AttendanceService();
   bool _isProcessing = false;
   String? _capturedImagePath;
@@ -44,17 +45,19 @@ class _OfflineVerificationScreenState extends State<OfflineVerificationScreen> {
 
   Future<void> _verifyAttendance(String imagePath) async {
     setState(() => _isProcessing = true);
-    
+
     try {
       final result = await _attendanceService.verifyImage(
         sessionId: widget.sessionId,
         imagePath: imagePath,
-        focalDistance: 2.0, 
+        focalDistance: 2.0,
       );
-      
+
       if (mounted) {
         if (result['success']) {
-          _showSuccessDialog(result['message'] ?? 'Attendance marked successfully');
+          _showSuccessDialog(
+            result['message'] ?? 'Attendance marked successfully',
+          );
         } else {
           _showErrorSnackBar(result['message'] ?? 'Verification failed');
           setState(() {
@@ -113,10 +116,7 @@ class _OfflineVerificationScreenState extends State<OfflineVerificationScreen> {
             const SizedBox(height: 16),
             const Text(
               'Success!',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -184,7 +184,11 @@ class _OfflineVerificationScreenState extends State<OfflineVerificationScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                  icon: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                   onPressed: () => Navigator.pop(context),
                   tooltip: 'Back',
                 ),
@@ -243,10 +247,7 @@ class _OfflineVerificationScreenState extends State<OfflineVerificationScreen> {
                     const SizedBox(height: 16),
                     const Text(
                       'Match the pattern drawn by your teacher to mark your attendance.',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 48),

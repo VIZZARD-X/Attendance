@@ -7,6 +7,7 @@ import '../teacher/my_classes_screen.dart';
 import '../teacher/session_create_screen.dart';
 import '../teacher/teacher_attendance_history_screen.dart';
 import '../teacher/teacher_profile_screen.dart';
+import '../../widgets/offline_indicator.dart';
 
 class TeacherDashboardMobile extends StatefulWidget {
   const TeacherDashboardMobile({super.key});
@@ -112,7 +113,7 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
       setState(() {
         _cachedUserData = userData;
         _lastFetch = DateTime.now();
-        
+
         teacherName = userData?['first_name'] ?? 'Teacher';
         username = userData?['username'] ?? '';
         totalClasses = classes.length;
@@ -135,9 +136,7 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
       case 'My Classes':
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const MyClassesScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const MyClassesScreen()),
         ).then((_) {
           // Refresh data when returning from My Classes
           _loadUserData(forceRefresh: true);
@@ -148,9 +147,9 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
         try {
           // Show inline loading state
           setState(() => isLoading = true);
-          
+
           final classes = await _classService.getMyClasses();
-          
+
           setState(() => isLoading = false);
 
           if (classes.isEmpty) {
@@ -158,12 +157,16 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
             return;
           }
 
-          final subjects = classes.map((c) => {
-            'id': c['id'].toString(),
-            'code': c['class_code'] as String,
-            'name': c['class_name'] as String,
-            'semester': c['semester'] as String,
-          }).toList();
+          final subjects = classes
+              .map(
+                (c) => {
+                  'id': c['id'].toString(),
+                  'code': c['class_code'] as String,
+                  'name': c['class_name'] as String,
+                  'semester': c['semester'] as String,
+                },
+              )
+              .toList();
 
           if (mounted) {
             Navigator.push(
@@ -179,7 +182,7 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
         } catch (e) {
           if (mounted) {
             setState(() => isLoading = false);
-            
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Error loading classes: $e'),
@@ -202,16 +205,14 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
       case 'Profile':
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const TeacherProfileScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const TeacherProfileScreen()),
         ).then((_) {
           _loadUserData(forceRefresh: true);
         });
         break;
 
       //  REMOVED: Class Insights and Reports cases
-      
+
       default:
         _showComingSoonSnackBar(title);
     }
@@ -284,7 +285,9 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
     return Scaffold(
       backgroundColor: const Color(0xFFF4F8FB),
       appBar: isMobile || isTablet ? _buildTopBar(isMobile) : null,
-      drawer: isMobile || isTablet ? const TeacherDrawer(currentRoute: 'Dashboard') : null,
+      drawer: isMobile || isTablet
+          ? const TeacherDrawer(currentRoute: 'Dashboard')
+          : null,
       body: Stack(
         children: [
           SafeArea(
@@ -308,7 +311,10 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
                           Center(
                             child: ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 1100),
-                              child: _buildDashboardGrid(crossAxisCount, isMobile),
+                              child: _buildDashboardGrid(
+                                crossAxisCount,
+                                isMobile,
+                              ),
                             ),
                           ),
                         ],
@@ -319,7 +325,7 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
               ],
             ),
           ),
-          
+
           // Inline loading indicator
           if (isLoading)
             Container(
@@ -353,7 +359,8 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
           ? null
           : IconButton(
               icon: const Icon(Icons.menu, color: Color(0xFF1F2937)),
-              onPressed: () => setState(() => isSidebarExpanded = !isSidebarExpanded),
+              onPressed: () =>
+                  setState(() => isSidebarExpanded = !isSidebarExpanded),
             ),
       title: Row(
         children: [
@@ -365,7 +372,11 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
               shape: BoxShape.circle,
             ),
             padding: const EdgeInsets.all(8),
-            child: const Icon(Icons.school_rounded, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.school_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -397,6 +408,7 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
         ],
       ),
       actions: [
+        const OfflineIndicator(),
         IconButton(
           icon: const Icon(Icons.refresh, color: Color(0xFF1F2937)),
           onPressed: () => _loadUserData(forceRefresh: true),
@@ -447,7 +459,10 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
   ) {
     return Container(
       height: isMobile ? 100 : 120,
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: isMobile ? 12 : 16),
+      padding: EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: isMobile ? 12 : 16,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: gradientColors,
@@ -619,7 +634,11 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
     );
   }
 
-  Widget _buildSidebarItem(IconData icon, String title, {bool isMobile = false}) {
+  Widget _buildSidebarItem(
+    IconData icon,
+    String title, {
+    bool isMobile = false,
+  }) {
     return ListTile(
       leading: Icon(icon, color: Colors.white70, size: isMobile ? 24 : 20),
       title: isSidebarExpanded || isMobile
@@ -631,5 +650,4 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
       onTap: () => _handleCardTap(title),
     );
   }
-
 }

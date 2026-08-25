@@ -4,31 +4,49 @@ import '../../services/attendance_service.dart';
 import '../../services/profile_service.dart';
 import '../../widgets/student_drawer.dart';
 
+import 'dart:async';
+import '../../services/sync_service.dart';
+
 class AttendanceHistoryScreen extends StatefulWidget {
   final String? filterClassName;
   const AttendanceHistoryScreen({super.key, this.filterClassName});
 
   @override
-  State<AttendanceHistoryScreen> createState() => _AttendanceHistoryScreenState();
+  State<AttendanceHistoryScreen> createState() =>
+      _AttendanceHistoryScreenState();
 }
 
 class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   final AttendanceService _attendanceService = AttendanceService();
-  
+
   List<Map<String, dynamic>> attendanceRecords = [];
   Map<String, List<Map<String, dynamic>>> groupedRecords = {};
   bool isLoading = true;
   String? errorMessage;
-  
+
   String selectedFilter = 'All'; // 'All', 'Present', 'Absent'
   String selectedView = 'Timeline'; // 'Timeline', 'ByClass'
   String? _selectedClassFilter;
+
+  StreamSubscription<void>? _syncSubscription;
 
   @override
   void initState() {
     super.initState();
     _selectedClassFilter = widget.filterClassName;
     _loadAttendanceHistory();
+
+    _syncSubscription = SyncService().onSyncComplete.listen((_) {
+      if (mounted) {
+        _loadAttendanceHistory();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _syncSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadAttendanceHistory() async {
@@ -39,7 +57,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
 
     try {
       final records = await _attendanceService.getMyAttendance();
-      
+
       if (mounted) {
         setState(() {
           attendanceRecords = records;
@@ -50,7 +68,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          errorMessage = 'Failed to load attendance: $e';
+          errorMessage = 'You appear to be offline. Please check your connection.';
           isLoading = false;
         });
       }
@@ -59,8 +77,10 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
 
   void _groupRecordsByClass() {
     groupedRecords.clear();
-    final recordsToGroup = _selectedClassFilter != null 
-        ? attendanceRecords.where((r) => r['class_name'] == _selectedClassFilter).toList() 
+    final recordsToGroup = _selectedClassFilter != null
+        ? attendanceRecords
+              .where((r) => r['class_name'] == _selectedClassFilter)
+              .toList()
         : attendanceRecords;
     for (var record in recordsToGroup) {
       final classKey = record['class_name'] ?? 'Unknown Class';
@@ -74,29 +94,32 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
   List<Map<String, dynamic>> get filteredRecords {
     var records = attendanceRecords;
     if (_selectedClassFilter != null) {
-      records = records.where((r) => r['class_name'] == _selectedClassFilter).toList();
+      records = records
+          .where((r) => r['class_name'] == _selectedClassFilter)
+          .toList();
     }
     if (selectedFilter == 'All') return records;
     return records
-        .where((r) => r['status'].toString().toLowerCase() == selectedFilter.toLowerCase())
+        .where(
+          (r) =>
+              r['status'].toString().toLowerCase() ==
+              selectedFilter.toLowerCase(),
+        )
         .toList();
   }
 
   Map<String, dynamic> get statistics {
-    final records = _selectedClassFilter != null 
-        ? attendanceRecords.where((r) => r['class_name'] == _selectedClassFilter).toList() 
+    final records = _selectedClassFilter != null
+        ? attendanceRecords
+              .where((r) => r['class_name'] == _selectedClassFilter)
+              .toList()
         : attendanceRecords;
     final total = records.length;
     final present = records.where((r) => r['status'] == 'present').length;
     final absent = total - present;
     final rate = total > 0 ? (present / total * 100) : 0.0;
-    
-    return {
-      'total': total,
-      'present': present,
-      'absent': absent,
-      'rate': rate,
-    };
+
+    return {'total': total, 'present': present, 'absent': absent, 'rate': rate};
   }
 
   @override
@@ -105,7 +128,9 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     final isMobile = screenW < 600;
 
     return Scaffold(
-      drawer: isMobile ? const StudentDrawer(currentRoute: 'Attendance History') : null,
+      drawer: isMobile
+          ? const StudentDrawer(currentRoute: 'Attendance History')
+          : null,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -161,7 +186,11 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24),
+                icon: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
                 onPressed: () => Navigator.pop(context),
                 tooltip: 'Back',
               ),
@@ -186,8 +215,16 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildViewButton(Icons.view_timeline_rounded, 'Timeline', isMobile),
-                _buildViewButton(Icons.view_module_rounded, 'ByClass', isMobile),
+                _buildViewButton(
+                  Icons.view_timeline_rounded,
+                  'Timeline',
+                  isMobile,
+                ),
+                _buildViewButton(
+                  Icons.view_module_rounded,
+                  'ByClass',
+                  isMobile,
+                ),
               ],
             ),
           ),
@@ -206,21 +243,19 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
           vertical: 8,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white.withOpacity(0.3) : Colors.transparent,
+          color: isSelected
+              ? Colors.white.withOpacity(0.3)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
         ),
-        child: Icon(
-          icon,
-          color: Colors.white,
-          size: isMobile ? 18 : 20,
-        ),
+        child: Icon(icon, color: Colors.white, size: isMobile ? 18 : 20),
       ),
     );
   }
 
   Widget _buildStatisticsCard(bool isMobile) {
     final stats = statistics;
-    
+
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(20),
@@ -240,9 +275,24 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStatItem('Total', '${stats['total']}', Icons.assessment_rounded, const Color(0xFF26A69A)),
-              _buildStatItem('Present', '${stats['present']}', Icons.check_circle_rounded, Colors.green),
-              _buildStatItem('Absent', '${stats['absent']}', Icons.cancel_rounded, Colors.red),
+              _buildStatItem(
+                'Total',
+                '${stats['total']}',
+                Icons.assessment_rounded,
+                const Color(0xFF26A69A),
+              ),
+              _buildStatItem(
+                'Present',
+                '${stats['present']}',
+                Icons.check_circle_rounded,
+                Colors.green,
+              ),
+              _buildStatItem(
+                'Absent',
+                '${stats['absent']}',
+                Icons.cancel_rounded,
+                Colors.red,
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -261,7 +311,9 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  stats['rate'] >= 75 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                  stats['rate'] >= 75
+                      ? Icons.trending_up_rounded
+                      : Icons.trending_down_rounded,
                   color: const Color(0xFF26A69A),
                   size: 20,
                 ),
@@ -282,7 +334,12 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+  Widget _buildStatItem(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         Container(
@@ -332,9 +389,15 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                   });
                 },
                 backgroundColor: const Color(0xFF26A69A),
-                labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                labelStyle: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
                 deleteIconColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Colors.transparent)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: const BorderSide(color: Colors.transparent),
+                ),
               ),
               const SizedBox(width: 8),
             ],
@@ -389,15 +452,11 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     }
 
     if (errorMessage != null) {
-      return Center(
-        child: _buildErrorState(isMobile),
-      );
+      return Center(child: _buildErrorState(isMobile));
     }
 
     if (attendanceRecords.isEmpty) {
-      return Center(
-        child: _buildEmptyState(isMobile),
-      );
+      return Center(child: _buildEmptyState(isMobile));
     }
 
     return selectedView == 'Timeline'
@@ -407,17 +466,14 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
 
   Widget _buildTimelineView(bool isMobile) {
     final records = filteredRecords;
-    
+
     if (records.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Text(
             'No $selectedFilter records found',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 16),
           ),
         ),
       );
@@ -450,7 +506,9 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
       itemBuilder: (context, index) {
         final className = groupedRecords.keys.elementAt(index);
         final records = groupedRecords[className]!;
-        final presentCount = records.where((r) => r['status'] == 'present').length;
+        final presentCount = records
+            .where((r) => r['status'] == 'present')
+            .length;
         final attendanceRate = (presentCount / records.length * 100);
 
         return TweenAnimationBuilder<double>(
@@ -477,9 +535,14 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
               ],
             ),
             child: Theme(
-              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              data: Theme.of(
+                context,
+              ).copyWith(dividerColor: Colors.transparent),
               child: ExpansionTile(
-                tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                tilePadding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 8,
+                ),
                 leading: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -488,7 +551,11 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.school_rounded, color: Colors.white, size: 24),
+                  child: const Icon(
+                    Icons.school_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
                 ),
                 title: Text(
                   className,
@@ -509,20 +576,27 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                       const SizedBox(width: 4),
                       Text(
                         '${records.length} sessions',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Icon(
                         Icons.trending_up_rounded,
                         size: 14,
-                        color: attendanceRate >= 75 ? Colors.green : Colors.orange,
+                        color: attendanceRate >= 75
+                            ? Colors.green
+                            : Colors.orange,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '${attendanceRate.toStringAsFixed(1)}%',
                         style: TextStyle(
                           fontSize: 12,
-                          color: attendanceRate >= 75 ? Colors.green : Colors.orange,
+                          color: attendanceRate >= 75
+                              ? Colors.green
+                              : Colors.orange,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -531,7 +605,10 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                 ),
                 children: records.map((record) {
                   return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
                     child: _buildCompactAttendanceCard(record, isMobile),
                   );
                 }).toList(),
@@ -564,9 +641,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
         borderRadius: BorderRadius.circular(18),
         child: Container(
           decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(color: statusColor, width: 5),
-            ),
+            border: Border(left: BorderSide(color: statusColor, width: 5)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(18),
@@ -597,7 +672,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            record['class_code'] ?? 'N/A',
+                            record['class_name'] ?? 'Unknown Class',
                             style: TextStyle(
                               fontSize: isMobile ? 15 : 17,
                               fontWeight: FontWeight.bold,
@@ -606,7 +681,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            record['class_name'] ?? 'Unknown Class',
+                            record['teacher_name'] ?? 'Unknown Teacher',
                             style: TextStyle(
                               fontSize: isMobile ? 13 : 14,
                               color: Colors.grey.shade600,
@@ -618,7 +693,10 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: statusColor,
                         borderRadius: BorderRadius.circular(20),
@@ -680,7 +758,9 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  DateFormat('dd/MM/yy').format(markedAt), // ✅ CHANGED
+                                  DateFormat(
+                                    'dd/MM/yy',
+                                  ).format(markedAt), // ✅ CHANGED
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
@@ -726,7 +806,9 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
-                                  DateFormat('hh:mm a').format(markedAt), // ✅ CHANGED to 12-hour format
+                                  DateFormat('hh:mm a').format(
+                                    markedAt,
+                                  ), // ✅ CHANGED to 12-hour format
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
@@ -749,10 +831,13 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     );
   }
 
-  Widget _buildCompactAttendanceCard(Map<String, dynamic> record, bool isMobile) {
+  Widget _buildCompactAttendanceCard(
+    Map<String, dynamic> record,
+    bool isMobile,
+  ) {
     final status = record['status'] ?? 'unknown';
     final statusColor = status == 'present' ? Colors.green : Colors.red;
-    
+
     // ✅ ADD THIS: Convert UTC to local time
     final markedAt = DateTime.parse(record['marked_at']).toLocal();
 
@@ -774,11 +859,10 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              DateFormat('MMM dd, yyyy • hh:mm a').format(markedAt), // ✅ CHANGED
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+              DateFormat(
+                'MMM dd, yyyy • hh:mm a',
+              ).format(markedAt), // ✅ CHANGED
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ),
           Container(
@@ -843,10 +927,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
           const Text(
             'Start scanning QR codes to track\nyour attendance history',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 15,
-            ),
+            style: TextStyle(color: Colors.white70, fontSize: 15),
           ),
           const SizedBox(height: 32),
           ElevatedButton.icon(
@@ -901,10 +982,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
           Text(
             errorMessage!,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
           const SizedBox(height: 28),
           ElevatedButton.icon(

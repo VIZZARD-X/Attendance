@@ -38,7 +38,6 @@ class AdminWebLayout extends StatefulWidget {
 }
 
 class _AdminWebLayoutState extends State<AdminWebLayout> {
-
   PageRouteBuilder _fadeRoute(Widget page) {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
@@ -48,7 +47,7 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
       transitionDuration: const Duration(milliseconds: 150),
     );
   }
-  
+
   final AuthService _authService = AuthService();
 
   bool _isSidebarExpanded = false;
@@ -104,7 +103,7 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title:   const Text('Logout'),
+        title: const Text('Logout'),
         content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
@@ -144,23 +143,36 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
-              onTap: () => title == 'Logout' ? _logout() : _handleCardTap(title),
+              onTap: () =>
+                  title == 'Logout' ? _logout() : _handleCardTap(title),
               child: Container(
                 height: 48,
-                padding: EdgeInsets.symmetric(horizontal: showLabel ? 12.0 : 0.0),
+                padding: EdgeInsets.symmetric(
+                  horizontal: showLabel ? 12.0 : 0.0,
+                ),
                 child: Row(
-                  mainAxisAlignment: showLabel ? MainAxisAlignment.start : MainAxisAlignment.center,
+                  mainAxisAlignment: showLabel
+                      ? MainAxisAlignment.start
+                      : MainAxisAlignment.center,
                   children: [
-                    Icon(icon, color: isSelected ? _AppColors.tealDark : Colors.white70, size: 24),
+                    Icon(
+                      icon,
+                      color: isSelected ? _AppColors.tealDark : Colors.white70,
+                      size: 24,
+                    ),
                     if (showLabel) ...[
                       const SizedBox(width: 16),
                       Expanded(
                         child: Text(
                           title,
                           style: TextStyle(
-                            color: isSelected ? _AppColors.tealDark : Colors.white70, 
+                            color: isSelected
+                                ? _AppColors.tealDark
+                                : Colors.white70,
                             fontSize: 14,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -187,7 +199,7 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
             color: Colors.black26,
             blurRadius: 10,
             offset: Offset(2, 0),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -224,7 +236,7 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
 
   @override
   Widget build(BuildContext context) {
-    final screenW  = MediaQuery.of(context).size.width;
+    final screenW = MediaQuery.of(context).size.width;
     final isDesktop = screenW >= 1024;
 
     if (kIsWeb && isDesktop) {
@@ -238,9 +250,7 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
                 child: widget.desktopBody,
               ),
             ),
-            SafeArea(
-              child: _buildDesktopSidebar(),
-            ),
+            SafeArea(child: _buildDesktopSidebar()),
           ],
         ),
       );

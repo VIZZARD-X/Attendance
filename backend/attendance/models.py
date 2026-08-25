@@ -30,13 +30,13 @@ class StudentProfile(models.Model):
         related_name='student_profile',
         limit_choices_to={'role': 'student'}
     )
-    roll_no = models.CharField(max_length=20, unique=True)
 
     class Meta:
         db_table = 'student_profiles'  # Table name in PostgreSQL
 
     def __str__(self):
-        return f"{self.student.username} - {self.roll_no}"
+        return f"{self.student.username}"
+
     
 class Class(models.Model):
     """Table for class/course information"""
@@ -88,8 +88,8 @@ class AttendanceSession(models.Model):
     )
     
     CLASS_TYPE_CHOICES = (
-        ('online', 'Online'),
-        ('offline', 'Offline'),
+        ('qr', 'QR'),
+        ('pattern', 'Pattern'),
     )
     
 
@@ -97,13 +97,14 @@ class AttendanceSession(models.Model):
     class_obj = models.ForeignKey(Class, on_delete=models.CASCADE, related_name='sessions')
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_sessions')
     
-    class_type = models.CharField(max_length=10, choices=CLASS_TYPE_CHOICES, default='online')
+    class_type = models.CharField(max_length=10, choices=CLASS_TYPE_CHOICES, default='qr')
 
     pattern_code = models.CharField(max_length=50, blank=True, null=True)
     instruction_card = models.TextField(blank=True, null=True)
     shape_data = models.JSONField(blank=True, null=True)
     
-    start_time = models.DateTimeField(auto_now_add=True)
+    from django.utils import timezone
+    start_time = models.DateTimeField(default=timezone.now)
     duration_minutes = models.IntegerField()  # Duration in minutes
     end_time = models.DateTimeField()  # Calculated: start_time + duration
     

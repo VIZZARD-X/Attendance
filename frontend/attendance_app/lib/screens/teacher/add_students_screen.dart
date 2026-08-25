@@ -18,7 +18,6 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
   final nameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  final rollNoController = TextEditingController();
 
   List<Map<String, String>> students = [];
   bool _obscurePassword = true;
@@ -51,7 +50,6 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
     nameController.dispose();
     emailController.dispose();
     passwordController.dispose();
-    rollNoController.dispose();
     super.dispose();
   }
 
@@ -74,7 +72,6 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
         setState(() {
           isExistingStudent = true;
           nameController.text = studentData['username'] ?? '';
-          rollNoController.text = studentData['roll_no']?.toString() ?? '';
           passwordController.clear();
         });
 
@@ -83,7 +80,6 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
         setState(() {
           isExistingStudent = false;
           nameController.clear();
-          rollNoController.clear();
         });
       }
     } catch (e) {
@@ -121,10 +117,6 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
         _showErrorSnackBar('Password is required for new students');
         return;
       }
-      if (rollNoController.text.isEmpty) {
-        _showErrorSnackBar('Roll number is required for new students');
-        return;
-      }
       if (passwordController.text.length < 6) {
         _showErrorSnackBar('Password must be at least 6 characters');
         return;
@@ -146,9 +138,6 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
     if (passwordController.text.isNotEmpty) {
       studentData['password'] = passwordController.text;
     }
-    if (rollNoController.text.isNotEmpty) {
-      studentData['rollNo'] = rollNoController.text;
-    }
 
     setState(() {
       students.add(studentData);
@@ -159,7 +148,6 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
     nameController.clear();
     emailController.clear();
     passwordController.clear();
-    rollNoController.clear();
 
     _showSuccessSnackBar('✓ Student added to list!');
   }
@@ -198,7 +186,9 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
 
       if (mounted) {
         if (failCount == 0) {
-          _showSuccessSnackBar('✓ All $successCount students added successfully!');
+          _showSuccessSnackBar(
+            '✓ All $successCount students added successfully!',
+          );
           Navigator.pop(context, true);
         } else {
           _showErrorSnackBar(
@@ -296,9 +286,7 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
             children: [
               _buildAppBar(isMobile),
               Expanded(
-                child: isMobile 
-                  ? _buildMobileLayout() 
-                  : _buildDesktopLayout(),
+                child: isMobile ? _buildMobileLayout() : _buildDesktopLayout(),
               ),
             ],
           ),
@@ -341,17 +329,15 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
               child: _buildLeftPanel(false),
             ),
           ),
-          
+
           const SizedBox(width: 20),
-          
+
           // RIGHT SIDE - Students List
           Expanded(
             flex: 3,
-            child: students.isEmpty 
-              ? _buildEmptyStudentsList()
-              : SingleChildScrollView(
-                  child: _buildStudentsList(),
-                ),
+            child: students.isEmpty
+                ? _buildEmptyStudentsList()
+                : SingleChildScrollView(child: _buildStudentsList()),
           ),
         ],
       ),
@@ -396,10 +382,7 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
             Text(
               'Add students using the form on the left',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
             ),
           ],
         ),
@@ -430,8 +413,11 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white, size: 20),
+              icon: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -451,10 +437,7 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                 SizedBox(height: 2),
                 Text(
                   'Enroll students to your class',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               ],
             ),
@@ -466,11 +449,18 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
-                icon: const Icon(Icons.share_rounded, color: Colors.white, size: 20),
+                icon: const Icon(
+                  Icons.share_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 tooltip: 'Share Invite Link',
                 onPressed: () {
-                  final link = 'https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net/join/$classCode';
-                  Share.share('Join my class on Presence!\nTap here to join: $link');
+                  final link =
+                      'https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net/join/$classCode';
+                  Share.share(
+                    'Join my class on Presence!\nTap here to join: $link',
+                  );
                 },
               ),
             ),
@@ -500,7 +490,9 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
             Container(
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
                 border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
               ),
               child: const TabBar(
@@ -509,23 +501,14 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                 indicatorColor: Color(0xFF007C91),
                 indicatorWeight: 3,
                 tabs: [
-                  Tab(
-                    icon: Icon(Icons.link_rounded),
-                    text: 'Invite Link',
-                  ),
-                  Tab(
-                    icon: Icon(Icons.person_add_rounded),
-                    text: 'Manual Add',
-                  ),
+                  Tab(icon: Icon(Icons.link_rounded), text: 'Invite Link'),
+                  Tab(icon: Icon(Icons.person_add_rounded), text: 'Manual Add'),
                 ],
               ),
             ),
             Expanded(
               child: TabBarView(
-                children: [
-                  _buildShareLinkTab(),
-                  _buildManualAddTab(),
-                ],
+                children: [_buildShareLinkTab(), _buildManualAddTab()],
               ),
             ),
           ],
@@ -565,10 +548,7 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                 Expanded(
                   child: Text(
                     link,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      color: Colors.black87,
-                    ),
+                    style: const TextStyle(fontSize: 15, color: Colors.black87),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -594,7 +574,10 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.copy_rounded, color: Colors.black87),
+                    child: const Icon(
+                      Icons.copy_rounded,
+                      color: Colors.black87,
+                    ),
                   ),
                 ),
               ],
@@ -608,16 +591,18 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
               child: ElevatedButton.icon(
                 onPressed: () {
                   if (classCode != null) {
-                    Share.share('Join my class on Presence!\nTap here to join: $link');
+                    Share.share(
+                      'Join my class on Presence!\nTap here to join: $link',
+                    );
                   }
                 },
-                icon: const Icon(Icons.reply_rounded, size: 24), // Share arrow icon
+                icon: const Icon(
+                  Icons.reply_rounded,
+                  size: 24,
+                ), // Share arrow icon
                 label: const Text(
                   'Share link',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0097A7),
@@ -672,10 +657,7 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                 Expanded(
                   child: Text(
                     'Enter email to check if student exists. Details will auto-fill for existing students.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.blue.shade700,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.blue.shade700),
                   ),
                 ),
               ],
@@ -713,8 +695,12 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                     ),
                   )
                 : (isExistingStudent
-                    ? Icon(Icons.check_circle, color: Colors.green.shade600, size: 24)
-                    : null),
+                      ? Icon(
+                          Icons.check_circle,
+                          color: Colors.green.shade600,
+                          size: 24,
+                        )
+                      : null),
           ),
 
           const SizedBox(height: 16),
@@ -731,7 +717,11 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_circle_outline, color: Colors.green.shade700, size: 20),
+                  Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.green.shade700,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   Text(
                     '✓ Existing student found',
@@ -759,7 +749,11 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.person_add_outlined, color: Colors.orange.shade700, size: 20),
+                  Icon(
+                    Icons.person_add_outlined,
+                    color: Colors.orange.shade700,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   Text(
                     'New student - fill all required fields',
@@ -785,17 +779,11 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
           ),
           const SizedBox(height: 16),
           _buildTextField(
-            controller: rollNoController,
-            label: isExistingStudent ? 'Roll Number' : 'Roll Number *',
-            hint: '2024001',
-            icon: Icons.badge_rounded,
-            enabled: !isExistingStudent,
-          ),
-          const SizedBox(height: 16),
-          _buildTextField(
             controller: passwordController,
             label: isExistingStudent ? 'Password (Optional)' : 'Password *',
-            hint: isExistingStudent ? 'Leave empty for existing' : 'Min. 6 characters',
+            hint: isExistingStudent
+                ? 'Leave empty for existing'
+                : 'Min. 6 characters',
             icon: Icons.lock_rounded,
             obscureText: _obscurePassword,
             suffixIcon: IconButton(
@@ -963,9 +951,7 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                   },
                   icon: const Icon(Icons.clear_all, size: 18),
                   label: const Text('Clear All'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.red,
-                  ),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
                 ),
             ],
           ),
@@ -978,7 +964,8 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
             itemBuilder: (context, index) {
               final student = students[index];
               final hasPassword =
-                  student.containsKey('password') && student['password']!.isNotEmpty;
+                  student.containsKey('password') &&
+                  student['password']!.isNotEmpty;
 
               return Container(
                 decoration: BoxDecoration(
@@ -987,7 +974,10 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                   border: Border.all(color: Colors.grey.shade200),
                 ),
                 child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   leading: CircleAvatar(
                     backgroundColor: const Color(0xFF007C91),
                     radius: 24,
@@ -1015,38 +1005,11 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                       const SizedBox(height: 4),
                       Text(
                         student['email']!,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 13,
-                        ),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 13),
                       ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          if (student.containsKey('rollNo') &&
-                              student['rollNo']!.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade200,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                'Roll: ${student['rollNo']}',
-                                style: TextStyle(
-                                  color: Colors.grey[700],
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          if (student.containsKey('rollNo') &&
-                              student['rollNo']!.isNotEmpty &&
-                              !hasPassword)
-                            const SizedBox(width: 6),
                           if (!hasPassword)
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -1054,14 +1017,13 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
+                                color: Colors.orange.shade100,
                                 borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: Colors.blue.shade300),
                               ),
                               child: Text(
-                                'Existing Student',
+                                'Existing',
                                 style: TextStyle(
-                                  color: Colors.blue.shade700,
+                                  color: Colors.orange.shade800,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -1072,7 +1034,11 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
                     ],
                   ),
                   trailing: IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.red, size: 22),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.red,
+                      size: 22,
+                    ),
                     onPressed: () => _removeStudent(index),
                     tooltip: 'Remove student',
                   ),

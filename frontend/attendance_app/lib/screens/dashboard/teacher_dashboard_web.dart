@@ -6,25 +6,26 @@ import '../teacher/session_create_screen.dart';
 import '../teacher/teacher_attendance_history_screen.dart';
 import '../teacher/teacher_profile_screen.dart';
 import '../../widgets/teacher_web_layout.dart';
+import '../../widgets/offline_indicator.dart';
 
 // ─── App colour constants ──────────────
 abstract class _AppColors {
-  static const tealDark    = Color(0xFF007C91);
-  static const teal        = Color(0xFF0097A7);
-  static const tealLight   = Color(0xFF0288A3);
-  static const background  = Color(0xFFF7FAFC);
-  static const darkBg      = Color(0xFF1E1E2D);
+  static const tealDark = Color(0xFF007C91);
+  static const teal = Color(0xFF0097A7);
+  static const tealLight = Color(0xFF0288A3);
+  static const background = Color(0xFFF7FAFC);
+  static const darkBg = Color(0xFF1E1E2D);
   static const textPrimary = Color(0xFF1F2937);
-  static const textMuted   = Color(0xFF6B7280);
+  static const textMuted = Color(0xFF6B7280);
 }
 
 // ─── Typed card model ───────────────────────
 class _DashboardCard {
-  final String       title;
-  final String       subtitle;
-  final IconData     icon;
-  final Color        color;
-  final List<Color>  gradient;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final List<Color> gradient;
 
   const _DashboardCard({
     required this.title,
@@ -46,7 +47,8 @@ class AnimatedWebCard extends StatefulWidget {
   State<AnimatedWebCard> createState() => _AnimatedWebCardState();
 }
 
-class _AnimatedWebCardState extends State<AnimatedWebCard> with SingleTickerProviderStateMixin {
+class _AnimatedWebCardState extends State<AnimatedWebCard>
+    with SingleTickerProviderStateMixin {
   bool _isHovered = false;
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
@@ -60,15 +62,18 @@ class _AnimatedWebCardState extends State<AnimatedWebCard> with SingleTickerProv
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.04).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
-    _translateAnimation = Tween<double>(begin: 0.0, end: -8.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
-    _rotationAnimation = Tween<double>(begin: 0.0, end: 0.15).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.04,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
+    _translateAnimation = Tween<double>(
+      begin: 0.0,
+      end: -8.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+    _rotationAnimation = Tween<double>(
+      begin: 0.0,
+      end: 0.15,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
   }
 
   @override
@@ -98,7 +103,10 @@ class _AnimatedWebCardState extends State<AnimatedWebCard> with SingleTickerProv
               child: Transform.scale(
                 scale: _scaleAnimation.value,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 24,
+                  ),
                   decoration: ShapeDecoration(
                     gradient: LinearGradient(
                       begin: const Alignment(-0.05, -0.07),
@@ -107,15 +115,20 @@ class _AnimatedWebCardState extends State<AnimatedWebCard> with SingleTickerProv
                     ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(43),
-                      side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
+                      side: const BorderSide(
+                        color: Color(0xFFE5E7EB),
+                        width: 1.5,
+                      ),
                     ),
                     shadows: [
                       BoxShadow(
-                        color: widget.card.color.withOpacity(_isHovered ? 0.6 : 0.1),
+                        color: widget.card.color.withOpacity(
+                          _isHovered ? 0.6 : 0.1,
+                        ),
                         blurRadius: _isHovered ? 25 : 10,
                         spreadRadius: _isHovered ? 2 : 0,
                         offset: Offset(0, _isHovered ? 12 : 4),
-                      )
+                      ),
                     ],
                   ),
                   child: Row(
@@ -135,7 +148,11 @@ class _AnimatedWebCardState extends State<AnimatedWebCard> with SingleTickerProv
                         ),
                         child: Transform.rotate(
                           angle: _rotationAnimation.value,
-                          child: Icon(widget.card.icon, color: widget.card.color, size: 30),
+                          child: Icon(
+                            widget.card.icon,
+                            color: widget.card.color,
+                            size: 30,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -190,7 +207,6 @@ class TeacherDashboardWeb extends StatefulWidget {
 }
 
 class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
-
   PageRouteBuilder _fadeRoute(Widget page) {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
@@ -200,61 +216,62 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
       transitionDuration: const Duration(milliseconds: 150),
     );
   }
-  final AuthService  _authService  = AuthService();
+
+  final AuthService _authService = AuthService();
   final ClassService _classService = ClassService();
 
-  bool   _isSidebarExpanded = false;
-  String _teacherName       = 'Loading...';
-  String _username          = '';
-  bool   _isLoading         = true;
-  int    _totalClasses      = 0;    
-  int    _activeSessions    = 0;
+  bool _isSidebarExpanded = false;
+  String _teacherName = 'Loading...';
+  String _username = '';
+  bool _isLoading = true;
+  int _totalClasses = 0;
+  int _activeSessions = 0;
 
   Map<String, dynamic>? _cachedUserData;
-  DateTime?             _lastFetch;
+  DateTime? _lastFetch;
 
   // Compile-time constant list
   static const _cards = <_DashboardCard>[
     _DashboardCard(
-      title:    'My Classes',
+      title: 'My Classes',
       subtitle: 'Manage and Monitor classes',
-      icon:     Icons.people_alt_rounded,
-      color:    Color(0xFF22C55E),
+      icon: Icons.people_alt_rounded,
+      color: Color(0xFF22C55E),
       gradient: [Color(0xFF1EB957), Colors.white],
     ),
     _DashboardCard(
-      title:    'Create Session',
+      title: 'Create Session',
       subtitle: 'Start new Attendance Session',
-      icon:     Icons.timer_rounded,
-      color:    Color(0xFFF59E0B),
+      icon: Icons.timer_rounded,
+      color: Color(0xFFF59E0B),
       gradient: [Color(0xFFF59E0B), Colors.white],
     ),
     _DashboardCard(
-      title:    'Attendance History',
+      title: 'Attendance History',
       subtitle: 'View and Edit Attendance',
-      icon:     Icons.check_circle_rounded,
-      color:    Color(0xFF0FA797),
+      icon: Icons.check_circle_rounded,
+      color: Color(0xFF0FA797),
       gradient: [Color(0xFF14B8A6), Colors.white],
     ),
     _DashboardCard(
-      title:    'Profile',
+      title: 'Profile',
       subtitle: 'View your Profile',
-      icon:     Icons.person_rounded,
-      color:    Color(0xFF999EA5),
+      icon: Icons.person_rounded,
+      color: Color(0xFF999EA5),
       gradient: [Color(0xFF9CA3AF), Colors.white],
     ),
     _DashboardCard(
-      title:    'Announcements',
+      title: 'Announcements',
       subtitle: 'Announce to class',
-      icon:     Icons.campaign_rounded,
-      color:    Color(0xFFF566C5),
+      icon: Icons.campaign_rounded,
+      color: Color(0xFFF566C5),
       gradient: [Color(0xFFE597F3), Colors.white],
     ),
     _DashboardCard(
-      title:    'Analytics',
+      title: 'Analytics',
       subtitle: 'Reports and Highlights',
-      icon:     Icons.insights_rounded,
-      color:    Color(0xFF78D855),
+      icon: Icons.insights_rounded,
+      color: Color(0xFF78D855),
       gradient: [Color(0xFFB0ED69), Colors.white],
     ),
   ];
@@ -266,7 +283,8 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
   }
 
   Future<void> _loadUserData({bool forceRefresh = false}) async {
-    final cacheValid = _cachedUserData != null &&
+    final cacheValid =
+        _cachedUserData != null &&
         _lastFetch != null &&
         DateTime.now().difference(_lastFetch!) < const Duration(minutes: 5);
 
@@ -274,8 +292,8 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
       if (!mounted) return;
       setState(() {
         _teacherName = _cachedUserData!['first_name'] ?? 'Teacher';
-        _username    = _cachedUserData!['username']   ?? '';
-        _isLoading   = false;
+        _username = _cachedUserData!['username'] ?? '';
+        _isLoading = false;
       });
       return;
     }
@@ -291,23 +309,23 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
 
       if (!mounted) return;
       final userData = results[0] as Map<String, dynamic>?;
-      final classes  = results[1] as List;
+      final classes = results[1] as List;
 
       setState(() {
         _cachedUserData = userData;
-        _lastFetch      = DateTime.now();
-        _teacherName    = userData?['first_name'] ?? 'Teacher';
-        _username       = userData?['username']   ?? '';
-        _totalClasses   = classes.length;
+        _lastFetch = DateTime.now();
+        _teacherName = userData?['first_name'] ?? 'Teacher';
+        _username = userData?['username'] ?? '';
+        _totalClasses = classes.length;
         _activeSessions = 0;
-        _isLoading      = false;
+        _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _teacherName = 'Teacher';
-        _username    = '';
-        _isLoading   = false;
+        _username = '';
+        _isLoading = false;
       });
       _showSnackBar('Failed to load data. Please try again.', Colors.red);
     }
@@ -316,10 +334,7 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
   Future<void> _handleCardTap(String title) async {
     switch (title) {
       case 'My Classes':
-        await Navigator.push(
-          context,
-          _fadeRoute(const MyClassesScreen()),
-        );
+        await Navigator.push(context, _fadeRoute(const MyClassesScreen()));
         _loadUserData(forceRefresh: true);
         break;
       case 'Create Session':
@@ -333,17 +348,20 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
         _loadUserData(forceRefresh: true);
         break;
       case 'Profile':
-        await Navigator.push(
-          context,
-          _fadeRoute(const TeacherProfileScreen()),
-        );
+        await Navigator.push(context, _fadeRoute(const TeacherProfileScreen()));
         _loadUserData(forceRefresh: true);
         break;
       case 'Announcements':
-        _showSnackBar('Announcements clicked! Coming soon.', const Color(0xFFF566C5));
+        _showSnackBar(
+          'Announcements clicked! Coming soon.',
+          const Color(0xFFF566C5),
+        );
         break;
       case 'Analytics':
-        _showSnackBar('Analytics clicked! Coming soon.', const Color(0xFF78D855));
+        _showSnackBar(
+          'Analytics clicked! Coming soon.',
+          const Color(0xFF78D855),
+        );
         break;
       default:
         _showSnackBar('$title card was clicked!', Colors.purple);
@@ -360,16 +378,23 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
       setState(() => _isLoading = false);
 
       if (classes.isEmpty) {
-        _showSnackBar('No classes found. Please create a class first.', Colors.orange);
+        _showSnackBar(
+          'No classes found. Please create a class first.',
+          Colors.orange,
+        );
         return;
       }
 
-      final subjects = classes.map((c) => {
-        'id'      : c['id'].toString(),
-        'code'    : c['class_code'] as String,
-        'name'    : c['class_name'] as String,
-        'semester': c['semester']   as String,
-      }).toList();
+      final subjects = classes
+          .map(
+            (c) => {
+              'id': c['id'].toString(),
+              'code': c['class_code'] as String,
+              'name': c['class_name'] as String,
+              'semester': c['semester'] as String,
+            },
+          )
+          .toList();
 
       if (!mounted) return;
       await Navigator.push(
@@ -388,9 +413,9 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content:         Text(message),
+        content: Text(message),
         backgroundColor: color,
-        duration:        const Duration(seconds: 3),
+        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -399,7 +424,7 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title:   const Text('Logout'),
+        title: const Text('Logout'),
         content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
@@ -416,7 +441,7 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
 
     if (confirm == true) {
       _cachedUserData = null;
-      _lastFetch      = null;
+      _lastFetch = null;
       await _authService.logout();
       if (mounted) Navigator.pushReplacementNamed(context, '/login');
     }
@@ -424,7 +449,7 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
 
   @override
   Widget build(BuildContext context) {
-    final screenW  = MediaQuery.of(context).size.width;
+    final screenW = MediaQuery.of(context).size.width;
     final isMobile = screenW < 600;
     final isDesktop = screenW >= 1024;
 
@@ -434,8 +459,8 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
 
     return Scaffold(
       backgroundColor: _AppColors.background,
-      appBar:          _buildTopBar(isMobile),
-      drawer:          _buildMobileDrawer(),
+      appBar: _buildTopBar(isMobile),
+      drawer: _buildMobileDrawer(),
       body: Stack(
         children: [
           SafeArea(
@@ -446,10 +471,7 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
               builder: (context, value, child) {
                 return Transform.translate(
                   offset: Offset(0, 40 * (1 - value)),
-                  child: Opacity(
-                    opacity: value,
-                    child: child,
-                  ),
+                  child: Opacity(opacity: value, child: child),
                 );
               },
               child: SingleChildScrollView(
@@ -489,10 +511,7 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
             builder: (context, value, child) {
               return Transform.translate(
                 offset: Offset(0, 40 * (1 - value)),
-                child: Opacity(
-                  opacity: value,
-                  child: child,
-                ),
+                child: Opacity(opacity: value, child: child),
               );
             },
             child: SingleChildScrollView(
@@ -521,122 +540,126 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
   }
 
   Widget _buildLoadingOverlay() => Container(
-        color: Colors.black26,
-        child: const Center(
-          child: Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Loading...'),
-                ],
-              ),
-            ),
+    color: Colors.black26,
+    child: const Center(
+      child: Card(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading...'),
+            ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 
   Widget _buildStatsSection(bool isMobile) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final totalCard = _buildStatCard(
-          value:          _totalClasses.toString(),
-          label:          'Total Classes',
-          iconColor:      const Color(0xFF14DCCA),
+          value: _totalClasses.toString(),
+          label: 'Total Classes',
+          iconColor: const Color(0xFF14DCCA),
           gradientColors: [const Color(0xFF65E8E1), Colors.white],
-          borderColor:    _AppColors.teal,
+          borderColor: _AppColors.teal,
         );
         final sessionCard = _buildStatCard(
-          value:          _activeSessions.toString(),
-          label:          'Active Sessions',
-          iconColor:      const Color(0xFFFF9191),
+          value: _activeSessions.toString(),
+          label: 'Active Sessions',
+          iconColor: const Color(0xFFFF9191),
           gradientColors: [const Color(0xFFFBC9C9), Colors.white],
-          borderColor:    const Color(0xFFF3ABAB),
+          borderColor: const Color(0xFFF3ABAB),
         );
 
         if (constraints.maxWidth < 700) {
-          return Column(children: [
-            totalCard,
-            const SizedBox(height: 16),
-            sessionCard,
-          ]);
+          return Column(
+            children: [totalCard, const SizedBox(height: 16), sessionCard],
+          );
         }
-        return Row(children: [
-          Expanded(child: totalCard),
-          const SizedBox(width: 16),
-          Expanded(child: sessionCard),
-        ]);
+        return Row(
+          children: [
+            Expanded(child: totalCard),
+            const SizedBox(width: 16),
+            Expanded(child: sessionCard),
+          ],
+        );
       },
     );
   }
 
   Widget _buildStatsRow() => Row(
-        children: [
-          Expanded(
-            child: _buildStatCard(
-              value:          _totalClasses.toString(),
-              label:          'Total Classes',
-              iconColor:      const Color(0xFF14DCCA),
-              gradientColors: [const Color(0xFF65E8E1), Colors.white],
-              borderColor:    _AppColors.teal,
-            ),
-          ),
-          const SizedBox(width: 24),
-          Expanded(
-            child: _buildStatCard(
-              value:          _activeSessions.toString(),
-              label:          'Active Sessions',
-              iconColor:      const Color(0xFFFF9191),
-              gradientColors: [const Color(0xFFFBC9C9), Colors.white],
-              borderColor:    const Color(0xFFF3ABAB),
-            ),
-          ),
-        ],
-      );
+    children: [
+      Expanded(
+        child: _buildStatCard(
+          value: _totalClasses.toString(),
+          label: 'Total Classes',
+          iconColor: const Color(0xFF14DCCA),
+          gradientColors: [const Color(0xFF65E8E1), Colors.white],
+          borderColor: _AppColors.teal,
+        ),
+      ),
+      const SizedBox(width: 24),
+      Expanded(
+        child: _buildStatCard(
+          value: _activeSessions.toString(),
+          label: 'Active Sessions',
+          iconColor: const Color(0xFFFF9191),
+          gradientColors: [const Color(0xFFFBC9C9), Colors.white],
+          borderColor: const Color(0xFFF3ABAB),
+        ),
+      ),
+    ],
+  );
 
   Widget _buildStatCard({
-    required String      value,
-    required String      label,
-    required Color       iconColor,
+    required String value,
+    required String label,
+    required Color iconColor,
     required List<Color> gradientColors,
-    required Color       borderColor,
+    required Color borderColor,
   }) {
     return Container(
-      height:   108,
-      padding:  const EdgeInsets.symmetric(horizontal: 24),
+      height: 108,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       decoration: ShapeDecoration(
         gradient: LinearGradient(
-          begin:  const Alignment(-0.13, 0),
-          end:    const Alignment(1.12, 1),
+          begin: const Alignment(-0.13, 0),
+          end: const Alignment(1.12, 1),
           colors: gradientColors,
         ),
         shape: RoundedRectangleBorder(
-          side:         BorderSide(width: 2, color: borderColor),
+          side: BorderSide(width: 2, color: borderColor),
           borderRadius: BorderRadius.circular(23),
         ),
       ),
       child: Row(
         children: [
           Container(
-            width:  68,
+            width: 68,
             height: 68,
             decoration: BoxDecoration(color: iconColor, shape: BoxShape.circle),
             padding: const EdgeInsets.all(10),
-            child: const Icon(Icons.bar_chart_rounded, color: Colors.white, size: 28),
+            child: const Icon(
+              Icons.bar_chart_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
           ),
           const SizedBox(width: 38),
           Column(
-            mainAxisAlignment:  MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 value,
                 style: const TextStyle(
-                  color:      Colors.black,
-                  fontSize:   40,
+                  color: Colors.black,
+                  fontSize: 40,
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.w700,
                 ),
@@ -644,8 +667,8 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
               Text(
                 label,
                 style: const TextStyle(
-                  color:      _AppColors.textMuted,
-                  fontSize:   17,
+                  color: _AppColors.textMuted,
+                  fontSize: 17,
                   fontFamily: 'Inter',
                 ),
               ),
@@ -663,17 +686,17 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
         const Text(
           'Overview',
           style: TextStyle(
-            fontSize:   26,
+            fontSize: 26,
             fontFamily: 'Inter',
             fontWeight: FontWeight.w700,
-            color:      Colors.black,
+            color: Colors.black,
           ),
         ),
         const SizedBox(height: 18),
         Row(
           children: [
             Container(
-              width:  12,
+              width: 12,
               height: 43,
               decoration: ShapeDecoration(
                 color: _AppColors.tealLight,
@@ -686,10 +709,10 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
             const Text(
               'Quick Actions',
               style: TextStyle(
-                fontSize:   33,
+                fontSize: 33,
                 fontFamily: 'Inter',
                 fontWeight: FontWeight.w700,
-                color:      Colors.black,
+                color: Colors.black,
               ),
             ),
           ],
@@ -699,14 +722,16 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
   }
 
   Widget _buildDashboardGrid(int crossAxisCount, bool isMobile) {
-    final childAspectRatio = crossAxisCount == 1 ? 1.5 : (crossAxisCount == 2 ? 1.3 : 1.6);
+    final childAspectRatio = crossAxisCount == 1
+        ? 1.5
+        : (crossAxisCount == 2 ? 1.3 : 1.6);
     return GridView.builder(
-      itemCount:  _cards.length,
-      physics:    const NeverScrollableScrollPhysics(),
+      itemCount: _cards.length,
+      physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        mainAxisSpacing:  42,
+        mainAxisSpacing: 42,
         crossAxisSpacing: 55,
         childAspectRatio: childAspectRatio,
       ),
@@ -731,16 +756,20 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
               shape: BoxShape.circle,
             ),
             padding: const EdgeInsets.all(8),
-            child: const Icon(Icons.school_rounded, color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.school_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               'Welcome, $_username',
               style: TextStyle(
-                fontSize:   isMobile ? 16 : 18,
+                fontSize: isMobile ? 16 : 18,
                 fontWeight: FontWeight.bold,
-                color:      _AppColors.textPrimary,
+                color: _AppColors.textPrimary,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -748,12 +777,13 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
         ],
       ),
       actions: [
+        const OfflineIndicator(),
         IconButton(
-          icon:      const Icon(Icons.refresh, color: _AppColors.textPrimary),
+          icon: const Icon(Icons.refresh, color: _AppColors.textPrimary),
           onPressed: () => _loadUserData(forceRefresh: true),
         ),
         IconButton(
-          icon:      const Icon(Icons.logout, color: _AppColors.textPrimary),
+          icon: const Icon(Icons.logout, color: _AppColors.textPrimary),
           onPressed: _logout,
         ),
       ],
@@ -764,17 +794,21 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
     return Row(
       children: [
         Container(
-          width:  76,
+          width: 76,
           height: 76,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [_AppColors.tealDark, _AppColors.teal],
-              begin:  Alignment.topCenter,
-              end:    Alignment.bottomCenter,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
             borderRadius: BorderRadius.circular(63.5),
           ),
-          child: const Icon(Icons.school_rounded, color: Colors.white, size: 38),
+          child: const Icon(
+            Icons.school_rounded,
+            color: Colors.white,
+            size: 38,
+          ),
         ),
         const SizedBox(width: 20),
         Expanded(
@@ -784,8 +818,8 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
               Text(
                 'Welcome, $_username',
                 style: const TextStyle(
-                  color:      _AppColors.tealDark,
-                  fontSize:   38,
+                  color: _AppColors.tealDark,
+                  fontSize: 38,
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.w700,
                 ),
@@ -795,31 +829,30 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
               Text(
                 '@$_username',
                 style: const TextStyle(
-                  fontSize:   16,
-                  color:      _AppColors.textMuted,
+                  fontSize: 16,
+                  color: _AppColors.textMuted,
                   fontFamily: 'Inter',
                 ),
               ),
             ],
           ),
         ),
+        const OfflineIndicator(),
         IconButton(
-          icon:      const Icon(Icons.refresh, color: _AppColors.textPrimary),
+          icon: const Icon(Icons.refresh, color: _AppColors.textPrimary),
           onPressed: () => _loadUserData(forceRefresh: true),
         ),
         IconButton(
-          icon:      const Icon(Icons.logout, color: _AppColors.textPrimary),
+          icon: const Icon(Icons.logout, color: _AppColors.textPrimary),
           onPressed: _logout,
         ),
       ],
     );
   }
 
-
-
   Widget _buildSidebarItem(
     IconData icon,
-    String   title, {
+    String title, {
     bool isMobile = false,
   }) {
     final showLabel = _isSidebarExpanded || isMobile;
@@ -828,11 +861,12 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
       child: ListTile(
         leading: Icon(icon, color: Colors.white70, size: isMobile ? 24 : 20),
         title: showLabel
-            ? Text(title,
-                style: const TextStyle(color: Colors.white, fontSize: 14))
+            ? Text(
+                title,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+              )
             : null,
-        onTap: () =>
-            title == 'Logout' ? _logout() : _handleCardTap(title),
+        onTap: () => title == 'Logout' ? _logout() : _handleCardTap(title),
       ),
     );
   }
@@ -851,14 +885,14 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment:  MainAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   const CircleAvatar(
-                    radius:          30,
+                    radius: 30,
                     backgroundColor: Colors.white,
                     child: Icon(
                       Icons.school_rounded,
-                      size:  35,
+                      size: 35,
                       color: _AppColors.tealDark,
                     ),
                   ),
@@ -866,8 +900,8 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
                   Text(
                     _teacherName,
                     style: const TextStyle(
-                      color:      Colors.white,
-                      fontSize:   18,
+                      color: Colors.white,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -885,5 +919,3 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
     );
   }
 }
-
-
