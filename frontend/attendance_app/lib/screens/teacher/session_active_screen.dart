@@ -113,15 +113,19 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
       remainingSeconds = duration.inSeconds > 0 ? duration.inSeconds : 0;
     });
 
-    // Start countdown
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (remainingSeconds > 0) {
-        setState(() => remainingSeconds--);
-      } else {
-        timer.cancel();
-        _endSession();
-      }
-    });
+    // Start countdown only if there is time remaining
+    if (remainingSeconds > 0) {
+      _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (remainingSeconds > 0) {
+          setState(() => remainingSeconds--);
+        } else {
+          timer.cancel();
+          if (widget.sessionData['is_offline'] != true) {
+            _endSession();
+          }
+        }
+      });
+    }
 
     // Load initial data
     _fetchAttendanceData();

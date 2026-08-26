@@ -42,10 +42,10 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return child;
+        return FadeTransition(opacity: animation, child: child);
       },
-      transitionDuration: Duration.zero,
-      reverseTransitionDuration: Duration.zero,
+      transitionDuration: const Duration(milliseconds: 150),
+      reverseTransitionDuration: const Duration(milliseconds: 150),
     );
   }
 
@@ -190,7 +190,9 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
   }
 
   Widget _buildDesktopSidebar() {
-    return AnimatedContainer(
+    return GestureDetector(
+      onTap: () => setState(() => _isSidebarExpanded = !_isSidebarExpanded),
+      child: AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       width: _isSidebarExpanded ? 220 : 72,
       decoration: const BoxDecoration(
@@ -231,6 +233,7 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
           _buildSidebarItem(Icons.logout, 'Logout'),
           const SizedBox(height: 20),
         ],
+      ),
       ),
     );
   }

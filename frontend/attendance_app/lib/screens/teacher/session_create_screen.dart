@@ -202,7 +202,7 @@ class _SessionPageState extends State<SessionPage>
         );
 
         if (!mounted) return;
-        Navigator.pushReplacement(
+        Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => SessionActiveScreen(
@@ -233,7 +233,7 @@ class _SessionPageState extends State<SessionPage>
         setState(() => isCreatingSession = false);
 
         //  NAVIGATE TO FULL-SCREEN SESSION VIEW
-        Navigator.pushReplacement(
+        Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => SessionActiveScreen(
