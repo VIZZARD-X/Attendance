@@ -285,7 +285,11 @@ class _TeacherAttendanceHistoryScreenState
       body: mainContent,
     );
 
-    return mobileChild;
+    return TeacherWebLayout(
+      currentRoute: 'Attendance History',
+      mobileChild: mobileChild,
+      desktopBody: mainContent,
+    );
   }
 
   Widget _buildModernAppBar(bool isMobile) {

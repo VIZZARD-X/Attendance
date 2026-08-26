@@ -394,15 +394,9 @@ class _MyClassesScreenState extends State<MyClassesScreen>
     }
   }
 
-  void _showClassDetails(Map<String, dynamic> classData) async {
-    // Load students first
-    setState(() => isLoading = true);
-
-    final students = await _classService.getClassStudents(classData['id']);
-
-    setState(() => isLoading = false);
-
-    if (!mounted) return;
+  void _showClassDetails(Map<String, dynamic> classData) {
+    List<Map<String, dynamic>> students = [];
+    bool isStudentsLoading = true;
 
     showModalBottomSheet(
       context: context,
@@ -410,6 +404,17 @@ class _MyClassesScreenState extends State<MyClassesScreen>
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
+          if (isStudentsLoading && students.isEmpty) {
+            _classService.getClassStudents(classData['id']).then((fetchedStudents) {
+              if (mounted) {
+                setModalState(() {
+                  students = fetchedStudents;
+                  isStudentsLoading = false;
+                });
+              }
+            });
+          }
+
           return Container(
             height: MediaQuery.of(context).size.height * 0.85,
             decoration: const BoxDecoration(
@@ -500,7 +505,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                         _buildOverviewTab(classData),
 
                         // Students Tab
-                        _buildStudentsTab(classData, students, setModalState),
+                        _buildStudentsTab(classData, students, setModalState, isStudentsLoading),
                       ],
                     ),
                   ),
@@ -589,6 +594,7 @@ class _MyClassesScreenState extends State<MyClassesScreen>
     Map<String, dynamic> classData,
     List<Map<String, dynamic>> students,
     StateSetter setModalState,
+    bool isStudentsLoading,
   ) {
     return Column(
       children: [
@@ -648,8 +654,12 @@ class _MyClassesScreenState extends State<MyClassesScreen>
 
         // Students list
         Expanded(
-          child: students.isEmpty
-              ? Center(
+          child: isStudentsLoading
+              ? const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF007C91)),
+                )
+              : students.isEmpty
+                  ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -1028,7 +1038,11 @@ class _MyClassesScreenState extends State<MyClassesScreen>
       body: SafeArea(child: mainContent),
     );
 
-    return mobileChild;
+    return TeacherWebLayout(
+      currentRoute: 'My Classes',
+      mobileChild: mobileChild,
+      desktopBody: mainContent,
+    );
   }
 
   Widget _buildAppBar(bool isMobile) {

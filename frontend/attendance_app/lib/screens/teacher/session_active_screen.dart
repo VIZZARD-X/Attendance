@@ -141,7 +141,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
 
     try {
       final result = await _sessionService.getSessionAttendance(
-        widget.sessionData['session_id'],
+        widget.sessionData['session_id'].toString(),
       );
 
       if (!mounted) return;
@@ -165,7 +165,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
 
   Future<void> _manualMarkAttendance(int studentId, String status) async {
     final result = await _sessionService.manualMarkAttendance(
-      sessionId: widget.sessionData['session_id'],
+      sessionId: widget.sessionData['session_id'].toString(),
       studentId: studentId,
       status: status,
     );
@@ -242,7 +242,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
       );
 
       final result = await _sessionService.endSession(
-        widget.sessionData['session_id'],
+        widget.sessionData['session_id'].toString(),
       );
 
       if (mounted) {
@@ -405,7 +405,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      final result = await _sessionService.deleteSession(widget.sessionData['session_id']);
+      final result = await _sessionService.deleteSession(widget.sessionData['session_id'].toString());
       if (mounted) {
         Navigator.pop(context); // close loader
         if (result['success'] == true) {
@@ -447,7 +447,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      final result = await _sessionService.markAllPresent(widget.sessionData['session_id']);
+      final result = await _sessionService.markAllPresent(widget.sessionData['session_id'].toString());
       if (mounted) {
         Navigator.pop(context); // close loader
         if (result['success'] == true) {
@@ -770,7 +770,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
 
       if (isOffline) {
         await SyncService().updateSessionReferenceImage(
-          widget.sessionData['session_id'],
+          widget.sessionData['session_id'].toString(),
           imagePath,
         );
         setState(() => referenceImagePath = imagePath);
@@ -779,7 +779,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
         );
       } else {
         final result = await _sessionService.uploadReferenceImage(
-          widget.sessionData['session_id'],
+          widget.sessionData['session_id'].toString(),
           imagePath,
         );
 

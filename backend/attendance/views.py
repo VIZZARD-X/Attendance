@@ -647,8 +647,10 @@ def mark_attendance(request, session_id):
         if is_offline_sync and existing_record.status == 'absent':
             # Allow offline sync to overwrite 'absent' with 'present'
             existing_record.status = 'present'
-            existing_record.marked_at = scan_time if scan_time else timezone.now()
             existing_record.save()
+            if scan_time:
+                AttendanceRecord.objects.filter(id=existing_record.id).update(marked_at=scan_time)
+                existing_record.refresh_from_db()
             return Response({
                 'message': f'Attendance marked for {session.class_obj.class_code}',
                 'class': session.class_obj.class_name,
@@ -669,8 +671,8 @@ def mark_attendance(request, session_id):
         status='present'
     )
     if scan_time:
-        record.marked_at = scan_time
-        record.save()
+        AttendanceRecord.objects.filter(id=record.id).update(marked_at=scan_time)
+        record.refresh_from_db()
     
     return Response({
         'message': f'Attendance marked for {session.class_obj.class_code}',
@@ -828,6 +830,10 @@ def verify_image(request):
             verification_score=final_score,
             verification_reasons=json.dumps(reasons)
         )
+
+        if scan_time:
+            AttendanceRecord.objects.filter(id=record.id).update(marked_at=scan_time)
+            record.refresh_from_db()
 
         if not matched:
             return Response({
@@ -1035,10 +1041,12 @@ def sync_offline_pattern(request):
 
         existing_record = AttendanceRecord.objects.filter(session=session, student=user).first()
         if existing_record:
-            if existing_record.status == 'pending_review':
-                existing_record.delete()
-            elif existing_record.status == 'absent':
-                existing_record.delete()  # Will recreate below with 'present' or 'pending_review'
+            if existing_record.status == 'absent':
+                existing_record.status = 'pending_review'
+                existing_record.save()
+                if scan_time:
+                    AttendanceRecord.objects.filter(id=existing_record.id).update(marked_at=scan_time)
+                    existing_record.refresh_from_db()
             else:
                 return Response({'error': 'Attendance already marked', 'marked_at': existing_record.marked_at, 'status': existing_record.status}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1058,6 +1066,10 @@ def sync_offline_pattern(request):
             verification_score=final_score,
             verification_reasons=json.dumps(reasons)
         )
+
+        if scan_time:
+            AttendanceRecord.objects.filter(id=record.id).update(marked_at=scan_time)
+            record.refresh_from_db()
 
         if not matched:
             return Response({'status': 'fail', 'error': f'Verification failed. Reasons: {", ".join(reasons)}'}, status=status.HTTP_400_BAD_REQUEST)
