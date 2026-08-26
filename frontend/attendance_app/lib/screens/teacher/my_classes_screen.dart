@@ -1353,7 +1353,9 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      'Semester ${classData['semester']}',
+                      classData['semester'].toString().toLowerCase().startsWith('semester')
+                          ? classData['semester'].toString()
+                          : 'Semester ${classData['semester']}',
                       style: const TextStyle(
                         color: Colors.black87,
                         fontSize: 11,

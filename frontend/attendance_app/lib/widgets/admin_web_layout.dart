@@ -148,21 +148,17 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
                   title == 'Logout' ? _logout() : _handleCardTap(title),
               child: Container(
                 height: 48,
-                padding: EdgeInsets.symmetric(
-                  horizontal: showLabel ? 12.0 : 0.0,
-                ),
                 child: Row(
-                  mainAxisAlignment: showLabel
-                      ? MainAxisAlignment.start
-                      : MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      icon,
-                      color: isSelected ? _AppColors.tealDark : Colors.white70,
-                      size: 24,
+                    SizedBox(
+                      width: 56,
+                      child: Icon(
+                        icon,
+                        color: isSelected ? _AppColors.tealDark : Colors.white70,
+                        size: 24,
+                      ),
                     ),
                     if (showLabel) ...[
-                      const SizedBox(width: 16),
                       Expanded(
                         child: Text(
                           title,
@@ -254,6 +250,13 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
                 child: widget.desktopBody,
               ),
             ),
+            if (_isSidebarExpanded)
+              GestureDetector(
+                onTap: () => setState(() => _isSidebarExpanded = false),
+                child: Container(
+                  color: Colors.transparent,
+                ),
+              ),
             SafeArea(child: _buildDesktopSidebar()),
           ],
         ),
