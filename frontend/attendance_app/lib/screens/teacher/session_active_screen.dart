@@ -1115,12 +1115,12 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
             title: Text(
               student['username'] ?? 'Unknown',
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
+),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 4),
-                if (hasRecord && student['marked_at'] != null)
+                if (hasRecord && isPresent && student['marked_at'] != null)
                   Text(
                     'Marked at: ${DateTime.parse(student['marked_at']).toLocal().toString().substring(11, 16)}',
                     style: TextStyle(
