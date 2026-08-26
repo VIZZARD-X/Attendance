@@ -1217,7 +1217,7 @@ def cancel_session(request, session_id):
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def mark_all_present_session(request, session_id):
-    """Teacher marks all enrolled students as present in an active session"""
+    """Teacher marks all enrolled students as present in an active or past session"""
     user = request.user
     
     try:
@@ -1229,12 +1229,6 @@ def mark_all_present_session(request, session_id):
         return Response(
             {'error': 'Session not found'},
             status=status.HTTP_404_NOT_FOUND
-        )
-    
-    if session.status != 'active':
-        return Response(
-            {'error': 'Session is not active'},
-            status=status.HTTP_400_BAD_REQUEST
         )
 
     enrolled_students = Enrollment.objects.filter(
