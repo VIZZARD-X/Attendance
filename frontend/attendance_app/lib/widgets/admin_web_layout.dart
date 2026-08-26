@@ -42,15 +42,16 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(opacity: animation, child: child);
+        return child;
       },
-      transitionDuration: const Duration(milliseconds: 150),
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
     );
   }
 
   final AuthService _authService = AuthService();
 
-  bool _isSidebarExpanded = false;
+  static bool _isSidebarExpanded = false;
 
   static const _cards = <AdminSidebarData>[
     AdminSidebarData(title: 'Dashboard', icon: Icons.dashboard_rounded),
@@ -65,31 +66,31 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
 
     switch (title) {
       case 'Dashboard':
-        await Navigator.push(
+        await Navigator.pushReplacement(
           context,
           _fadeRoute(const AdminDashboardPage()),
         );
         break;
       case 'Manage Students':
-        await Navigator.push(
+        await Navigator.pushReplacement(
           context,
           _fadeRoute(const ManageStudentsScreen()),
         );
         break;
       case 'Manage Teachers':
-        await Navigator.push(
+        await Navigator.pushReplacement(
           context,
           _fadeRoute(const ManageTeachersScreen()),
         );
         break;
       case 'Reset Login':
-        await Navigator.push(
+        await Navigator.pushReplacement(
           context,
           _fadeRoute(const ResetLoginScreen()),
         );
         break;
       case 'Profile':
-        await Navigator.push(
+        await Navigator.pushReplacement(
           context,
           _fadeRoute(const AdminProfileScreen()),
         );

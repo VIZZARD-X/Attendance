@@ -44,16 +44,17 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(opacity: animation, child: child);
+        return child;
       },
-      transitionDuration: const Duration(milliseconds: 150),
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
     );
   }
 
   final AuthService _authService = AuthService();
   final ClassService _classService = ClassService();
 
-  bool _isSidebarExpanded = false;
+  static bool _isSidebarExpanded = false;
 
   static const _cards = <DashboardCardData>[
     DashboardCardData(title: 'Dashboard', icon: Icons.dashboard_rounded),
@@ -71,13 +72,13 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
 
     switch (title) {
       case 'Dashboard':
-        await Navigator.push(
+        await Navigator.pushReplacement(
           context,
           _fadeRoute(const TeacherDashboardWeb()),
         );
         break;
       case 'My Classes':
-        await Navigator.push(
+        await Navigator.pushReplacement(
           context,
           _fadeRoute(const MyClassesScreen()),
         );
@@ -86,13 +87,13 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
         await _navigateToCreateSession();
         break;
       case 'Attendance History':
-        await Navigator.push(
+        await Navigator.pushReplacement(
           context,
           _fadeRoute(const TeacherAttendanceHistoryScreen()),
         );
         break;
       case 'Profile':
-        await Navigator.push(
+        await Navigator.pushReplacement(
           context,
           _fadeRoute(const TeacherProfileScreen()),
         );
