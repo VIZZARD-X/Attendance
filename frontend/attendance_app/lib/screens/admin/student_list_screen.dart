@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../services/class_service.dart';
-import '../../widgets/hover_wrapper.dart';
 
 abstract class _AppColors {
   static const tealDark = Color(0xFF007C91);
@@ -38,7 +37,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
       result = result.where((s) {
         final name = (s['full_name'] ?? '').toString().toLowerCase();
         final email = (s['email'] ?? '').toString().toLowerCase();
-        return name.contains(q) || email.contains(q);
+        final rollNo = (s['roll_no'] ?? '').toString().toLowerCase();
+        return name.contains(q) || email.contains(q) || rollNo.contains(q);
       }).toList();
     }
 
@@ -178,19 +178,12 @@ class _StudentListScreenState extends State<StudentListScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.cloud_off_rounded,
-                size: 64,
-                color: _AppColors.textMuted,
-              ),
+              const Icon(Icons.cloud_off_rounded, size: 64, color: _AppColors.textMuted),
               const SizedBox(height: 16),
               Text(
                 _errorMessage!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: _AppColors.textMuted,
-                ),
+                style: const TextStyle(fontSize: 16, color: _AppColors.textMuted),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
@@ -216,9 +209,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
             Icon(Icons.people_outline, size: 80, color: Colors.grey.shade300),
             const SizedBox(height: 16),
             Text(
-              _searchQuery.isNotEmpty
-                  ? 'No students match your search'
-                  : 'No students yet',
+              _searchQuery.isNotEmpty ? 'No students match your search' : 'No students yet',
               style: const TextStyle(
                 fontSize: 18,
                 color: _AppColors.textMuted,
@@ -264,9 +255,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                       child: _isLoading
                           ? const Center(
                               child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  _AppColors.teal,
-                                ),
+                                valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal),
                               ),
                             )
                           : _buildContent(false),
@@ -286,10 +275,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
       backgroundColor: Colors.transparent,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(
-          Icons.arrow_back_rounded,
-          color: _AppColors.textPrimary,
-        ),
+        icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
         onPressed: () => Navigator.pop(context),
       ),
       title: Row(
@@ -302,11 +288,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
               shape: BoxShape.circle,
             ),
             padding: const EdgeInsets.all(8),
-            child: const Icon(
-              Icons.people_alt_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
+            child: const Icon(Icons.people_alt_rounded, color: Colors.white, size: 20),
           ),
           const SizedBox(width: 12),
           const Expanded(
@@ -341,11 +323,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 borderRadius: BorderRadius.circular(22),
               ),
             ),
-            child: const Icon(
-              Icons.people_alt_rounded,
-              color: Colors.white,
-              size: 26,
-            ),
+            child: const Icon(Icons.people_alt_rounded, color: Colors.white, size: 26),
           ),
           const SizedBox(width: 16),
           const Expanded(
@@ -380,11 +358,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
               ),
               borderRadius: BorderRadius.circular(24),
             ),
-            child: const Icon(
-              Icons.people_alt_rounded,
-              color: Colors.white,
-              size: 26,
-            ),
+            child: const Icon(Icons.people_alt_rounded, color: Colors.white, size: 26),
           ),
           IconButton(
             icon: Icon(
@@ -422,10 +396,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
       child: ListTile(
         leading: Icon(icon, color: Colors.white70, size: isMobile ? 24 : 20),
         title: showLabel
-            ? Text(
-                title,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-              )
+            ? Text(title,
+                style: const TextStyle(color: Colors.white, fontSize: 14))
             : null,
         onTap: () {
           if (title == 'Back' || title == 'Dashboard') {
@@ -463,7 +435,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   ),
                   SizedBox(height: 10),
                   Text(
-                    'Manage Students',
+              'Manage Students',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 18,
@@ -473,16 +445,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 ],
               ),
             ),
-            _buildSidebarItem(
-              Icons.dashboard_rounded,
-              'Dashboard',
-              isMobile: true,
-            ),
-            _buildSidebarItem(
-              Icons.people_alt_rounded,
-              'Students',
-              isMobile: true,
-            ),
+            _buildSidebarItem(Icons.dashboard_rounded, 'Dashboard', isMobile: true),
+            _buildSidebarItem(Icons.people_alt_rounded, 'Students', isMobile: true),
             const Divider(color: Colors.white24),
             _buildSidebarItem(Icons.arrow_back_rounded, 'Back', isMobile: true),
           ],
@@ -493,27 +457,15 @@ class _StudentListScreenState extends State<StudentListScreen> {
 
   Widget _buildHeaderSection(bool isMobile) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        isMobile ? 16 : 24,
-        isMobile ? 6 : 12,
-        isMobile ? 16 : 24,
-        0,
-      ),
+      padding: EdgeInsets.fromLTRB(isMobile ? 16 : 24, isMobile ? 6 : 12, isMobile ? 16 : 24, 0),
       child: Row(
         children: [
           if (isMobile)
             IconButton(
-              icon: const Icon(
-                Icons.arrow_back_rounded,
-                color: _AppColors.textPrimary,
-              ),
+              icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
               onPressed: () => Navigator.pop(context),
             ),
-          const Icon(
-            Icons.people_alt_rounded,
-            color: _AppColors.tealDark,
-            size: 32,
-          ),
+          const Icon(Icons.people_alt_rounded, color: _AppColors.tealDark, size: 32),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -530,19 +482,13 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 ),
                 Text(
                   '${_students.length} students',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: _AppColors.textMuted,
-                  ),
+                  style: const TextStyle(fontSize: 13, color: _AppColors.textMuted),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(
-              Icons.person_add_alt_1_rounded,
-              color: _AppColors.tealDark,
-            ),
+            icon: const Icon(Icons.person_add_alt_1_rounded, color: _AppColors.tealDark),
             onPressed: _showAddStudentDialog,
             tooltip: 'Add Student',
           ),
@@ -558,19 +504,12 @@ class _StudentListScreenState extends State<StudentListScreen> {
         controller: _searchController,
         onChanged: (v) => setState(() => _searchQuery = v),
         decoration: InputDecoration(
-          hintText: 'Search by name, email or username',
+          hintText: 'Search by name, email or roll no',
           hintStyle: TextStyle(color: Colors.grey.shade400),
-          prefixIcon: const Icon(
-            Icons.search,
-            color: _AppColors.teal,
-            size: 22,
-          ),
+          prefixIcon: const Icon(Icons.search, color: _AppColors.teal, size: 22),
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
@@ -627,8 +566,11 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 child: ListView.builder(
                   padding: EdgeInsets.zero,
                   itemCount: filtered.length,
-                  itemBuilder: (context, index) =>
-                      _buildTableRow(filtered[index], index + 1, isTablet),
+                  itemBuilder: (context, index) => _buildTableRow(
+                    filtered[index],
+                    index + 1,
+                    isTablet,
+                  ),
                 ),
               ),
             ],
@@ -678,24 +620,16 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 controller: _searchController,
                 onChanged: (v) => setState(() => _searchQuery = v),
                 decoration: InputDecoration(
-                  hintText: 'Search by name, email or username',
+                  hintText: 'Search by name, email or roll no',
                   hintStyle: TextStyle(
                     color: Colors.black.withValues(alpha: 0.3),
                     fontSize: isCompact ? 14 : 18,
                   ),
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    color: _AppColors.tealLight,
-                    size: 22,
-                  ),
+                  prefixIcon: const Icon(Icons.search, color: _AppColors.tealLight, size: 22),
                   suffixIcon: _searchQuery.isEmpty
                       ? null
                       : IconButton(
-                          icon: const Icon(
-                            Icons.clear,
-                            size: 20,
-                            color: Colors.white70,
-                          ),
+                          icon: const Icon(Icons.clear, size: 20, color: Colors.white70),
                           onPressed: () {
                             _searchController.clear();
                             setState(() => _searchQuery = '');
@@ -703,10 +637,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                         ),
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none,
@@ -746,9 +677,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   const SizedBox(width: 2),
                   Icon(
                     _sortColumn == 'name'
-                        ? (_sortAscending
-                              ? Icons.arrow_upward
-                              : Icons.arrow_downward)
+                        ? (_sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
                         : Icons.unfold_more,
                     size: 14,
                     color: Colors.white70,
@@ -774,9 +703,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   const SizedBox(width: 4),
                   Icon(
                     _sortColumn == 'name'
-                        ? (_sortAscending
-                              ? Icons.arrow_upward
-                              : Icons.arrow_downward)
+                        ? (_sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
                         : Icons.unfold_more,
                     size: 14,
                     color: Colors.white70,
@@ -802,9 +729,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   const SizedBox(width: 4),
                   Icon(
                     _sortColumn == 'email'
-                        ? (_sortAscending
-                              ? Icons.arrow_upward
-                              : Icons.arrow_downward)
+                        ? (_sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
                         : Icons.unfold_more,
                     size: 14,
                     color: Colors.white70,
@@ -830,9 +755,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   const SizedBox(width: 4),
                   Icon(
                     _sortColumn == 'access'
-                        ? (_sortAscending
-                              ? Icons.arrow_upward
-                              : Icons.arrow_downward)
+                        ? (_sortAscending ? Icons.arrow_upward : Icons.arrow_downward)
                         : Icons.unfold_more,
                     size: 14,
                     color: Colors.white70,
@@ -847,13 +770,10 @@ class _StudentListScreenState extends State<StudentListScreen> {
     );
   }
 
-  Widget _buildTableRow(
-    Map<String, dynamic> student,
-    int index,
-    bool isCompact,
-  ) {
+  Widget _buildTableRow(Map<String, dynamic> student, int index, bool isCompact) {
     final name = student['full_name'] ?? 'Unknown';
     final email = student['email'] ?? '';
+    final rollNo = student['roll_no'] ?? '';
     final hasAccess = student['is_active'] == true;
 
     return Container(
@@ -879,10 +799,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
               padding: const EdgeInsets.only(left: 8),
               child: Text(
                 name,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -893,6 +810,17 @@ class _StudentListScreenState extends State<StudentListScreen> {
               padding: const EdgeInsets.only(left: 8),
               child: Text(
                 email,
+                style: const TextStyle(fontSize: 14),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 1,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Text(
+                rollNo,
                 style: const TextStyle(fontSize: 14),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -917,20 +845,12 @@ class _StudentListScreenState extends State<StudentListScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 IconButton(
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: Colors.red,
-                    size: 20,
-                  ),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
                   onPressed: () => _showDeleteStudentDialog(student),
                   tooltip: 'Delete student',
                 ),
                 IconButton(
-                  icon: const Icon(
-                    Icons.more_vert,
-                    color: _AppColors.textMuted,
-                    size: 20,
-                  ),
+                  icon: const Icon(Icons.more_vert, color: _AppColors.textMuted, size: 20),
                   onPressed: () => _showAccessDialog(student),
                 ),
               ],
@@ -944,6 +864,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
   Widget _buildStudentCard(Map<String, dynamic> student, int index) {
     final name = student['full_name'] ?? 'Unknown';
     final email = student['email'] ?? '';
+    final rollNo = student['roll_no'] ?? '';
     final hasAccess = student['is_active'] == true;
 
     return Dismissible(
@@ -963,11 +884,10 @@ class _StudentListScreenState extends State<StudentListScreen> {
         _showDeleteStudentDialog(student);
         return false;
       },
-      child: HoverWrapper(
-        child: InkWell(
-          onTap: () => _showAccessDialog(student),
-          borderRadius: BorderRadius.circular(24),
-          child: Container(
+      child: InkWell(
+        onTap: () => _showAccessDialog(student),
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -1026,14 +946,22 @@ class _StudentListScreenState extends State<StudentListScreen> {
                         color: _AppColors.textMuted,
                       ),
                     ),
+                    if (rollNo.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        rollNo,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: _AppColors.tealDark,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color: hasAccess
                                 ? const Color(0xFFE8F5E9)
@@ -1053,27 +981,14 @@ class _StudentListScreenState extends State<StudentListScreen> {
                         ),
                         const Spacer(),
                         IconButton(
-                          constraints: const BoxConstraints(
-                            minWidth: 48,
-                            minHeight: 48,
-                          ),
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
-                            size: 22,
-                          ),
+                          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 22),
                           onPressed: () => _showDeleteStudentDialog(student),
                           tooltip: 'Delete student',
                         ),
                         IconButton(
-                          constraints: const BoxConstraints(
-                            minWidth: 48,
-                            minHeight: 48,
-                          ),
-                          icon: const Icon(
-                            Icons.more_vert,
-                            color: _AppColors.textMuted,
-                          ),
+                          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                          icon: const Icon(Icons.more_vert, color: _AppColors.textMuted),
                           onPressed: () => _showAccessDialog(student),
                         ),
                       ],
@@ -1084,7 +999,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
             ],
           ),
         ),
-      ),
       ),
     );
   }
@@ -1125,14 +1039,17 @@ class _StudentListScreenState extends State<StudentListScreen> {
     final nameController = TextEditingController();
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
+    final rollNoController = TextEditingController();
     final nameFocus = FocusNode();
     final emailFocus = FocusNode();
     final passwordFocus = FocusNode();
+    final rollNoFocus = FocusNode();
 
     bool isSaving = false;
     String? nameError;
     String? emailError;
     String? passwordError;
+    String? rollNoError;
 
     showDialog(
       context: context,
@@ -1140,13 +1057,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text(
-                'Add Student',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Add Student', style: TextStyle(fontWeight: FontWeight.bold)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1161,13 +1073,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
                         labelText: 'Name',
                         errorText: nameError,
                         prefixIcon: const Icon(Icons.person_outline, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -1182,13 +1089,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
                         labelText: 'Email',
                         errorText: emailError,
                         prefixIcon: const Icon(Icons.email_outlined, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -1196,20 +1098,29 @@ class _StudentListScreenState extends State<StudentListScreen> {
                       controller: passwordController,
                       focusNode: passwordFocus,
                       obscureText: true,
-                      textInputAction: TextInputAction.done,
-                      onChanged: (_) =>
-                          setDialogState(() => passwordError = null),
+                      textInputAction: TextInputAction.next,
+                      onSubmitted: (_) => rollNoFocus.requestFocus(),
+                      onChanged: (_) => setDialogState(() => passwordError = null),
                       decoration: InputDecoration(
                         labelText: 'Password (min 6 chars)',
                         errorText: passwordError,
                         prefixIcon: const Icon(Icons.lock_outline, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: rollNoController,
+                      focusNode: rollNoFocus,
+                      textInputAction: TextInputAction.done,
+                      onChanged: (_) => setDialogState(() => rollNoError = null),
+                      decoration: InputDecoration(
+                        labelText: 'Roll No (optional)',
+                        errorText: rollNoError,
+                        prefixIcon: const Icon(Icons.numbers, size: 20),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                     ),
                   ],
@@ -1227,35 +1138,26 @@ class _StudentListScreenState extends State<StudentListScreen> {
                           final name = nameController.text.trim();
                           final email = emailController.text.trim();
                           final password = passwordController.text;
+                          final rollNo = rollNoController.text.trim();
 
                           bool hasError = false;
 
                           if (name.isEmpty) {
-                            setDialogState(
-                              () => nameError = 'Name is required',
-                            );
+                            setDialogState(() => nameError = 'Name is required');
                             hasError = true;
                           }
                           if (email.isEmpty) {
-                            setDialogState(
-                              () => emailError = 'Email is required',
-                            );
+                            setDialogState(() => emailError = 'Email is required');
                             hasError = true;
                           } else if (!email.contains('@')) {
-                            setDialogState(
-                              () => emailError = 'Enter a valid email',
-                            );
+                            setDialogState(() => emailError = 'Enter a valid email');
                             hasError = true;
                           }
                           if (password.isEmpty) {
-                            setDialogState(
-                              () => passwordError = 'Password is required',
-                            );
+                            setDialogState(() => passwordError = 'Password is required');
                             hasError = true;
                           } else if (password.length < 6) {
-                            setDialogState(
-                              () => passwordError = 'At least 6 characters',
-                            );
+                            setDialogState(() => passwordError = 'At least 6 characters');
                             hasError = true;
                           }
 
@@ -1295,10 +1197,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Text('Create'),
                 ),
@@ -1317,10 +1216,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Delete Student',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Delete Student', style: TextStyle(fontWeight: FontWeight.bold)),
         content: Text(
           'Permanently delete $name?\n\nAll their data (enrollments, attendance records, profile) will be removed. This cannot be undone.',
         ),
@@ -1382,10 +1278,12 @@ class _ShimmerCardState extends State<_ShimmerCard>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
-    _animation = AlignmentTween(begin: Alignment(-1, 0), end: Alignment(1, 0))
-        .animate(
-          CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine),
-        );
+    _animation = AlignmentTween(
+      begin: Alignment(-1, 0),
+      end: Alignment(1, 0),
+    ).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine),
+    );
   }
 
   @override

@@ -29,7 +29,8 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
     return _students.where((s) {
       final name = (s['username'] ?? '').toString().toLowerCase();
       final email = (s['email'] ?? '').toString().toLowerCase();
-      return name.contains(q) || email.contains(q);
+      final rollNo = (s['roll_no'] ?? '').toString().toLowerCase();
+      return name.contains(q) || email.contains(q) || rollNo.contains(q);
     }).toList();
   }
 
@@ -49,9 +50,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final data = await _classService.getSemesterStudents(
-        widget.semesterLabel,
-      );
+      final data = await _classService.getSemesterStudents(widget.semesterLabel);
 
       if (mounted) {
         setState(() {
@@ -89,11 +88,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                 shape: BoxShape.circle,
               ),
               padding: const EdgeInsets.all(8),
-              child: const Icon(
-                Icons.people_alt_rounded,
-                color: Colors.white,
-                size: 20,
-              ),
+              child: const Icon(Icons.people_alt_rounded, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -129,13 +124,13 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
               ),
             )
           : _students.isEmpty
-          ? _buildEmptyState()
-          : Column(
-              children: [
-                _buildSearchBar(),
-                Expanded(child: _buildStudentList()),
-              ],
-            ),
+              ? _buildEmptyState()
+              : Column(
+                  children: [
+                    _buildSearchBar(),
+                    Expanded(child: _buildStudentList()),
+                  ],
+                ),
     );
   }
 
@@ -168,18 +163,12 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
           controller: _searchController,
           onChanged: (v) => setState(() => _searchQuery = v),
           decoration: InputDecoration(
-            hintText: 'Search by name or email',
-            hintStyle: TextStyle(
-              color: Colors.black.withValues(alpha: 0.3),
-              fontSize: 14,
-            ),
+            hintText: 'Search by name, email or roll no',
+            hintStyle: TextStyle(color: Colors.black.withValues(alpha: 0.3), fontSize: 14),
             prefixIcon: const Icon(Icons.search, color: Color(0xFF007C91)),
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: const BorderSide(color: Color(0xFF007C91)),
@@ -199,9 +188,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
     if (filtered.isEmpty && !_isLoading) {
       return Center(
         child: Text(
-          _searchQuery.isEmpty
-              ? 'No students in this semester'
-              : 'No students match your search',
+          _searchQuery.isEmpty ? 'No students in this semester' : 'No students match your search',
           style: const TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
         ),
       );
@@ -241,10 +228,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
               backgroundColor: const Color(0xFF007C91),
               radius: 24,
               child: Text(
-                (student['username'] as String?)
-                        ?.substring(0, 1)
-                        .toUpperCase() ??
-                    'S',
+                (student['username'] as String?)?.substring(0, 1).toUpperCase() ?? 'S',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -267,19 +251,12 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      Icon(
-                        Icons.email_outlined,
-                        size: 13,
-                        color: Colors.grey.shade500,
-                      ),
+                      Icon(Icons.email_outlined, size: 13, color: Colors.grey.shade500),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           student['email'] ?? '',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade600,
-                          ),
+                          style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                         ),
                       ),
                     ],
@@ -288,20 +265,17 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade100,
+                          color: Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          'Student',
+                          'Roll: ${student['roll_no'] ?? 'N/A'}',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: Colors.blue.shade800,
+                            color: Colors.grey.shade700,
                           ),
                         ),
                       ),
@@ -309,13 +283,12 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                       if (classes.isNotEmpty)
                         Expanded(
                           child: Text(
-                            'Classes: ${classes.map((c) => c['class_name']).join(', ')}',
+                            'Classes: ${classes.map((c) => c['class_code']).join(', ')}',
                             style: TextStyle(
                               fontSize: 11,
-                              color: Colors.black.withOpacity(0.5),
+                              color: const Color(0xFF007C91).withOpacity(0.8),
                             ),
                             overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
                           ),
                         ),
                     ],
@@ -325,19 +298,11 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
             ),
             const SizedBox(width: 4),
             IconButton(
-              icon: const Icon(
-                Icons.edit_outlined,
-                color: Color(0xFF007C91),
-                size: 20,
-              ),
+              icon: const Icon(Icons.edit_outlined, color: Color(0xFF007C91), size: 20),
               onPressed: () => _showEditDialog(student),
             ),
             IconButton(
-              icon: const Icon(
-                Icons.remove_circle_outline,
-                color: Colors.red,
-                size: 20,
-              ),
+              icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
               onPressed: () => _showRemoveStudentDialog(student),
               tooltip: 'Remove from class',
             ),
@@ -348,10 +313,9 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
   }
 
   void _showEditDialog(Map<String, dynamic> student) {
-    final nameController = TextEditingController(
-      text: student['username'] ?? '',
-    );
+    final nameController = TextEditingController(text: student['username'] ?? '');
     final emailController = TextEditingController(text: student['email'] ?? '');
+    final rollNoController = TextEditingController(text: student['roll_no'] ?? '');
     bool isSaving = false;
 
     showDialog(
@@ -360,9 +324,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               title: const Text(
                 'Edit Student',
                 style: TextStyle(fontWeight: FontWeight.bold),
@@ -376,13 +338,8 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                       decoration: InputDecoration(
                         labelText: 'Name',
                         prefixIcon: const Icon(Icons.person_outline, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -390,12 +347,19 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                       controller: emailController,
                       decoration: InputDecoration(
                         labelText: 'Email',
-                        prefixIcon: const Icon(Icons.email, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
+                        prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: rollNoController,
+                      decoration: InputDecoration(
+                        labelText: 'Roll No',
+                        prefixIcon: const Icon(Icons.numbers, size: 20),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                     ),
                   ],
@@ -411,12 +375,11 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                       ? null
                       : () async {
                           setDialogState(() => isSaving = true);
-                          final result = await _classService
-                              .updateStudentDetails(
-                                studentId: student['id'],
-                                username: nameController.text.trim(),
-                                email: emailController.text.trim(),
-                              );
+                          final result = await _classService.updateStudentDetails(
+                            studentId: student['id'],
+                            username: nameController.text.trim(),
+                            email: emailController.text.trim(),
+                          );
                           if (!ctx.mounted) return;
                           Navigator.pop(ctx);
                           if (result['error'] != null) {
@@ -444,10 +407,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Text('Save'),
                 ),
@@ -470,14 +430,9 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Remove Student',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          content: Text('Remove $studentName from ${cls['class_name']}?'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Remove Student', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: Text('Remove $studentName from ${cls['class_code']}?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -495,9 +450,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                   _loadStudents();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(
-                        '$studentName removed from ${cls['class_name']}',
-                      ),
+                      content: Text('$studentName removed from ${cls['class_code']}'),
                       backgroundColor: const Color(0xFF007C91),
                     ),
                   );
@@ -530,23 +483,15 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text(
-                'Remove from Classes',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Remove from Classes', style: TextStyle(fontWeight: FontWeight.bold)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Select classes to remove $studentName from:',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF6B7280),
-                    ),
+                    style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
                   ),
                   const SizedBox(height: 12),
                   ...classes.map((cls) {
@@ -554,7 +499,8 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                     final isSelected = selectedClasses.contains(classId);
                     return CheckboxListTile(
                       value: isSelected,
-                      title: Text(cls['class_name'] ?? 'Unknown Class'),
+                      title: Text(cls['class_code'] ?? ''),
+                      subtitle: Text(cls['class_code'] ?? ''),
                       controlAffinity: ListTileControlAffinity.leading,
                       dense: true,
                       onChanged: (v) {
@@ -590,9 +536,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                           _loadStudents();
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text(
-                                'Student removed from selected classes',
-                              ),
+                              content: Text('Student removed from selected classes'),
                               backgroundColor: Color(0xFF007C91),
                             ),
                           );

@@ -75,11 +75,7 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
                 shape: BoxShape.circle,
               ),
               padding: const EdgeInsets.all(8),
-              child: const Icon(
-                Icons.book_rounded,
-                color: Colors.white,
-                size: 20,
-              ),
+              child: const Icon(Icons.book_rounded, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -96,7 +92,7 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    '${_students.length} students',
+                    '$_classCode \u2022 ${_students.length} students',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF6B7280),
@@ -120,8 +116,8 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
               ),
             )
           : _students.isEmpty
-          ? _buildEmptyState()
-          : _buildStudentList(),
+              ? _buildEmptyState()
+              : _buildStudentList(),
     );
   }
 
@@ -179,10 +175,7 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
               backgroundColor: const Color(0xFF007C91),
               radius: 22,
               child: Text(
-                (student['username'] as String?)
-                        ?.substring(0, 1)
-                        .toUpperCase() ??
-                    'S',
+                (student['username'] as String?)?.substring(0, 1).toUpperCase() ?? 'S',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -205,39 +198,29 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      Icon(
-                        Icons.email_outlined,
-                        size: 12,
-                        color: Colors.grey.shade500,
-                      ),
+                      Icon(Icons.email_outlined, size: 12, color: Colors.grey.shade500),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           student['email'] ?? '',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
+                      color: Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      'Student',
+                      'Roll: ${student['roll_no'] ?? 'N/A'}',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Colors.blue.shade800,
+                        color: Colors.grey.shade700,
                       ),
                     ),
                   ),
@@ -246,20 +229,12 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
             ),
             const SizedBox(width: 4),
             IconButton(
-              icon: const Icon(
-                Icons.edit_outlined,
-                color: Color(0xFF007C91),
-                size: 20,
-              ),
+              icon: const Icon(Icons.edit_outlined, color: Color(0xFF007C91), size: 20),
               onPressed: () => _showEditStudentDialog(student),
               tooltip: 'Edit student',
             ),
             IconButton(
-              icon: const Icon(
-                Icons.delete_outline,
-                color: Colors.red,
-                size: 20,
-              ),
+              icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
               onPressed: () => _showRemoveStudentDialog(student),
               tooltip: 'Remove student',
             ),
@@ -280,13 +255,8 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text(
-                'Edit Class',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Edit Class', style: TextStyle(fontWeight: FontWeight.bold)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -296,13 +266,8 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
                       decoration: InputDecoration(
                         labelText: 'Class Code',
                         prefixIcon: const Icon(Icons.code, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -311,13 +276,8 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
                       decoration: InputDecoration(
                         labelText: 'Class Name',
                         prefixIcon: const Icon(Icons.book_outlined, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                     ),
                   ],
@@ -368,10 +328,7 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Text('Save'),
                 ),
@@ -384,10 +341,9 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
   }
 
   void _showEditStudentDialog(Map<String, dynamic> student) {
-    final nameController = TextEditingController(
-      text: student['username'] ?? '',
-    );
+    final nameController = TextEditingController(text: student['username'] ?? '');
     final emailController = TextEditingController(text: student['email'] ?? '');
+    final rollNoController = TextEditingController(text: student['roll_no'] ?? '');
     bool isSaving = false;
 
     showDialog(
@@ -396,13 +352,8 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text(
-                'Edit Student',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Edit Student', style: TextStyle(fontWeight: FontWeight.bold)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -412,13 +363,8 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
                       decoration: InputDecoration(
                         labelText: 'Name',
                         prefixIcon: const Icon(Icons.person_outline, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -426,12 +372,19 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
                       controller: emailController,
                       decoration: InputDecoration(
                         labelText: 'Email',
-                        prefixIcon: const Icon(Icons.email, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
+                        prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: rollNoController,
+                      decoration: InputDecoration(
+                        labelText: 'Roll No',
+                        prefixIcon: const Icon(Icons.numbers, size: 20),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                     ),
                   ],
@@ -447,12 +400,11 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
                       ? null
                       : () async {
                           setDialogState(() => isSaving = true);
-                          final result = await _classService
-                              .updateStudentDetails(
-                                  studentId: student['id'],
-                                  username: nameController.text.trim(),
-                                  email: emailController.text.trim(),
-                                );
+                          final result = await _classService.updateStudentDetails(
+                            studentId: student['id'],
+                            username: nameController.text.trim(),
+                            email: emailController.text.trim(),
+                          );
                           if (!ctx.mounted) return;
                           Navigator.pop(ctx);
                           if (result['error'] != null) {
@@ -480,10 +432,7 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Text('Save'),
                 ),
@@ -502,10 +451,7 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Remove Student',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Remove Student', style: TextStyle(fontWeight: FontWeight.bold)),
         content: Text('Remove $name from this class?'),
         actions: [
           TextButton(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/class_service.dart';
 import 'admin_class_detail_screen.dart';
-import '../../widgets/admin_web_layout.dart';
 
 abstract class _AppColors {
   static const tealDark = Color(0xFF007C91);
@@ -32,13 +31,10 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
   List<Map<String, dynamic>> get _filteredTeachers {
     if (_searchQuery.isEmpty) return _teachers;
     final q = _searchQuery.toLowerCase();
-    return _teachers
-        .where(
-          (t) =>
-              (t['username']?.toString().toLowerCase() ?? '').contains(q) ||
-              (t['email']?.toString().toLowerCase() ?? '').contains(q),
-        )
-        .toList();
+    return _teachers.where((t) =>
+      (t['username']?.toString().toLowerCase() ?? '').contains(q) ||
+      (t['email']?.toString().toLowerCase() ?? '').contains(q)
+    ).toList();
   }
 
   @override
@@ -79,74 +75,9 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
     final isMobile = screenW < 600;
     final isDesktop = screenW >= 1024;
 
-    Widget mainContent = isDesktop
-        ? Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 52,
-                      height: 52,
-                      decoration: ShapeDecoration(
-                        gradient: const LinearGradient(
-                          colors: [_AppColors.tealDark, _AppColors.teal],
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.person_rounded,
-                        color: Colors.white,
-                        size: 26,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    const Expanded(
-                      child: Text(
-                        'Manage Teachers',
-                        style: TextStyle(
-                          color: _AppColors.tealDark,
-                          fontSize: 36,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(38, 20, 38, 38),
-                  child: _isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              _AppColors.teal,
-                            ),
-                          ),
-                        )
-                      : _buildContent(false),
-                ),
-              ),
-            ],
-          )
-        : Column(
-            children: [
-              _buildHeaderSection(isMobile),
-              _buildMobileSearch(),
-              const SizedBox(height: 12),
-              Expanded(child: _buildContent(isMobile)),
-            ],
-          );
+    if (isDesktop) return _buildDesktopLayout();
 
-    Widget mobileChild = Scaffold(
+    return Scaffold(
       backgroundColor: _AppColors.background,
       appBar: _buildTopBar(isMobile),
       drawer: _buildMobileDrawer(),
@@ -157,11 +88,16 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                   valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal),
                 ),
               )
-            : mainContent,
+            : Column(
+                children: [
+                  _buildHeaderSection(isMobile),
+                  _buildMobileSearch(),
+                  const SizedBox(height: 12),
+                  Expanded(child: _buildContent(isMobile)),
+                ],
+              ),
       ),
     );
-
-    return mobileChild;
   }
 
   PreferredSizeWidget _buildTopBar(bool isMobile) {
@@ -169,10 +105,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
       backgroundColor: _AppColors.background,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(
-          Icons.arrow_back_rounded,
-          color: _AppColors.textPrimary,
-        ),
+        icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
         onPressed: () => Navigator.pop(context),
       ),
       title: Row(
@@ -185,11 +118,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
               shape: BoxShape.circle,
             ),
             padding: const EdgeInsets.all(8),
-            child: const Icon(
-              Icons.person_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
+            child: const Icon(Icons.person_rounded, color: Colors.white, size: 20),
           ),
           const SizedBox(width: 12),
           const Expanded(
@@ -217,17 +146,10 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
         decoration: InputDecoration(
           hintText: 'Search by name or email',
           hintStyle: TextStyle(color: Colors.grey.shade400),
-          prefixIcon: const Icon(
-            Icons.search,
-            color: _AppColors.teal,
-            size: 22,
-          ),
+          prefixIcon: const Icon(Icons.search, color: _AppColors.teal, size: 22),
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
@@ -241,6 +163,140 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
             borderSide: const BorderSide(color: _AppColors.teal, width: 2),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopLayout() {
+    return Scaffold(
+      backgroundColor: _AppColors.background,
+      body: SafeArea(
+        child: Row(
+          children: [
+            _buildDesktopSidebar(),
+            Expanded(
+              child: Column(
+                children: [
+                  _buildDesktopTopBar(),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(38, 20, 38, 38),
+                      child: _isLoading
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal),
+                              ),
+                            )
+                          : _buildContent(false),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopTopBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: ShapeDecoration(
+              gradient: const LinearGradient(
+                colors: [_AppColors.tealDark, _AppColors.teal],
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(22),
+              ),
+            ),
+            child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
+          ),
+          const SizedBox(width: 16),
+          const Expanded(
+            child: Text(
+              'Manage Teachers',
+              style: TextStyle(
+                color: _AppColors.tealDark,
+                fontSize: 36,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopSidebar() {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      width: _isSidebarExpanded ? 220 : 72,
+      decoration: const BoxDecoration(color: _AppColors.darkBg),
+      child: Column(
+        children: [
+          const SizedBox(height: 24),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [_AppColors.tealDark, _AppColors.teal],
+              ),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
+          ),
+          IconButton(
+            icon: Icon(
+              _isSidebarExpanded ? Icons.chevron_left : Icons.chevron_right,
+              color: Colors.white70,
+            ),
+            onPressed: () =>
+                setState(() => _isSidebarExpanded = !_isSidebarExpanded),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                _buildSidebarItem(Icons.dashboard_rounded, 'Dashboard'),
+                _buildSidebarItem(Icons.person_rounded, 'Teachers'),
+              ],
+            ),
+          ),
+          _buildSidebarItem(Icons.arrow_back_rounded, 'Back'),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSidebarItem(
+    IconData icon,
+    String title, {
+    bool isMobile = false,
+  }) {
+    final showLabel = _isSidebarExpanded || isMobile;
+    return Tooltip(
+      message: showLabel ? '' : title,
+      child: ListTile(
+        leading: Icon(icon, color: Colors.white70, size: isMobile ? 24 : 20),
+        title: showLabel
+            ? Text(title,
+                style: const TextStyle(color: Colors.white, fontSize: 14))
+            : null,
+        onTap: () {
+          if (title == 'Back' || title == 'Dashboard') {
+            Navigator.pop(context);
+          }
+        },
       ),
     );
   }
@@ -282,16 +338,10 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                 ],
               ),
             ),
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.white70),
-              title: const Text(
-                'Logout',
-                style: TextStyle(color: Colors.white),
-              ),
-              onTap: () {
-                // implement logout or back if needed
-              },
-            ),
+            _buildSidebarItem(Icons.dashboard_rounded, 'Dashboard', isMobile: true),
+            _buildSidebarItem(Icons.person_rounded, 'Teachers', isMobile: true),
+            const Divider(color: Colors.white24),
+            _buildSidebarItem(Icons.arrow_back_rounded, 'Back', isMobile: true),
           ],
         ),
       ),
@@ -300,27 +350,15 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
 
   Widget _buildHeaderSection(bool isMobile) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        isMobile ? 16 : 24,
-        isMobile ? 6 : 12,
-        isMobile ? 16 : 24,
-        0,
-      ),
+      padding: EdgeInsets.fromLTRB(isMobile ? 16 : 24, isMobile ? 6 : 12, isMobile ? 16 : 24, 0),
       child: Row(
         children: [
           if (isMobile)
             IconButton(
-              icon: const Icon(
-                Icons.arrow_back_rounded,
-                color: _AppColors.textPrimary,
-              ),
+              icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
               onPressed: () => Navigator.pop(context),
             ),
-          const Icon(
-            Icons.person_rounded,
-            color: _AppColors.tealDark,
-            size: 32,
-          ),
+          const Icon(Icons.person_rounded, color: _AppColors.tealDark, size: 32),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -358,16 +396,10 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.person_off_outlined,
-              size: 80,
-              color: Colors.grey.shade300,
-            ),
+            Icon(Icons.person_off_outlined, size: 80, color: Colors.grey.shade300),
             const SizedBox(height: 16),
             Text(
-              _searchQuery.isNotEmpty
-                  ? 'No teachers match your search'
-                  : 'No teachers found',
+              _searchQuery.isNotEmpty ? 'No teachers match your search' : 'No teachers found',
               style: const TextStyle(
                 fontSize: 18,
                 color: _AppColors.textMuted,
@@ -478,17 +510,10 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                     color: Colors.black.withValues(alpha: 0.3),
                     fontSize: isCompact ? 14 : 18,
                   ),
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    color: _AppColors.tealLight,
-                    size: 22,
-                  ),
+                  prefixIcon: const Icon(Icons.search, color: _AppColors.tealLight, size: 22),
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none,
@@ -557,11 +582,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
     );
   }
 
-  Widget _buildTableRow(
-    Map<String, dynamic> teacher,
-    int displayIndex,
-    bool isCompact,
-  ) {
+  Widget _buildTableRow(Map<String, dynamic> teacher, int displayIndex, bool isCompact) {
     final classes = List<Map<String, dynamic>>.from(teacher['classes'] ?? []);
     final teacherId = teacher['id'] as int;
     final hasClasses = classes.isNotEmpty;
@@ -635,10 +656,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                             });
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: _AppColors.teal.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
@@ -656,9 +674,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                                 ),
                                 const SizedBox(width: 4),
                                 Icon(
-                                  isExpanded
-                                      ? Icons.expand_less
-                                      : Icons.expand_more,
+                                  isExpanded ? Icons.expand_less : Icons.expand_more,
                                   size: 16,
                                   color: _AppColors.teal,
                                 ),
@@ -672,11 +688,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                 ),
               ),
               IconButton(
-                icon: const Icon(
-                  Icons.edit_outlined,
-                  color: _AppColors.tealDark,
-                  size: 20,
-                ),
+                icon: const Icon(Icons.edit_outlined, color: _AppColors.tealDark, size: 20),
                 onPressed: () => _showEditTeacherDialog(teacher),
                 tooltip: 'Edit teacher',
               ),
@@ -706,77 +718,65 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                ...classes.map(
-                  (cls) => Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: InkWell(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => AdminClassDetailScreen(
-                            classId: cls['id'],
-                            classCode: cls['class_code'] ?? '',
-                            className: cls['class_name'] ?? '',
-                          ),
-                        ),
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _AppColors.teal.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                cls['class_code'] ?? '',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: _AppColors.tealDark,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                cls['class_name'] ?? '',
-                                style: const TextStyle(fontSize: 13),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Text(
-                              '${cls['student_count'] ?? 0} students',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.chevron_right,
-                              size: 18,
-                              color: Colors.grey.shade400,
-                            ),
-                          ],
+                ...classes.map((cls) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: InkWell(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AdminClassDetailScreen(
+                          classId: cls['id'],
+                          classCode: cls['class_code'] ?? '',
+                          className: cls['class_name'] ?? '',
                         ),
                       ),
                     ),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _AppColors.teal.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              cls['class_code'] ?? '',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _AppColors.tealDark,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              cls['class_name'] ?? '',
+                              style: const TextStyle(fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            '${cls['student_count'] ?? 0} students',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                )),
               ],
             ),
           ),
@@ -811,89 +811,83 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: Colors.grey.shade200),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEAF7FA),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    '$displayIndex',
-                    style: const TextStyle(
-                      color: _AppColors.tealDark,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFEAF7FA),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$displayIndex',
+                      style: const TextStyle(
+                        color: _AppColors.tealDark,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              teacher['username'] ?? '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                teacher['username'] ?? '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black,
+                                ),
                               ),
                             ),
+                            if (classes.isNotEmpty)
+                              Icon(
+                                isExpanded ? Icons.expand_less : Icons.expand_more,
+                                color: _AppColors.teal,
+                                size: 24,
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          teacher['email'] ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: _AppColors.textMuted,
                           ),
-                          if (classes.isNotEmpty)
-                            Icon(
-                              isExpanded
-                                  ? Icons.expand_less
-                                  : Icons.expand_more,
-                              color: _AppColors.teal,
-                              size: 24,
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        teacher['email'] ?? '',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: _AppColors.textMuted,
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${teacher['class_count'] ?? 0} classes',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: _AppColors.tealDark,
-                          fontWeight: FontWeight.w600,
+                        const SizedBox(height: 6),
+                        Text(
+                          '${teacher['class_count'] ?? 0} classes',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: _AppColors.tealDark,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                IconButton(
-                  icon: const Icon(
-                    Icons.edit_outlined,
-                    color: _AppColors.tealDark,
-                    size: 20,
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, color: _AppColors.tealDark, size: 20),
+                    onPressed: () => _showEditTeacherDialog(teacher),
+                    tooltip: 'Edit teacher',
                   ),
-                  onPressed: () => _showEditTeacherDialog(teacher),
-                  tooltip: 'Edit teacher',
-                ),
-              ],
-            ),
+                ],
+              ),
           ),
         ),
         AnimatedCrossFade(
@@ -934,77 +928,65 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                     style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
                   )
                 else
-                  ...classes.map(
-                    (cls) => Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: InkWell(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AdminClassDetailScreen(
-                              classId: cls['id'],
-                              classCode: cls['class_code'] ?? '',
-                              className: cls['class_name'] ?? '',
-                            ),
-                          ),
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _AppColors.teal.withOpacity(0.08),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  cls['class_code'] ?? '',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: _AppColors.tealDark,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  cls['class_name'] ?? '',
-                                  style: const TextStyle(fontSize: 14),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              Text(
-                                '${cls['student_count'] ?? 0} students',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.chevron_right,
-                                size: 18,
-                                color: Colors.grey.shade400,
-                              ),
-                            ],
+                  ...classes.map((cls) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: InkWell(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AdminClassDetailScreen(
+                            classId: cls['id'],
+                            classCode: cls['class_code'] ?? '',
+                            className: cls['class_name'] ?? '',
                           ),
                         ),
                       ),
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _AppColors.teal.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                cls['class_code'] ?? '',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: _AppColors.tealDark,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                cls['class_name'] ?? '',
+                                style: const TextStyle(fontSize: 14),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text(
+                              '${cls['student_count'] ?? 0} students',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                  )),
               ],
             ),
           ),
@@ -1015,9 +997,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
   }
 
   void _showEditTeacherDialog(Map<String, dynamic> teacher) {
-    final nameController = TextEditingController(
-      text: teacher['username'] ?? '',
-    );
+    final nameController = TextEditingController(text: teacher['username'] ?? '');
     final emailController = TextEditingController(text: teacher['email'] ?? '');
     bool isSaving = false;
 
@@ -1027,13 +1007,8 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text(
-                'Edit Teacher',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Edit Teacher', style: TextStyle(fontWeight: FontWeight.bold)),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1043,13 +1018,8 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                       decoration: InputDecoration(
                         labelText: 'Name',
                         prefixIcon: const Icon(Icons.person_outline, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -1058,13 +1028,8 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                       decoration: InputDecoration(
                         labelText: 'Email',
                         prefixIcon: const Icon(Icons.email_outlined, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                     ),
                   ],
@@ -1080,12 +1045,11 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                       ? null
                       : () async {
                           setDialogState(() => isSaving = true);
-                          final result = await _classService
-                              .updateTeacherDetails(
-                                teacherId: teacher['id'],
-                                username: nameController.text.trim(),
-                                email: emailController.text.trim(),
-                              );
+                          final result = await _classService.updateTeacherDetails(
+                            teacherId: teacher['id'],
+                            username: nameController.text.trim(),
+                            email: emailController.text.trim(),
+                          );
                           if (!ctx.mounted) return;
                           Navigator.pop(ctx);
                           if (result['error'] != null) {
@@ -1113,10 +1077,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : const Text('Save'),
                 ),
@@ -1127,4 +1088,5 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
       },
     );
   }
+
 }
