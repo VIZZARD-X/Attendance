@@ -44,6 +44,23 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from django.views.static import serve as static_serve
 from django.urls import re_path
 
+from attendance.admin_views import (
+    admin_classes_summary,
+    admin_semester_classes,
+    admin_semester_students,
+    admin_teachers_list,
+    admin_update_teacher,
+    admin_stats,
+    admin_users_list,
+    admin_toggle_user_access,
+    admin_create_user,
+    admin_delete_user,
+    admin_update_class,
+    admin_class_detail,
+    admin_remove_student_from_class,
+    admin_update_student,
+)
+
 FLUTTER_WEB_DIR = os.path.join(settings.BASE_DIR, 'flutter_web')
 
 def serve_flutter(request, path=''):
@@ -104,6 +121,22 @@ urlpatterns = [
 
     # Utility
     path('api/v1/ping/', ping, name='ping'),
+
+    # Admin API (from teacher branch, adapted — no roll_no)
+    path('api/v1/admin/classes/summary/', admin_classes_summary, name='admin_classes_summary'),
+    path('api/v1/admin/classes/by-semester/<str:semester>/', admin_semester_classes, name='admin_semester_classes'),
+    path('api/v1/admin/students/by-semester/<str:semester>/', admin_semester_students, name='admin_semester_students'),
+    path('api/v1/admin/teachers/', admin_teachers_list, name='admin_teachers_list'),
+    path('api/v1/admin/stats/', admin_stats, name='admin_stats'),
+    path('api/v1/admin/users/create/', admin_create_user, name='admin_create_user'),
+    path('api/v1/admin/users/<str:role>/', admin_users_list, name='admin_users_list'),
+    path('api/v1/admin/users/<int:user_id>/toggle-access/', admin_toggle_user_access, name='admin_toggle_user_access'),
+    path('api/v1/admin/users/<int:user_id>/delete/', admin_delete_user, name='admin_delete_user'),
+    path('api/v1/admin/students/<int:student_id>/update/', admin_update_student, name='admin_update_student'),
+    path('api/v1/admin/teachers/<int:teacher_id>/update/', admin_update_teacher, name='admin_update_teacher'),
+    path('api/v1/admin/classes/<int:class_id>/update/', admin_update_class, name='admin_update_class'),
+    path('api/v1/admin/classes/<int:class_id>/detail/', admin_class_detail, name='admin_class_detail'),
+    path('api/v1/admin/classes/<int:class_id>/remove-student/<int:student_id>/', admin_remove_student_from_class, name='admin_remove_student'),
 
     # Flutter Web — must be last
     re_path(r'^(?P<path>.*)$', serve_flutter, name='flutter_web'),
