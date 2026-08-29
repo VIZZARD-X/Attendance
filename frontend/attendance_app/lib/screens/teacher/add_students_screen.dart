@@ -337,7 +337,16 @@ class _AddStudentsScreenState extends State<AddStudentsScreen> {
             flex: 3,
             child: students.isEmpty
                 ? _buildEmptyStudentsList()
-                : SingleChildScrollView(child: _buildStudentsList()),
+                : Column(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: _buildStudentsList(),
+                        ),
+                      ),
+                      if (students.isNotEmpty) _buildSubmitButton(),
+                    ],
+                  ),
           ),
         ],
       ),
