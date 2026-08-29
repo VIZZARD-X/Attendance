@@ -30,12 +30,12 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-    if host.strip()
-]
-
+# ALLOWED_HOSTS = [
+#     host.strip()
+#     for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+#     if host.strip()
+# ]
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']#remove this
 AUTH_USER_MODEL = 'attendance.User'
 
 #ADD THESE LINES (Optional - for documentation)
@@ -171,8 +171,8 @@ CORS_ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
-CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "True").lower() == "true"
-
+# CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "True").lower() == "true"
+CORS_ALLOW_ALL_ORIGINS = True# change this
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
@@ -180,4 +180,5 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 # CORS settings
-CORS_ALLOW_CREDENTIALS = True
+# CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = False# change this
