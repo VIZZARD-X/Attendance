@@ -1,39 +1,32 @@
 class ApiConfig {
-  // Local IP for physical phone testing on same Wi-Fi.
-  static const String _localIp = 'http://10.127.123.219:8000/api/v1';
-
-  // Compile-time overrides:
-  // flutter run --dart-define=API_BASE_URL=https://your-backend.onrender.com/api/v1
+  // Override the base URL at compile time for ANY environment (physical
+  // device, your own server, CI) without editing this file:
+  //   flutter run --dart-define=API_BASE_URL=https://your-host/api/v1
   static const String _apiBaseUrl = String.fromEnvironment('API_BASE_URL');
 
-  // For Android Emulator
+  // For Android Emulator (default for mobile dev)
   static const String _androidEmulatorUrl = 'http://10.0.2.2:8000/api/v1';
 
-  // For Local Tunnel (e.g. VS Code Port Forwarding, ngrok, localtunnel)
-  // Ensure that 'Port Forwarding' is active in VS Code if using this method.
-  static const String _localtunnelUrl =
-      'https://qdg6mx71-8000.inc1.devtunnels.ms/api/v1';
+  // For Web
+  static const String _webUrl = 'http://localhost:8000/api/v1';
 
-  // Change this to false to use local IP for debugging!
-  static const bool isProduction = true;
+  // Example production URL - replace with YOUR own host, or simply use the
+  // API_BASE_URL override above. Do not ship the original author's URL.
+  static const String _productionUrl = 'https://your-backend.example.com/api/v1';
 
-  // Your Render URL
-  static const String _productionUrl =
-      'https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net/api/v1';
+  // Set to true for production builds. The actual host still comes from the
+  // API_BASE_URL override (falls back to _productionUrl as a placeholder).
+  static const bool isProduction = false;
 
   // Base URL resolution
   static String get baseUrl {
-    if (isProduction) {
-      return _productionUrl;
-    }
-
-    // Check if we're running on the web
+    if (_apiBaseUrl.isNotEmpty) return _apiBaseUrl; // override wins everywhere
+    if (isProduction) return _productionUrl;
     if (identical(0, 0.0)) {
-      // A trick to detect web without importing flutter/foundation.dart
-      return 'http://127.0.0.1:8000/api/v1';
+      // Trick to detect web without importing flutter/foundation.dart
+      return _webUrl;
     }
-
-    return _localtunnelUrl; // Fallback to localtunnel for physical device USB debugging
+    return _androidEmulatorUrl; // mobile default (emulator)
   }
 
   // Connection settings (90s to handle Render free-tier cold starts gracefully)

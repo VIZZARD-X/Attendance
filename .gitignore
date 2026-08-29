@@ -22,6 +22,18 @@ staticfiles/
 # Docker
 docker-compose.override.yml
 
+# Build artifacts / scratch (should never be committed)
+backend/flutter_web/
+backend/*.json
+backend/debug_thresh.jpg
+diff*.txt
+fix_*.py
+old_session_create*.dart
+original_session_create.dart
+scratch/
+frontend/attendance_app/out.txt
+*.bak
+
 # Flutter/Dart
 frontend/attendance_app/build/
 frontend/attendance_app/.dart_tool/
@@ -48,6 +60,9 @@ frontend/attendance_app/ios/.symlinks/
 *.swo
 *.iml
 .DS_Store
+
+# Repo analysis/cache tooling
+.cgraph/
 
 # Generated APKs (optional - remove if you want to track them)
 *.apk
