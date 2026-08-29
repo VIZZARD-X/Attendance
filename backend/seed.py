@@ -53,7 +53,7 @@ def seed_database(reset=False, default_password="password123"):
     admin_user, created = User.objects.get_or_create(
         email='admin@example.com',
         defaults={
-            'username': 'admin',
+            'username': 'seed_admin',
             'role': 'admin',
             'first_name': 'System',
             'last_name': 'Admin',
