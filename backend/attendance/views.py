@@ -1377,7 +1377,8 @@ def check_student_by_email(request):
             profile = None
         
         return Response({
-            'user': {
+            'exists': True,
+            'student': {
                 'id': user.id,
                 'username': user.username,
                 'email': user.email,
@@ -1398,22 +1399,46 @@ def check_student_by_email(request):
 @api_view(['PUT'])
 @permission_classes([permissions.IsAuthenticated])
 def update_student_in_class(request, class_id, student_id):
-    """Update student details in a class"""
+    """Update a student's email within a class the teacher owns."""
     user = request.user
-    
+
+    if user.role != 'teacher':
+        return Response(
+            {'error': 'Only teachers can update students'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
     try:
         class_obj = Class.objects.get(id=class_id, teacher=user)
         enrollment = Enrollment.objects.get(class_obj=class_obj, student_id=student_id)
-        
-        
-        profile.save()
-        
-        return Response({'message': 'Student updated successfully'})
-    
     except Class.DoesNotExist:
         return Response({'error': 'Class not found'}, status=status.HTTP_404_NOT_FOUND)
     except Enrollment.DoesNotExist:
-        return Response({'error': 'Student not enrolled'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': 'Student not enrolled in this class'}, status=status.HTTP_404_NOT_FOUND)
+
+    student = enrollment.student
+
+    email = request.data.get('email')
+    if email is not None:
+        email = email.strip().lower()
+        if not email:
+            return Response({'error': 'Email cannot be empty'}, status=status.HTTP_400_BAD_REQUEST)
+        if User.objects.filter(email=email).exclude(id=student.id).exists():
+            return Response(
+                {'error': 'Email already in use by another user'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        student.email = email
+
+    student.save()
+    return Response({
+        'message': 'Student updated successfully',
+        'student': {
+            'id': student.id,
+            'username': student.username,
+            'email': student.email,
+        }
+    })
 
 
 
