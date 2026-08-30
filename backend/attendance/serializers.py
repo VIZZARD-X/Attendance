@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from .models import StudentProfile, Class, Enrollment, AttendanceSession, AttendanceRecord
+from .models import StudentProfile, Class, Enrollment, AttendanceSession, AttendanceRecord, Announcement
 import json
 import uuid
 import string
@@ -353,3 +353,19 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Add user data to response
         data['user'] = UserSerializer(self.user).data
         return data
+
+
+class AnnouncementSerializer(serializers.ModelSerializer):
+    sender_name = serializers.CharField(source='sender.username', read_only=True)
+    sender_email = serializers.CharField(source='sender.email', read_only=True)
+    class_name = serializers.CharField(source='target_class.class_name', read_only=True)
+    class_code = serializers.CharField(source='target_class.class_code', read_only=True)
+
+    class Meta:
+        model = Announcement
+        fields = [
+            'id', 'sender_name', 'sender_email', 'title', 'content',
+            'target_type', 'target_class', 'class_name', 'class_code',
+            'min_attendance_threshold', 'is_urgent', 'created_at'
+        ]
+        read_only_fields = ['id', 'sender', 'created_at']
