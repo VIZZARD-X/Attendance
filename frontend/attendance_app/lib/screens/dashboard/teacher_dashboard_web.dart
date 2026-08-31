@@ -5,6 +5,7 @@ import '../teacher/my_classes_screen.dart';
 import '../teacher/session_create_screen.dart';
 import '../teacher/teacher_attendance_history_screen.dart';
 import '../teacher/teacher_profile_screen.dart';
+import '../teacher/teacher_announcements_screen.dart';
 import '../../widgets/teacher_web_layout.dart';
 import '../../widgets/offline_indicator.dart';
 
@@ -352,10 +353,7 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
         _loadUserData(forceRefresh: true);
         break;
       case 'Announcements':
-        _showSnackBar(
-          'Announcements clicked! Coming soon.',
-          const Color(0xFFF566C5),
-        );
+        await Navigator.push(context, _fadeRoute(const TeacherAnnouncementsScreen()));
         break;
       case 'Analytics':
         _showSnackBar(

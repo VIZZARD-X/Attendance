@@ -39,6 +39,7 @@ from attendance.views import (
     mark_all_present_session,
     edit_session,
     update_session_attendance,
+    announcements_list_create,
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 from django.views.static import serve as static_serve
@@ -118,6 +119,9 @@ urlpatterns = [
     path('api/v1/teachers/attendance-history/', get_teacher_attendance_history, name='teacher_attendance_history'),
     path('api/v1/attendance/<int:record_id>/update/', update_attendance_status, name='update_attendance'),
     path('api/v1/sessions/<uuid:session_id>/attendance/', get_session_attendance_details, name='session_attendance_details'),
+
+    # Announcements
+    path('api/v1/announcements/', announcements_list_create, name='announcements'),
 
     # Utility
     path('api/v1/ping/', ping, name='ping'),

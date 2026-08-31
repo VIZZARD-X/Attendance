@@ -156,3 +156,30 @@ class AttendanceRecord(models.Model):
 
     def __str__(self):
         return f"{self.student.username} - {self.session.class_obj.class_code} - {self.status}"
+
+
+class Announcement(models.Model):
+    TARGET_TYPE_CHOICES = (
+        ('class', 'Class'),
+        ('individual', 'Individual'),
+        ('low_attendance', 'Low Attendance'),
+    )
+
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_announcements', limit_choices_to={'role': 'teacher'})
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    
+    target_type = models.CharField(max_length=20, choices=TARGET_TYPE_CHOICES, default='class')
+    target_class = models.ForeignKey(Class, on_delete=models.CASCADE, related_name='announcements', null=True, blank=True)
+    min_attendance_threshold = models.IntegerField(null=True, blank=True)
+    
+    is_urgent = models.BooleanField(default=False)
+    recipients = models.ManyToManyField(User, related_name='announcements_received')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'announcements'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} by {self.sender.username}"

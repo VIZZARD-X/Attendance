@@ -7,6 +7,7 @@ import '../teacher/my_classes_screen.dart';
 import '../teacher/session_create_screen.dart';
 import '../teacher/teacher_attendance_history_screen.dart';
 import '../teacher/teacher_profile_screen.dart';
+import '../teacher/teacher_announcements_screen.dart';
 import '../../widgets/offline_indicator.dart';
 
 class TeacherDashboardMobile extends StatefulWidget {
@@ -209,6 +210,12 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
         ).then((_) {
           _loadUserData(forceRefresh: true);
         });
+        break;
+      case 'Announcements':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const TeacherAnnouncementsScreen()),
+        );
         break;
 
       //  REMOVED: Class Insights and Reports cases
