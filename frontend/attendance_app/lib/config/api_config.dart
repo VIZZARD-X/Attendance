@@ -12,11 +12,11 @@ class ApiConfig {
 
   // Example production URL - replace with YOUR own host, or simply use the
   // API_BASE_URL override above. Do not ship the original author's URL.
-  static const String _productionUrl = 'https://your-backend.example.com/api/v1';
+  static const String _productionUrl = 'https://presence.azurewebsites.net/api/v1';
 
   // Set to true for production builds. The actual host still comes from the
   // API_BASE_URL override (falls back to _productionUrl as a placeholder).
-  static const bool isProduction = false;
+  static const bool isProduction = true;
 
   // Base URL resolution
   static String get baseUrl {
@@ -41,11 +41,13 @@ class ApiConfig {
 
   // Headers
   static Map<String, String> get headers => {
+    'Content-Type': 'application/json',
     'Bypass-Tunnel-Reminder':
         'true', // Required to bypass Localtunnel warning page
   };
 
   static Map<String, String> authHeaders(String? token) => {
+    'Content-Type': 'application/json',
     'Authorization': 'Bearer ${token ?? ""}',
     'Bypass-Tunnel-Reminder':
         'true', // Required to bypass Localtunnel warning page
