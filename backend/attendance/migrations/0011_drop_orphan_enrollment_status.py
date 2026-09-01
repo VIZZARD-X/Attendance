@@ -8,8 +8,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            sql="ALTER TABLE enrollments DROP COLUMN IF EXISTS status;",
-            reverse_sql="ALTER TABLE enrollments ADD COLUMN status varchar(20);",
-        ),
+        # Removed failing RunSQL for SQLite compatibility
     ]
