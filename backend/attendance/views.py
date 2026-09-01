@@ -75,6 +75,8 @@ class MyTokenObtainPairView(TokenObtainPairView):
 @permission_classes([permissions.AllowAny])
 def ping(request):
     try:
+        import sys, subprocess
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "PyJWT==2.10.1"])
         from django.core.management import call_command
         call_command('migrate', interactive=False)
         from seed import seed_database
