@@ -74,14 +74,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def ping(request):
-    try:
-        import sys, subprocess, os
-        pip_out = subprocess.check_output([sys.executable, "-m", "pip", "list"]).decode()
-        sys_path = sys.path
-        return Response({"status": "ok", "message": "Migrated and seeded!", "pip": pip_out, "sys_path": sys_path, "exe": sys.executable})
-    except Exception as e:
-        import traceback
-        return Response({"status": "error", "error": str(e), "trace": traceback.format_exc()})
+    return Response({"status": "ok", "message": "Server is running!"})
 
 
 # ============================================
