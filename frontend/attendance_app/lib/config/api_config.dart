@@ -12,7 +12,7 @@ class ApiConfig {
 
   // Example production URL - replace with YOUR own host, or simply use the
   // API_BASE_URL override above. Do not ship the original author's URL.
-  static const String _productionUrl = 'https://presence.azurewebsites.net/api/v1';
+  static const String _productionUrl = 'https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net/api/v1';
 
   // Set to true for production builds. The actual host still comes from the
   // API_BASE_URL override (falls back to _productionUrl as a placeholder).
