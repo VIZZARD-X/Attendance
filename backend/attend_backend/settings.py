@@ -30,12 +30,11 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DJANGO_DEBUG", "False").lower() == "true"
 
-# ALLOWED_HOSTS = [
-#     host.strip()
-#     for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-#     if host.strip()
-# ]
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']#remove this
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv("ALLOWED_HOSTS", "*").split(",")
+    if host.strip()
+]
 AUTH_USER_MODEL = 'attendance.User'
 
 #ADD THESE LINES (Optional - for documentation)
@@ -175,7 +174,7 @@ CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "True").lower() == 
 # CORS_ALLOW_ALL_ORIGINS = True
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net").split(",")
     if origin.strip()
 ]
 
