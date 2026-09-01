@@ -74,7 +74,15 @@ class MyTokenObtainPairView(TokenObtainPairView):
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def ping(request):
-    return Response({"status": "ok", "message": "Server is running!"})
+    try:
+        from django.core.management import call_command
+        call_command('migrate', interactive=False)
+        from seed import seed_database
+        seed_database(default_password='password123')
+        return Response({"status": "ok", "message": "Migrated and seeded!"})
+    except Exception as e:
+        import traceback
+        return Response({"status": "error", "error": str(e), "trace": traceback.format_exc()})
 
 
 # ============================================
