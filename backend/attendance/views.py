@@ -76,14 +76,9 @@ class MyTokenObtainPairView(TokenObtainPairView):
 def ping(request):
     try:
         import sys, subprocess, os
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "PyJWT==2.10.1"])
-        from django.core.management import call_command
-        call_command('migrate', interactive=False)
-        from seed import seed_database
-        seed_database(default_password='password123')
-        if request.GET.get('restart') == '1':
-            os._exit(0)
-        return Response({"status": "ok", "message": "Migrated and seeded!"})
+        pip_out = subprocess.check_output([sys.executable, "-m", "pip", "list"]).decode()
+        sys_path = sys.path
+        return Response({"status": "ok", "message": "Migrated and seeded!", "pip": pip_out, "sys_path": sys_path, "exe": sys.executable})
     except Exception as e:
         import traceback
         return Response({"status": "error", "error": str(e), "trace": traceback.format_exc()})
