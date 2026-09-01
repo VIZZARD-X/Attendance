@@ -90,9 +90,14 @@ WSGI_APPLICATION = 'attend_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+if os.getenv('WEBSITE_SITE_NAME'):
+    db_path = '/home/db.sqlite3'
+else:
+    db_path = BASE_DIR / 'db.sqlite3'
+
 DATABASES = {
     'default': dj_database_url.parse(
-        os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
+        os.getenv("DATABASE_URL", f"sqlite:///{db_path}")
     )
 }
 
