@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../services/class_service.dart';
+import '../../widgets/admin_web_layout.dart';
 import 'admin_class_detail_screen.dart';
 
 abstract class _AppColors {
   static const tealDark = Color(0xFF007C91);
   static const teal = Color(0xFF0097A7);
   static const tealLight = Color(0xFF0288A3);
-  static const background = Color(0xFFF7FAFC);
-  static const darkBg = Color(0xFF1E1E2D);
   static const textPrimary = Color(0xFF1F2937);
   static const textMuted = Color(0xFF6B7280);
 }
@@ -23,7 +22,6 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
   final ClassService _classService = ClassService();
   final _searchController = TextEditingController();
   String _searchQuery = '';
-  bool _isSidebarExpanded = false;
   bool _isLoading = false;
   List<Map<String, dynamic>> _teachers = [];
   final Set<int> _expandedTeacherIds = {};
@@ -73,67 +71,30 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
   Widget build(BuildContext context) {
     final screenW = MediaQuery.of(context).size.width;
     final isMobile = screenW < 600;
-    final isDesktop = screenW >= 1024;
 
-    if (isDesktop) return _buildDesktopLayout();
-
-    return Scaffold(
-      backgroundColor: _AppColors.background,
-      appBar: _buildTopBar(isMobile),
-      drawer: _buildMobileDrawer(),
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal),
-                ),
-              )
-            : Column(
-                children: [
-                  _buildHeaderSection(isMobile),
-                  _buildMobileSearch(),
-                  const SizedBox(height: 12),
-                  Expanded(child: _buildContent(isMobile)),
-                ],
-              ),
-      ),
+    return AdminWebLayout(
+      currentRoute: 'Manage Teachers',
+      mobileChild: _buildMobileBody(isMobile),
+      desktopBody: _buildDesktopBody(),
     );
   }
 
-  PreferredSizeWidget _buildTopBar(bool isMobile) {
-    return AppBar(
-      backgroundColor: _AppColors.background,
-      elevation: 0,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
-        onPressed: () => Navigator.pop(context),
-      ),
-      title: Row(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [_AppColors.tealDark, _AppColors.teal],
+  Widget _buildMobileBody(bool isMobile) {
+    return SafeArea(
+      child: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal),
               ),
-              shape: BoxShape.circle,
+            )
+          : Column(
+              children: [
+                _buildHeaderSection(isMobile),
+                _buildMobileSearch(),
+                const SizedBox(height: 12),
+                Expanded(child: _buildContent(isMobile)),
+              ],
             ),
-            padding: const EdgeInsets.all(8),
-            child: const Icon(Icons.person_rounded, color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Manage Teachers',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: _AppColors.textPrimary,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -167,183 +128,61 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
     );
   }
 
-  Widget _buildDesktopLayout() {
-    return Scaffold(
-      backgroundColor: _AppColors.background,
-      body: SafeArea(
-        child: Row(
-          children: [
-            _buildDesktopSidebar(),
-            Expanded(
-              child: Column(
-                children: [
-                  _buildDesktopTopBar(),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(38, 20, 38, 38),
-                      child: _isLoading
-                          ? const Center(
-                              child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal),
-                              ),
-                            )
-                          : _buildContent(false),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDesktopTopBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-      child: Row(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: ShapeDecoration(
-              gradient: const LinearGradient(
-                colors: [_AppColors.tealDark, _AppColors.teal],
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(22),
-              ),
-            ),
-            child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
-          ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Text(
-              'Manage Teachers',
-              style: TextStyle(
-                color: _AppColors.tealDark,
-                fontSize: 36,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDesktopSidebar() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      width: _isSidebarExpanded ? 220 : 72,
-      decoration: const BoxDecoration(color: _AppColors.darkBg),
+  Widget _buildDesktopBody() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(38, 20, 38, 38),
       child: Column(
         children: [
-          const SizedBox(height: 24),
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [_AppColors.tealDark, _AppColors.teal],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: ShapeDecoration(
+                  gradient: const LinearGradient(
+                    colors: [_AppColors.tealDark, _AppColors.teal],
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                ),
+                child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
               ),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
-          ),
-          IconButton(
-            icon: Icon(
-              _isSidebarExpanded ? Icons.chevron_left : Icons.chevron_right,
-              color: Colors.white70,
-            ),
-            onPressed: () =>
-                setState(() => _isSidebarExpanded = !_isSidebarExpanded),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                _buildSidebarItem(Icons.dashboard_rounded, 'Dashboard'),
-                _buildSidebarItem(Icons.person_rounded, 'Teachers'),
-              ],
-            ),
-          ),
-          _buildSidebarItem(Icons.arrow_back_rounded, 'Back'),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSidebarItem(
-    IconData icon,
-    String title, {
-    bool isMobile = false,
-  }) {
-    final showLabel = _isSidebarExpanded || isMobile;
-    return Tooltip(
-      message: showLabel ? '' : title,
-      child: ListTile(
-        leading: Icon(icon, color: Colors.white70, size: isMobile ? 24 : 20),
-        title: showLabel
-            ? Text(title,
-                style: const TextStyle(color: Colors.white, fontSize: 14))
-            : null,
-        onTap: () {
-          if (title == 'Back' || title == 'Dashboard') {
-            Navigator.pop(context);
-          }
-        },
-      ),
-    );
-  }
-
-  Widget _buildMobileDrawer() {
-    return Drawer(
-      child: Container(
-        decoration: const BoxDecoration(color: _AppColors.darkBg),
-        child: ListView(
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [_AppColors.tealDark, _AppColors.teal],
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Text(
+                  'Manage Teachers',
+                  style: TextStyle(
+                    color: _AppColors.tealDark,
+                    fontSize: 36,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.person_rounded,
-                      size: 35,
-                      color: _AppColors.tealDark,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'Manage Teachers',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+              Text(
+                '${_teachers.length} teachers',
+                style: const TextStyle(fontSize: 15, color: _AppColors.textMuted),
               ),
-            ),
-            _buildSidebarItem(Icons.dashboard_rounded, 'Dashboard', isMobile: true),
-            _buildSidebarItem(Icons.person_rounded, 'Teachers', isMobile: true),
-            const Divider(color: Colors.white24),
-            _buildSidebarItem(Icons.arrow_back_rounded, 'Back', isMobile: true),
-          ],
-        ),
+              IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
+                onPressed: () => Navigator.pop(context),
+                tooltip: 'Back',
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal),
+                    ),
+                  )
+                : _buildContent(false),
+          ),
+        ],
       ),
     );
   }
@@ -458,6 +297,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                       _buildTableRow(filtered[index], index + 1, isTablet),
                 ),
               ),
+              _buildTableFooter(filtered.length),
             ],
           ),
         );
@@ -474,6 +314,34 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
 
         return table;
       },
+    );
+  }
+
+  Widget _buildTableFooter(int count) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+        border: Border(top: BorderSide(color: Color(0xFFE0E0E0))),
+      ),
+      child: Row(
+        children: [
+          Text(
+            _searchQuery.isEmpty
+                ? 'Showing $count teacher${count == 1 ? '' : 's'}'
+                : 'Showing $count of ${_teachers.length} teachers',
+            style: const TextStyle(
+              fontSize: 13,
+              color: _AppColors.textMuted,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -1,17 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart';
-import 'admin_profile_screen.dart';
-import 'manage_students_screen.dart';
-import 'manage_teachers_screen.dart';
-import 'reset_login_screen.dart';
+import '../../widgets/admin_web_layout.dart';
+import 'admin_navigation.dart';
 
 abstract class _AppColors {
   static const tealDark = Color(0xFF007C91);
   static const teal = Color(0xFF0097A7);
   static const tealLight = Color(0xFF0288A3);
-  static const background = Color(0xFFF7FAFC);
-  static const darkBg = Color(0xFF1E1E2D);
-  static const textPrimary = Color(0xFF1F2937);
   static const textMuted = Color(0xFF6B7280);
 }
 
@@ -39,9 +33,6 @@ class AdminDashboardPage extends StatefulWidget {
 }
 
 class _AdminDashboardPageState extends State<AdminDashboardPage> {
-  final AuthService _authService = AuthService();
-
-  bool _isSidebarExpanded = false;
   bool _isLoading = false;
   String _username = 'Admin';
 
@@ -76,140 +67,69 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     ),
   ];
 
-  Future<void> _logout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      await _authService.logout();
-      if (mounted) Navigator.pushReplacementNamed(context, '/login');
-    }
-  }
-
   Future<void> _handleCardTap(String title) async {
-    switch (title) {
-      case 'Manage Students':
-        await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ManageStudentsScreen()),
-        );
-      case 'Manage Teachers':
-        await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ManageTeachersScreen()),
-        );
-      case 'Reset Login':
-        await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ResetLoginScreen()),
-        );
-      case 'Profile':
-        await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AdminProfileScreen()),
-        );
-      default:
-        _showSnackBar('$title – Coming Soon!', Colors.blue);
-    }
-  }
-
-  void _showSnackBar(String message, Color color) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: color,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    await navigateToAdminScreen(context, title);
   }
 
   @override
   Widget build(BuildContext context) {
     final screenW = MediaQuery.of(context).size.width;
     final isMobile = screenW < 600;
-    final isDesktop = screenW >= 1024;
 
-    if (isDesktop) return _buildDesktopLayout();
-
-    final crossAxisCount = isMobile ? 1 : 2;
-
-    return Scaffold(
-      backgroundColor: _AppColors.background,
-      appBar: _buildTopBar(isMobile),
-      drawer: _buildMobileDrawer(),
-      body: Stack(
-        children: [
-          SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Padding(
-                padding: EdgeInsets.all(isMobile ? 16 : 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionHeader(),
-                    const SizedBox(height: 16),
-                    _buildDashboardGrid(crossAxisCount, isMobile),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          if (_isLoading) _buildLoadingOverlay(),
-        ],
-      ),
+    return AdminWebLayout(
+      currentRoute: 'Dashboard',
+      mobileChild: _buildMobileBody(isMobile),
+      desktopBody: _buildDesktopBody(),
     );
   }
 
-  Widget _buildDesktopLayout() {
-    return Scaffold(
-      backgroundColor: _AppColors.background,
-      body: Stack(
-        children: [
-          SafeArea(
-            child: Row(
+  Widget _buildMobileBody(bool isMobile) {
+    final crossAxisCount = isMobile ? 1 : 2;
+
+    return Stack(
+      children: [
+        SafeArea(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: EdgeInsets.all(isMobile ? 16 : 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionHeader(),
+                  const SizedBox(height: 16),
+                  _buildDashboardGrid(crossAxisCount, isMobile),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (_isLoading) _buildLoadingOverlay(),
+      ],
+    );
+  }
+
+  Widget _buildDesktopBody() {
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildDesktopSidebar(),
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDesktopHeader(),
-                          const SizedBox(height: 48),
-                          _buildSectionHeader(),
-                          const SizedBox(height: 24),
-                          _buildDashboardGrid(3, false),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                _buildDesktopHeader(),
+                const SizedBox(height: 48),
+                _buildSectionHeader(),
+                const SizedBox(height: 24),
+                _buildDashboardGrid(3, false),
               ],
             ),
           ),
-          if (_isLoading) _buildLoadingOverlay(),
-        ],
-      ),
+        ),
+        if (_isLoading) _buildLoadingOverlay(),
+      ],
     );
   }
 
@@ -369,45 +289,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     );
   }
 
-  PreferredSizeWidget _buildTopBar(bool isMobile) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      title: Row(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [_AppColors.tealDark, _AppColors.teal],
-              ),
-              shape: BoxShape.circle,
-            ),
-            padding: const EdgeInsets.all(8),
-            child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Welcome, $_username',
-              style: TextStyle(
-                fontSize: isMobile ? 16 : 18,
-                fontWeight: FontWeight.bold,
-                color: _AppColors.textPrimary,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.logout, color: _AppColors.textPrimary),
-          onPressed: _logout,
-        ),
-      ],
-    );
-  }
-
   Widget _buildDesktopHeader() {
     return Row(
       children: [
@@ -451,122 +332,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             ],
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.logout, color: _AppColors.textPrimary),
-          onPressed: _logout,
-        ),
       ],
     );
   }
 
-  Widget _buildDesktopSidebar() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      width: _isSidebarExpanded ? 220 : 72,
-      decoration: const BoxDecoration(color: _AppColors.darkBg),
-      child: Column(
-        children: [
-          const SizedBox(height: 24),
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [_AppColors.tealDark, _AppColors.teal],
-              ),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 26),
-          ),
-          IconButton(
-            icon: Icon(
-              _isSidebarExpanded ? Icons.chevron_left : Icons.chevron_right,
-              color: Colors.white70,
-            ),
-            onPressed: () =>
-                setState(() => _isSidebarExpanded = !_isSidebarExpanded),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: _cards
-                  .map((c) => _buildSidebarItem(c.icon, c.title))
-                  .toList(),
-            ),
-          ),
-          _buildSidebarItem(Icons.logout, 'Logout'),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
   }
-
-  Widget _buildSidebarItem(
-    IconData icon,
-    String title, {
-    bool isMobile = false,
-  }) {
-    final showLabel = _isSidebarExpanded || isMobile;
-    return Tooltip(
-      message: showLabel ? '' : title,
-      child: ListTile(
-        leading: Icon(icon, color: Colors.white70, size: isMobile ? 24 : 20),
-        title: showLabel
-            ? Text(title,
-                style: const TextStyle(color: Colors.white, fontSize: 14))
-            : null,
-        onTap: () =>
-            title == 'Logout' ? _logout() : _handleCardTap(title),
-      ),
-    );
-  }
-
-  Widget _buildMobileDrawer() {
-    return Drawer(
-      child: Container(
-        decoration: const BoxDecoration(color: _AppColors.darkBg),
-        child: ListView(
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [_AppColors.tealDark, _AppColors.teal],
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  const CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.admin_panel_settings_rounded,
-                      size: 35,
-                      color: _AppColors.tealDark,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    _username,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ..._cards.map(
-              (c) => _buildSidebarItem(c.icon, c.title, isMobile: true),
-            ),
-            const Divider(color: Colors.white24),
-            _buildSidebarItem(Icons.logout, 'Logout', isMobile: true),
-          ],
-        ),
-      ),
-    );
-  }
-}
