@@ -75,12 +75,14 @@ class MyTokenObtainPairView(TokenObtainPairView):
 @permission_classes([permissions.AllowAny])
 def ping(request):
     try:
-        import sys, subprocess
+        import sys, subprocess, os
         subprocess.check_call([sys.executable, "-m", "pip", "install", "PyJWT==2.10.1"])
         from django.core.management import call_command
         call_command('migrate', interactive=False)
         from seed import seed_database
         seed_database(default_password='password123')
+        if request.GET.get('restart') == '1':
+            os._exit(0)
         return Response({"status": "ok", "message": "Migrated and seeded!"})
     except Exception as e:
         import traceback
