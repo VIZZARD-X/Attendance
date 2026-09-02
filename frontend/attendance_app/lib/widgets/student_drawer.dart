@@ -6,6 +6,7 @@ import '../screens/student/qr_scanner_screen.dart';
 import '../screens/student/pattern_sessions_screen.dart';
 import '../screens/student/attendance_history_screen.dart';
 import '../screens/student/student_profile_screen.dart';
+import '../screens/student/student_analytics_screen.dart';
 import '../services/auth_service.dart';
 
 class StudentDrawer extends StatefulWidget {
@@ -84,6 +85,9 @@ class _StudentDrawerState extends State<StudentDrawer> {
       case 'Dashboard':
         nextScreen = const StudentDashboardPage();
         break;
+      case 'Analytics':
+        nextScreen = const StudentAnalyticsScreen();
+        break;
       case 'My Classes':
         nextScreen = const StudentMyClassesScreen();
         break;
@@ -120,6 +124,7 @@ class _StudentDrawerState extends State<StudentDrawer> {
   Widget build(BuildContext context) {
     final dashboardCards = [
       {'title': 'Dashboard', 'icon': Icons.dashboard},
+      {'title': 'Analytics', 'icon': Icons.insights_rounded},
       {'title': 'My Classes', 'icon': Icons.class_rounded},
       {'title': 'Scan QR', 'icon': Icons.qr_code_scanner_rounded},
       {'title': 'Attendance History', 'icon': Icons.history_rounded},

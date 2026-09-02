@@ -10,6 +10,8 @@ import '../screens/teacher/session_create_screen.dart';
 import '../screens/teacher/teacher_attendance_history_screen.dart';
 import '../screens/teacher/teacher_profile_screen.dart';
 
+import '../screens/teacher/teacher_analytics_screen.dart';
+
 class _AppColors {
   static const darkBg = Color(0xFF1E1E2C);
   static const tealLight = Color(0xFF14DCCA);
@@ -58,6 +60,7 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
 
   static const _cards = <DashboardCardData>[
     DashboardCardData(title: 'Dashboard', icon: Icons.dashboard_rounded),
+    DashboardCardData(title: 'Analytics', icon: Icons.insights_rounded),
     DashboardCardData(title: 'My Classes', icon: Icons.people_alt_rounded),
     DashboardCardData(title: 'Create Session', icon: Icons.timer_rounded),
     DashboardCardData(
@@ -75,6 +78,12 @@ class _TeacherWebLayoutState extends State<TeacherWebLayout> {
         await Navigator.pushReplacement(
           context,
           _fadeRoute(const TeacherDashboardWeb()),
+        );
+        break;
+      case 'Analytics':
+        await Navigator.pushReplacement(
+          context,
+          _fadeRoute(const TeacherAnalyticsScreen()),
         );
         break;
       case 'My Classes':
