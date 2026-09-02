@@ -67,8 +67,17 @@ FLUTTER_WEB_DIR = os.path.join(settings.BASE_DIR, 'flutter_web')
 def serve_flutter(request, path=''):
     file_path = os.path.join(FLUTTER_WEB_DIR, path)
     if path and os.path.exists(file_path) and os.path.isfile(file_path):
-        return static_serve(request, path, document_root=FLUTTER_WEB_DIR)
-    return static_serve(request, 'index.html', document_root=FLUTTER_WEB_DIR)
+        response = static_serve(request, path, document_root=FLUTTER_WEB_DIR)
+    else:
+        path = 'index.html'
+        response = static_serve(request, path, document_root=FLUTTER_WEB_DIR)
+    # Flutter's web assets (main.dart.js, flutter_bootstrap.js, index.html, and
+    # the files under /assets/ and /canvaskit/) are requested at stable URLs
+    # that do NOT change between builds. Force the browser to always revalidate
+    # against the server so every build is picked up immediately without manual
+    # cache clearing (an earlier stale-cache bug kept showing an old build).
+    response['Cache-Control'] = 'no-cache'
+    return response
 
 urlpatterns = [
     path('.well-known/assetlinks.json', assetlinks_json, name='assetlinks'),

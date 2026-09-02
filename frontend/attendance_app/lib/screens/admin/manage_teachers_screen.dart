@@ -23,6 +23,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isLoading = false;
+  String? _errorMessage;
   List<Map<String, dynamic>> _teachers = [];
   final Set<int> _expandedTeacherIds = {};
 
@@ -47,8 +48,20 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
     super.dispose();
   }
 
+  /// Safely parses a teacher id that may arrive as int, String, or null
+  /// depending on the backend/JSON serialization path.
+  int? _teacherIdOf(Map<String, dynamic> teacher) {
+    final raw = teacher['id'];
+    if (raw is int) return raw;
+    if (raw is String) return int.tryParse(raw);
+    return null;
+  }
+
   Future<void> _loadTeachers() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
       final data = await _classService.getTeachers();
@@ -60,9 +73,12 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
         });
       }
     } catch (e) {
-      print('Error loading teachers: $e');
+      debugPrint('Error loading teachers: $e');
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Could not load teachers. Please check your connection and try again.';
+        });
       }
     }
   }
@@ -92,7 +108,13 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                 _buildHeaderSection(isMobile),
                 _buildMobileSearch(),
                 const SizedBox(height: 12),
-                Expanded(child: _buildContent(isMobile)),
+                Expanded(
+                  child: RefreshIndicator(
+                    color: _AppColors.teal,
+                    onRefresh: _loadTeachers,
+                    child: _buildContent(isMobile),
+                  ),
+                ),
               ],
             ),
     );
@@ -161,9 +183,10 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                   ),
                 ),
               ),
-              Text(
-                '${_teachers.length} teachers',
-                style: const TextStyle(fontSize: 15, color: _AppColors.textMuted),
+              IconButton(
+                icon: const Icon(Icons.person_add_alt_1_rounded, color: _AppColors.tealDark),
+                onPressed: _showAddTeacherDialog,
+                tooltip: 'Add Teacher',
               ),
               IconButton(
                 icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
@@ -212,52 +235,30 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text(
-                  '${_teachers.length} teachers',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: _AppColors.textMuted,
-                  ),
-                ),
               ],
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.person_add_alt_1_rounded, color: _AppColors.tealDark),
+            onPressed: _showAddTeacherDialog,
+            tooltip: 'Add Teacher',
           ),
         ],
       ),
     );
   }
 
+  /// Central place that decides between the error state, empty state,
+  /// and the actual teacher list/table.
   Widget _buildContent(bool isMobile) {
+    if (_errorMessage != null) {
+      return _buildErrorState();
+    }
+
     final filtered = _filteredTeachers;
 
     if (filtered.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.person_off_outlined, size: 80, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            Text(
-              _searchQuery.isNotEmpty ? 'No teachers match your search' : 'No teachers found',
-              style: const TextStyle(
-                fontSize: 18,
-                color: _AppColors.textMuted,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            if (_searchQuery.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () {
-                  _searchController.clear();
-                  setState(() => _searchQuery = '');
-                },
-                child: const Text('Clear search'),
-              ),
-            ],
-          ],
-        ),
-      );
+      return _buildEmptyState();
     }
 
     if (isMobile) {
@@ -270,6 +271,70 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
     }
 
     return _buildTable(filtered);
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline_rounded, size: 72, color: Colors.red.shade300),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 15,
+                color: _AppColors.textMuted,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _loadTeachers,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Try again'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _AppColors.tealDark,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.person_off_outlined, size: 80, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text(
+            _searchQuery.isNotEmpty ? 'No teachers match your search' : 'No teachers found',
+            style: const TextStyle(
+              fontSize: 18,
+              color: _AppColors.textMuted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (_searchQuery.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () {
+                _searchController.clear();
+                setState(() => _searchQuery = '');
+              },
+              child: const Text('Clear search'),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   Widget _buildTable(List<Map<String, dynamic>> filtered) {
@@ -297,7 +362,6 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                       _buildTableRow(filtered[index], index + 1, isTablet),
                 ),
               ),
-              _buildTableFooter(filtered.length),
             ],
           ),
         );
@@ -314,34 +378,6 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
 
         return table;
       },
-    );
-  }
-
-  Widget _buildTableFooter(int count) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
-        ),
-        border: Border(top: BorderSide(color: Color(0xFFE0E0E0))),
-      ),
-      child: Row(
-        children: [
-          Text(
-            _searchQuery.isEmpty
-                ? 'Showing $count teacher${count == 1 ? '' : 's'}'
-                : 'Showing $count of ${_teachers.length} teachers',
-            style: const TextStyle(
-              fontSize: 13,
-              color: _AppColors.textMuted,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -452,9 +488,9 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
 
   Widget _buildTableRow(Map<String, dynamic> teacher, int displayIndex, bool isCompact) {
     final classes = List<Map<String, dynamic>>.from(teacher['classes'] ?? []);
-    final teacherId = teacher['id'] as int;
+    final teacherId = _teacherIdOf(teacher);
     final hasClasses = classes.isNotEmpty;
-    final isExpanded = _expandedTeacherIds.contains(teacherId);
+    final isExpanded = teacherId != null && _expandedTeacherIds.contains(teacherId);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -511,7 +547,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (hasClasses) ...[
+                      if (hasClasses && teacherId != null) ...[
                         const SizedBox(width: 8),
                         GestureDetector(
                           onTap: () {
@@ -526,7 +562,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: _AppColors.teal.withOpacity(0.1),
+                              color: _AppColors.teal.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -534,7 +570,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                               children: [
                                 Text(
                                   isExpanded ? 'Hide' : 'View',
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     color: _AppColors.teal,
                                     fontWeight: FontWeight.w600,
@@ -574,78 +610,10 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
               color: Colors.grey.shade50,
               border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Classes:',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _AppColors.tealDark,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                ...classes.map((cls) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: InkWell(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AdminClassDetailScreen(
-                          classId: cls['id'],
-                          classCode: cls['class_code'] ?? '',
-                          className: cls['class_name'] ?? '',
-                        ),
-                      ),
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: _AppColors.teal.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              cls['class_code'] ?? '',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: _AppColors.tealDark,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              cls['class_name'] ?? '',
-                              style: const TextStyle(fontSize: 13),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Text(
-                            '${cls['student_count'] ?? 0} students',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
-                        ],
-                      ),
-                    ),
-                  ),
-                )),
-              ],
+            child: _ClassListSection(
+              classes: classes,
+              dense: true,
+              onTapClass: _openClassDetail,
             ),
           ),
           secondChild: const SizedBox.shrink(),
@@ -656,29 +624,33 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
 
   Widget _buildTeacherCard(Map<String, dynamic> teacher, int displayIndex) {
     final classes = List<Map<String, dynamic>>.from(teacher['classes'] ?? []);
-    final teacherId = teacher['id'] as int;
-    final isExpanded = _expandedTeacherIds.contains(teacherId);
+    final teacherId = _teacherIdOf(teacher);
+    final isExpanded = teacherId != null && _expandedTeacherIds.contains(teacherId);
 
-    return Column(
-      children: [
-        InkWell(
-          onTap: () {
-            setState(() {
-              if (isExpanded) {
-                _expandedTeacherIds.remove(teacherId);
-              } else {
-                _expandedTeacherIds.add(teacherId);
-              }
-            });
-          },
-          borderRadius: BorderRadius.circular(24),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: teacherId == null
+                ? null
+                : () {
+                    setState(() {
+                      if (isExpanded) {
+                        _expandedTeacherIds.remove(teacherId);
+                      } else {
+                        _expandedTeacherIds.add(teacherId);
+                      }
+                    });
+                  },
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -756,112 +728,176 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                   ),
                 ],
               ),
+            ),
           ),
-        ),
-        AnimatedCrossFade(
-          duration: const Duration(milliseconds: 200),
-          crossFadeState: isExpanded
-              ? CrossFadeState.showFirst
-              : CrossFadeState.showSecond,
-          firstChild: Container(
-            margin: const EdgeInsets.only(top: 0),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 200),
+            crossFadeState: isExpanded
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            firstChild: Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
+                ),
+                border: Border(
+                  left: BorderSide(color: Colors.grey.shade200),
+                  right: BorderSide(color: Colors.grey.shade200),
+                  bottom: BorderSide(color: Colors.grey.shade200),
+                ),
               ),
-              border: Border(
-                left: BorderSide(color: Colors.grey.shade200),
-                right: BorderSide(color: Colors.grey.shade200),
-                bottom: BorderSide(color: Colors.grey.shade200),
+              child: _ClassListSection(
+                classes: classes,
+                dense: false,
+                onTapClass: _openClassDetail,
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Classes:',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _AppColors.tealDark,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (classes.isEmpty)
-                  Text(
-                    'No classes assigned',
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-                  )
-                else
-                  ...classes.map((cls) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: InkWell(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => AdminClassDetailScreen(
-                            classId: cls['id'],
-                            classCode: cls['class_code'] ?? '',
-                            className: cls['class_name'] ?? '',
-                          ),
-                        ),
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: _AppColors.teal.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                cls['class_code'] ?? '',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: _AppColors.tealDark,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                cls['class_name'] ?? '',
-                                style: const TextStyle(fontSize: 14),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Text(
-                              '${cls['student_count'] ?? 0} students',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
-                          ],
-                        ),
+            secondChild: const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openClassDetail(Map<String, dynamic> cls) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AdminClassDetailScreen(
+          classId: cls['id'],
+          classCode: cls['class_code'] ?? '',
+          className: cls['class_name'] ?? '',
+        ),
+      ),
+    );
+  }
+
+  void _showAddTeacherDialog() {
+    final nameController = TextEditingController();
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Add Teacher', style: TextStyle(fontWeight: FontWeight.bold)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        labelText: 'Name',
+                        prefixIcon: const Icon(Icons.person_outline, size: 20),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                     ),
-                  )),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: 'Password (min 6 chars)',
+                        prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          final name = nameController.text.trim();
+                          final email = emailController.text.trim();
+                          final password = passwordController.text;
+
+                          if (name.isEmpty || email.isEmpty || password.isEmpty) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(
+                                content: Text('Name, email, and password are required'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setDialogState(() => isSaving = true);
+                          final result = await _classService.adminCreateUser(
+                            username: name,
+                            email: email,
+                            password: password,
+                            role: 'teacher',
+                          );
+                          if (!ctx.mounted) return;
+                          Navigator.pop(ctx);
+                          if (result['error'] != null) {
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              SnackBar(
+                                content: Text(result['error']),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Teacher created successfully'),
+                                backgroundColor: Color(0xFF007C91),
+                              ),
+                            );
+                            _loadTeachers();
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _AppColors.tealDark,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Create'),
+                ),
               ],
-            ),
-          ),
-          secondChild: const SizedBox.shrink(),
-        ),
-      ],
-    );
+            );
+          },
+        );
+      },
+    ).whenComplete(() {
+      nameController.dispose();
+      emailController.dispose();
+      passwordController.dispose();
+    });
   }
 
   void _showEditTeacherDialog(Map<String, dynamic> teacher) {
@@ -912,11 +948,24 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                   onPressed: isSaving
                       ? null
                       : () async {
+                          final name = nameController.text.trim();
+                          final email = emailController.text.trim();
+
+                          if (name.isEmpty || email.isEmpty) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              const SnackBar(
+                                content: Text('Name and email cannot be empty'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
                           setDialogState(() => isSaving = true);
                           final result = await _classService.updateTeacherDetails(
                             teacherId: teacher['id'],
-                            username: nameController.text.trim(),
-                            email: emailController.text.trim(),
+                            username: name,
+                            email: email,
                           );
                           if (!ctx.mounted) return;
                           Navigator.pop(ctx);
@@ -954,7 +1003,103 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
           },
         );
       },
+    ).whenComplete(() {
+      nameController.dispose();
+      emailController.dispose();
+    });
+  }
+}
+
+/// Shared "Classes:" expandable section used by both the desktop table row
+/// and the mobile card, so styling/behaviour only needs to live in one place.
+class _ClassListSection extends StatelessWidget {
+  const _ClassListSection({
+    required this.classes,
+    required this.onTapClass,
+    this.dense = false,
+  });
+
+  final List<Map<String, dynamic>> classes;
+  final void Function(Map<String, dynamic> cls) onTapClass;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Classes:',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: _AppColors.tealDark,
+          ),
+        ),
+        SizedBox(height: dense ? 6 : 8),
+        if (classes.isEmpty)
+          Text(
+            'No classes assigned',
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+          )
+        else
+          ...classes.map((cls) => Padding(
+            padding: EdgeInsets.only(bottom: dense ? 4 : 6),
+            child: InkWell(
+              onTap: () => onTapClass(cls),
+              borderRadius: BorderRadius.circular(dense ? 8 : 10),
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: dense ? 4 : 8,
+                  vertical: dense ? 4 : 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(dense ? 8 : 10),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: dense ? 8 : 10,
+                        vertical: dense ? 2 : 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _AppColors.teal.withValues(alpha: dense ? 0.08 : 0.08),
+                        borderRadius: BorderRadius.circular(dense ? 6 : 8),
+                      ),
+                      child: Text(
+                        cls['class_code'] ?? '',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: _AppColors.tealDark,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: dense ? 8 : 10),
+                    Expanded(
+                      child: Text(
+                        cls['class_name'] ?? '',
+                        style: TextStyle(fontSize: dense ? 13 : 14),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Text(
+                      '${cls['student_count'] ?? 0} students',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
+                  ],
+                ),
+              ),
+            ),
+          )),
+      ],
     );
   }
-
 }
