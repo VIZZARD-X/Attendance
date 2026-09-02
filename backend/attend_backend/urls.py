@@ -9,14 +9,6 @@ from django.http import HttpResponse
 from django.core.management import call_command
 import io
 
-def trigger_migration(request):
-    out = io.StringIO()
-    try:
-        call_command('migrate', interactive=False, stdout=out, stderr=out)
-        return HttpResponse(f"Migration Success:\n{out.getvalue()}", content_type="text/plain")
-    except Exception as e:
-        import traceback
-        return HttpResponse(f"Migration Failed:\n{out.getvalue()}\n{traceback.format_exc()}", content_type="text/plain", status=500)
 
 from attendance.views import (
     RegisterView,
@@ -96,7 +88,6 @@ def serve_flutter(request, path=''):
 urlpatterns = [
     path('.well-known/assetlinks.json', assetlinks_json, name='assetlinks'),
     path('admin/', admin.site.urls),
-    path('api/v1/trigger-migration-123/', trigger_migration, name='trigger_migration'),
 
     # JWT Authentication
     path('api/v1/auth/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
