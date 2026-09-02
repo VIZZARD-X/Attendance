@@ -331,9 +331,11 @@ class _TeacherAnalyticsScreenState extends State<TeacherAnalyticsScreen>
         label: Text(label),
         selected: selected,
         showCheckmark: false,
-        backgroundColor: Colors.white.withValues(alpha: 0.16),
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: Colors.transparent,
         selectedColor: Colors.white,
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.4)),
+        side: BorderSide(color: Colors.white.withValues(alpha: selected ? 1.0 : 0.6)),
         labelStyle: TextStyle(
           color: selected ? AnalyticsTheme.accent : Colors.white,
           fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
