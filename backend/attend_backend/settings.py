@@ -25,19 +25,18 @@ load_dotenv(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-secret-key-attend-app-local-testing")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DJANGO_DEBUG", "True").lower() == "true"
 
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.getenv("ALLOWED_HOSTS", "*").split(",")
+    for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0,*").split(",")
     if host.strip()
 ]
 AUTH_USER_MODEL = 'attendance.User'
 
-#ADD THESE LINES (Optional - for documentation)
 ACCOUNT_AUTHENTICATION_METHOD = 'email'  # Use email for login
 ACCOUNT_EMAIL_REQUIRED = True
 
@@ -166,23 +165,28 @@ if not DEBUG:
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+from corsheaders.defaults import default_headers
+
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         "CORS_ALLOWED_ORIGINS",
-        "http://localhost:3000,http://localhost:8080,http://localhost:5000,http://localhost:59371",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://localhost:5000,http://localhost:59371,https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net",
     ).split(",")
     if origin.strip()
 ]
 
 CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "True").lower() == "true"
-# CORS_ALLOW_ALL_ORIGINS = True
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net").split(",")
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000,https://presence-cne6ezafcncnduf3.indiasouthcentral-01.azurewebsites.net").split(",")
     if origin.strip()
 ]
 
-# CORS settings
-# CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_CREDENTIALS = False# change this
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'bypass-tunnel-reminder',
+    'content-type',
+    'authorization',
+]
+
+CORS_ALLOW_CREDENTIALS = True

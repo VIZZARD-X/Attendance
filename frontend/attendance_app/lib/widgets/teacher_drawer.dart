@@ -5,6 +5,7 @@ import '../screens/teacher/my_classes_screen.dart';
 import '../screens/teacher/session_create_screen.dart';
 import '../screens/teacher/teacher_attendance_history_screen.dart';
 import '../screens/teacher/teacher_profile_screen.dart';
+import '../screens/teacher/teacher_analytics_screen.dart';
 import '../services/auth_service.dart';
 import '../services/class_service.dart';
 
@@ -128,6 +129,9 @@ class _TeacherDrawerState extends State<TeacherDrawer> {
       case 'Dashboard':
         nextScreen = const TeacherDashboardMobile();
         break;
+      case 'Analytics':
+        nextScreen = const TeacherAnalyticsScreen();
+        break;
       case 'My Classes':
         nextScreen = const MyClassesScreen();
         break;
@@ -151,6 +155,7 @@ class _TeacherDrawerState extends State<TeacherDrawer> {
   Widget build(BuildContext context) {
     final dashboardCards = [
       {'title': 'Dashboard', 'icon': Icons.dashboard},
+      {'title': 'Analytics', 'icon': Icons.insights_rounded},
       {'title': 'My Classes', 'icon': Icons.people},
       {'title': 'Create Session', 'icon': Icons.timer},
       {'title': 'Attendance History', 'icon': Icons.history},

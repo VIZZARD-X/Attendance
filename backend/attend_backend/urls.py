@@ -61,6 +61,16 @@ from attendance.admin_views import (
     admin_remove_student_from_class,
     admin_update_student,
 )
+from attendance.analytics_views import (
+    teacher_analytics_overview,
+    teacher_at_risk_list,
+    teacher_student_detail,
+    teacher_integrity_flags,
+    resolve_integrity_flag,
+    student_analytics_overview,
+    student_calendar_data,
+    student_forecast_simulator,
+)
 
 FLUTTER_WEB_DIR = os.path.join(settings.BASE_DIR, 'flutter_web')
 
@@ -141,6 +151,16 @@ urlpatterns = [
     path('api/v1/admin/classes/<int:class_id>/update/', admin_update_class, name='admin_update_class'),
     path('api/v1/admin/classes/<int:class_id>/detail/', admin_class_detail, name='admin_class_detail'),
     path('api/v1/admin/classes/<int:class_id>/remove-student/<int:student_id>/', admin_remove_student_from_class, name='admin_remove_student'),
+
+    # Advanced Analytics APIs
+    path('api/v1/analytics/teacher/overview/', teacher_analytics_overview, name='teacher_analytics_overview'),
+    path('api/v1/analytics/teacher/at-risk/', teacher_at_risk_list, name='teacher_at_risk_list'),
+    path('api/v1/analytics/teacher/student/<int:student_id>/', teacher_student_detail, name='teacher_student_detail'),
+    path('api/v1/analytics/teacher/flags/', teacher_integrity_flags, name='teacher_integrity_flags'),
+    path('api/v1/analytics/teacher/flags/<int:flag_id>/resolve/', resolve_integrity_flag, name='resolve_integrity_flag'),
+    path('api/v1/analytics/student/overview/', student_analytics_overview, name='student_analytics_overview'),
+    path('api/v1/analytics/student/calendar/', student_calendar_data, name='student_calendar_data'),
+    path('api/v1/analytics/student/simulate/', student_forecast_simulator, name='student_forecast_simulator'),
 
     # Flutter Web — must be last
     re_path(r'^(?P<path>.*)$', serve_flutter, name='flutter_web'),

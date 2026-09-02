@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:app_links/app_links.dart';
 import 'screens/auth/login_screen.dart';
@@ -9,47 +10,55 @@ import 'screens/dashboard/teacher_dashboard.dart';
 import 'screens/teacher/session_create_screen.dart';
 import 'screens/teacher/my_classes_screen.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/teacher/teacher_analytics_screen.dart';
+import 'screens/student/student_analytics_screen.dart';
 import 'services/storage_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await StorageService.init();
-
   String initialRoute = '/login';
 
-  // Try to get initial link from AppLinks
   try {
-    final appLinks = AppLinks();
-    final initialUri = await appLinks.getInitialLink();
-    if (initialUri != null && initialUri.path.startsWith('/join/')) {
-      final code = initialUri.path.split('/join/').last;
+    await StorageService.init();
+
+    // Mobile deep links (skip on Web)
+    if (!kIsWeb) {
+      try {
+        final appLinks = AppLinks();
+        final initialUri = await appLinks.getInitialLink();
+        if (initialUri != null && initialUri.path.startsWith('/join/')) {
+          final code = initialUri.path.split('/join/').last;
+          await StorageService.write(key: 'pending_join_code', value: code);
+        }
+      } catch (e) {
+        debugPrint('Error getting initial deep link: $e');
+      }
+    }
+
+    // Also extract initial path from the web URL if present (hash routing fallback)
+    final currentPath = Uri.base.fragment;
+    if (currentPath.startsWith('/join/')) {
+      final code = currentPath.split('/join/').last;
       await StorageService.write(key: 'pending_join_code', value: code);
     }
-  } catch (e) {
-    debugPrint('Error getting initial deep link: $e');
-  }
 
-  // Also extract initial path from the web URL if present (hash routing fallback)
-  final currentPath = Uri.base.fragment;
-  if (currentPath.startsWith('/join/')) {
-    final code = currentPath.split('/join/').last;
-    await StorageService.write(key: 'pending_join_code', value: code);
-  }
-
-  final userJson = await StorageService.read(key: 'user');
-  if (userJson != null && userJson.isNotEmpty) {
-    try {
-      final user = jsonDecode(userJson);
-      if (user['role'] == 'student') {
-        initialRoute = '/student';
-      } else if (user['role'] == 'teacher') {
-        initialRoute = '/teacher';
-      } else if (user['role'] == 'admin') {
-        initialRoute = '/admin';
+    final userJson = await StorageService.read(key: 'user');
+    if (userJson != null && userJson.isNotEmpty) {
+      try {
+        final user = jsonDecode(userJson);
+        if (user['role'] == 'student') {
+          initialRoute = '/student';
+        } else if (user['role'] == 'teacher') {
+          initialRoute = '/teacher';
+        } else if (user['role'] == 'admin') {
+          initialRoute = '/admin';
+        }
+      } catch (e) {
+        debugPrint('Error parsing saved user: $e');
       }
-    } catch (e) {
-      debugPrint('Error parsing saved user: $e');
     }
+  } catch (e) {
+    debugPrint('Initialization error: $e');
   }
 
   runApp(MyApp(initialRoute: initialRoute));
@@ -67,44 +76,50 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late AppLinks _appLinks;
+  AppLinks? _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
 
   @override
   void initState() {
     super.initState();
-    _initDeepLinks();
+    if (!kIsWeb) {
+      _initDeepLinks();
+    }
   }
 
   Future<void> _initDeepLinks() async {
-    _appLinks = AppLinks();
-    _linkSubscription = _appLinks.uriLinkStream.listen((uri) async {
-      debugPrint('onAppLink: $uri');
-      if (uri.path.startsWith('/join/')) {
-        final code = uri.path.split('/join/').last;
-        await StorageService.write(key: 'pending_join_code', value: code);
+    try {
+      _appLinks = AppLinks();
+      _linkSubscription = _appLinks?.uriLinkStream.listen((uri) async {
+        debugPrint('onAppLink: $uri');
+        if (uri.path.startsWith('/join/')) {
+          final code = uri.path.split('/join/').last;
+          await StorageService.write(key: 'pending_join_code', value: code);
 
-        if (navigatorKey.currentState != null) {
-          String nextRoute = '/login';
-          final userJson = await StorageService.read(key: 'user');
-          if (userJson != null && userJson.isNotEmpty) {
-            try {
-              final user = jsonDecode(userJson);
-              if (user['role'] == 'student') {
-                nextRoute = '/student';
-              } else if (user['role'] == 'teacher') {
-                nextRoute = '/teacher';
-              } else if (user['role'] == 'admin') {
-                nextRoute = '/admin';
+          if (navigatorKey.currentState != null) {
+            String nextRoute = '/login';
+            final userJson = await StorageService.read(key: 'user');
+            if (userJson != null && userJson.isNotEmpty) {
+              try {
+                final user = jsonDecode(userJson);
+                if (user['role'] == 'student') {
+                  nextRoute = '/student';
+                } else if (user['role'] == 'teacher') {
+                  nextRoute = '/teacher';
+                } else if (user['role'] == 'admin') {
+                  nextRoute = '/admin';
+                }
+              } catch (e) {
+                debugPrint('Error parsing saved user: $e');
               }
-            } catch (e) {
-              debugPrint('Error parsing saved user: $e');
             }
+            navigatorKey.currentState!.pushReplacementNamed(nextRoute);
           }
-          navigatorKey.currentState!.pushReplacementNamed(nextRoute);
         }
-      }
-    });
+      });
+    } catch (e) {
+      debugPrint('Deep links init error: $e');
+    }
   }
 
   @override
@@ -122,10 +137,19 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       initialRoute: widget.initialRoute,
       routes: {
+        '/': (context) => widget.initialRoute == '/student'
+            ? const StudentDashboardPage()
+            : (widget.initialRoute == '/teacher'
+                ? const TeacherDashboardPage()
+                : (widget.initialRoute == '/admin'
+                    ? const AdminDashboardPage()
+                    : const LoginPage())),
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignUpPage(),
         '/student': (context) => const StudentDashboardPage(),
+        '/student/analytics': (context) => const StudentAnalyticsScreen(),
         '/teacher': (context) => const TeacherDashboardPage(),
+        '/teacher/analytics': (context) => const TeacherAnalyticsScreen(),
         '/teacher/my-classes': (context) => const MyClassesScreen(),
         '/admin': (context) => const AdminDashboardPage(),
         '/teacher/create-session': (context) => const SessionPage(
