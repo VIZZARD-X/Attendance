@@ -162,23 +162,28 @@ if not DEBUG:
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+from corsheaders.defaults import default_headers
+
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         "CORS_ALLOWED_ORIGINS",
-        "http://localhost:3000,http://localhost:8080,http://localhost:5000,http://localhost:59371",
+        "http://localhost:3000,http://localhost:8080,http://localhost:5000,http://localhost:59371,http://127.0.0.1:3000",
     ).split(",")
     if origin.strip()
 ]
 
-CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "True").lower() == "true"
-# CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = True
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000").split(",")
     if origin.strip()
 ]
 
-# CORS settings
-# CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_CREDENTIALS = False# change this
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'bypass-tunnel-reminder',
+    'content-type',
+    'authorization',
+]
+
+CORS_ALLOW_CREDENTIALS = True

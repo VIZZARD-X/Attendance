@@ -9,6 +9,7 @@ import '../student/qr_scanner_screen.dart';
 import '../student/attendance_history_screen.dart';
 import '../student/student_profile_screen.dart';
 import '../student/student_announcements_screen.dart';
+import '../student/student_analytics_screen.dart';
 import '../student/pattern_sessions_screen.dart';
 import '../../services/class_service.dart';
 import '../../services/storage_service.dart';
@@ -67,6 +68,12 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
       'subtitle': 'View notices and updates',
       'icon': Icons.campaign_rounded,
       'gradientColors': [const Color(0xFFEF8AF6), Colors.white],
+    },
+    {
+      'title': 'Analytics',
+      'subtitle': 'Personal metrics & recovery',
+      'icon': Icons.insights_rounded,
+      'gradientColors': [const Color(0xFF14DCCA), Colors.white],
     },
   ];
 
@@ -253,6 +260,13 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const StudentAnnouncementsScreen()),
+        );
+        break;
+
+      case 'Analytics':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const StudentAnalyticsScreen()),
         );
         break;
 

@@ -1,4 +1,15 @@
-from django.db import migrations
+from django.db import connection, migrations
+
+
+def drop_column_if_exists(apps, schema_editor):
+    with connection.cursor() as cursor:
+        if connection.vendor == "sqlite":
+            cursor.execute("PRAGMA table_info(enrollments)")
+            columns = [row[1] for row in cursor.fetchall()]
+            if "status" in columns:
+                cursor.execute("ALTER TABLE enrollments DROP COLUMN status;")
+        else:
+            cursor.execute("ALTER TABLE enrollments DROP COLUMN IF EXISTS status;")
 
 
 class Migration(migrations.Migration):
@@ -8,8 +19,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            sql="ALTER TABLE enrollments DROP COLUMN IF EXISTS status;",
-            reverse_sql="ALTER TABLE enrollments ADD COLUMN status varchar(20);",
-        ),
+        migrations.RunPython(drop_column_if_exists, migrations.RunPython.noop),
     ]
+

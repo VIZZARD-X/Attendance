@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class ApiConfig {
   // Override the base URL at compile time for ANY environment (physical
   // device, your own server, CI) without editing this file:
@@ -7,7 +9,7 @@ class ApiConfig {
   // For Android Emulator (default for mobile dev)
   static const String _androidEmulatorUrl = 'http://10.0.2.2:8000/api/v1';
 
-  // For Web
+  // For Web and Desktop localhost
   static const String _webUrl = 'http://localhost:8000/api/v1';
 
   // Example production URL - replace with YOUR own host, or simply use the
@@ -22,8 +24,10 @@ class ApiConfig {
   static String get baseUrl {
     if (_apiBaseUrl.isNotEmpty) return _apiBaseUrl; // override wins everywhere
     if (isProduction) return _productionUrl;
-    if (identical(0, 0.0)) {
-      // Trick to detect web without importing flutter/foundation.dart
+    if (kIsWeb) return _webUrl;
+    if (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
       return _webUrl;
     }
     return _androidEmulatorUrl; // mobile default (emulator)
