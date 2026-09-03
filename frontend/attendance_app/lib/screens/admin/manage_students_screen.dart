@@ -11,14 +11,14 @@ abstract class _AppColors {
 }
 
 class _SemesterCard {
-  final int semester;
+  final String semesterDisplay;
   final String semesterLabel;
   final int studentCount;
   final Color color;
   final List<Color> gradient;
 
   const _SemesterCard({
-    required this.semester,
+    required this.semesterDisplay,
     required this.semesterLabel,
     required this.studentCount,
     required this.color,
@@ -79,9 +79,10 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
             final data = entry.value;
             final semesterStr = data['semester']?.toString() ?? '';
             return _SemesterCard(
-              semester: int.tryParse(semesterStr) ?? index + 1,
+              semesterDisplay: _semesterDisplay(semesterStr),
               semesterLabel: semesterStr,
-              studentCount: data['student_count'] ?? 0,
+              studentCount:
+                  int.tryParse(data['student_count']?.toString() ?? '') ?? 0,
               color: colorPalette[index % colorPalette.length],
               gradient: gradientPalette[index % gradientPalette.length],
             );
@@ -98,6 +99,11 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
         });
       }
     }
+  }
+
+  String _semesterDisplay(String raw) {
+    final trimmed = raw.trim();
+    return int.tryParse(trimmed) != null ? 'Semester $trimmed' : trimmed;
   }
 
   @override
@@ -344,7 +350,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
           MaterialPageRoute(
             builder: (context) => SemesterClassesScreen(
               semesterLabel: semester.semesterLabel,
-              semesterDisplay: 'Semester ${semester.semester}',
+              semesterDisplay: semester.semesterDisplay,
               totalEnrollments: semester.studentCount,
             ),
           ),
@@ -399,7 +405,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Semester ${semester.semester}',
+                        semester.semesterDisplay,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
