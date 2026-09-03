@@ -4,11 +4,13 @@ import '../../services/class_service.dart';
 class SemesterClassesScreen extends StatefulWidget {
   final String semesterLabel;
   final String semesterDisplay;
+  final int totalEnrollments;
 
   const SemesterClassesScreen({
     super.key,
     required this.semesterLabel,
     required this.semesterDisplay,
+    required this.totalEnrollments,
   });
 
   @override
@@ -18,8 +20,8 @@ class SemesterClassesScreen extends StatefulWidget {
 class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
   final ClassService _classService = ClassService();
   bool _isLoading = false;
+  String? _errorMessage;
   List<Map<String, dynamic>> _students = [];
-  int _totalStudents = 0;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -31,6 +33,21 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
       final email = (s['email'] ?? '').toString().toLowerCase();
       return name.contains(q) || email.contains(q);
     }).toList();
+  }
+
+  /// Returns an uppercase single-letter avatar initial, safely handling a
+  /// null or empty username.
+  String _initialOf(dynamic username) {
+    final name = username?.toString() ?? '';
+    return name.isEmpty ? 'S' : name.substring(0, 1).toUpperCase();
+  }
+
+  /// Safely parses a class id that may arrive as int or String.
+  int? _classIdOf(Map<String, dynamic> cls) {
+    final raw = cls['id'];
+    if (raw is int) return raw;
+    if (raw is String) return int.tryParse(raw);
+    return null;
   }
 
   @override
@@ -46,7 +63,10 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
   }
 
   Future<void> _loadStudents() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
       final data = await _classService.getSemesterStudents(widget.semesterLabel);
@@ -54,14 +74,16 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
       if (mounted) {
         setState(() {
           _students = List<Map<String, dynamic>>.from(data['students'] ?? []);
-          _totalStudents = data['total_students'] ?? 0;
           _isLoading = false;
         });
       }
     } catch (e) {
-      print('Error loading students: $e');
+      debugPrint('Error loading students: $e');
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Could not load students. Please try again.';
+        });
       }
     }
   }
@@ -104,7 +126,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    '$_totalStudents students',
+                    '${widget.totalEnrollments} students',
                     style: const TextStyle(
                       fontSize: 13,
                       color: Color(0xFF6B7280),
@@ -122,14 +144,50 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                 valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0097A7)),
               ),
             )
-          : _students.isEmpty
-              ? _buildEmptyState()
-              : Column(
-                  children: [
-                    _buildSearchBar(),
-                    Expanded(child: _buildStudentList()),
-                  ],
-                ),
+          : _errorMessage != null
+              ? _buildErrorState()
+              : _students.isEmpty
+                  ? _buildEmptyState()
+                  : Column(
+                      children: [
+                        _buildSearchBar(),
+                        Expanded(child: _buildStudentList()),
+                      ],
+                    ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline_rounded, size: 72, color: Colors.red.shade300),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 15,
+                color: Color(0xFF6B7280),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _loadStudents,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Try again'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF007C91),
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -227,7 +285,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
               backgroundColor: const Color(0xFF007C91),
               radius: 24,
               child: Text(
-                (student['username'] as String?)?.substring(0, 1).toUpperCase() ?? 'S',
+                _initialOf(student['username']),
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -284,11 +342,12 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
               icon: const Icon(Icons.edit_outlined, color: Color(0xFF007C91), size: 20),
               onPressed: () => _showEditDialog(student),
             ),
-            IconButton(
-              icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
-              onPressed: () => _showRemoveStudentDialog(student),
-              tooltip: 'Remove from class',
-            ),
+            if (classes.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
+                onPressed: () => _showRemoveStudentDialog(student),
+                tooltip: 'Remove from class',
+              ),
           ],
         ),
       ),
@@ -413,8 +472,19 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
             ElevatedButton(
               onPressed: () async {
                 Navigator.pop(ctx);
+                final classId = _classIdOf(cls);
+                if (classId == null) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to remove student'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
                 final success = await _classService.adminRemoveStudentFromClass(
-                  cls['id'],
+                  classId,
                   student['id'],
                 );
                 if (!mounted) return;
@@ -467,7 +537,8 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                   ),
                   const SizedBox(height: 12),
                   ...classes.map((cls) {
-                    final classId = cls['id'] as int;
+                    final classId = _classIdOf(cls);
+                    if (classId == null) return const SizedBox.shrink();
                     final isSelected = selectedClasses.contains(classId);
                     return CheckboxListTile(
                       value: isSelected,
@@ -498,18 +569,32 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                       ? null
                       : () async {
                           Navigator.pop(ctx);
+                          var removed = 0;
+                          var failed = 0;
                           for (final classId in selectedClasses) {
-                            await _classService.adminRemoveStudentFromClass(
+                            final ok = await _classService.adminRemoveStudentFromClass(
                               classId,
                               student['id'],
                             );
+                            if (ok) {
+                              removed++;
+                            } else {
+                              failed++;
+                            }
                           }
                           if (!mounted) return;
                           _loadStudents();
+                          final message = failed == 0
+                              ? 'Student removed from selected classes'
+                              : removed > 0
+                                  ? 'Removed from $removed class(es); failed to remove from $failed'
+                                  : 'Failed to remove student from selected classes';
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Student removed from selected classes'),
-                              backgroundColor: Color(0xFF007C91),
+                            SnackBar(
+                              content: Text(message),
+                              backgroundColor: failed == 0
+                                  ? const Color(0xFF007C91)
+                                  : Colors.red,
                             ),
                           );
                         },

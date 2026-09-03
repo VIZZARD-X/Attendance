@@ -35,6 +35,7 @@ class ManageStudentsScreen extends StatefulWidget {
 
 class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
   bool _isLoading = false;
+  String? _errorMessage;
   final ClassService _classService = ClassService();
   List<_SemesterCard> _semesters = [];
 
@@ -45,7 +46,10 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
   }
 
   Future<void> _loadSemesters() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
     try {
       final summary = await _classService.getAdminClassesSummary();
@@ -86,9 +90,12 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
         });
       }
     } catch (e) {
-      print('Error loading semesters: $e');
+      debugPrint('Error loading semesters: $e');
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Could not load class summaries. Please try again.';
+        });
       }
     }
   }
@@ -127,9 +134,11 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                         ),
                       ),
                     )
-                  : _semesters.isEmpty
-                      ? _buildEmptyState()
-                      : _buildSemesterGrid(crossAxisCount, isMobile),
+                  : _errorMessage != null
+                      ? _buildErrorState()
+                      : _semesters.isEmpty
+                          ? _buildEmptyState()
+                          : _buildSemesterGrid(crossAxisCount, isMobile),
             ],
           ),
         ),
@@ -156,9 +165,11 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                       ),
                     ),
                   )
-                : _semesters.isEmpty
-                    ? _buildEmptyState()
-                    : _buildSemesterGrid(3, false),
+                : _errorMessage != null
+                    ? _buildErrorState()
+                    : _semesters.isEmpty
+                        ? _buildEmptyState()
+                        : _buildSemesterGrid(3, false),
           ],
         ),
       ),
@@ -259,6 +270,40 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
     );
   }
 
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline_rounded, size: 72, color: Colors.red.shade300),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 15,
+                color: _AppColors.textMuted,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _loadSemesters,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Try again'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _AppColors.tealDark,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -300,6 +345,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
             builder: (context) => SemesterClassesScreen(
               semesterLabel: semester.semesterLabel,
               semesterDisplay: 'Semester ${semester.semester}',
+              totalEnrollments: semester.studentCount,
             ),
           ),
         );
