@@ -29,8 +29,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
     return _students.where((s) {
       final name = (s['username'] ?? '').toString().toLowerCase();
       final email = (s['email'] ?? '').toString().toLowerCase();
-      final rollNo = (s['roll_no'] ?? '').toString().toLowerCase();
-      return name.contains(q) || email.contains(q) || rollNo.contains(q);
+      return name.contains(q) || email.contains(q);
     }).toList();
   }
 
@@ -264,22 +263,6 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'Roll: ${student['roll_no'] ?? 'N/A'}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
                       if (classes.isNotEmpty)
                         Expanded(
                           child: Text(
@@ -315,7 +298,6 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
   void _showEditDialog(Map<String, dynamic> student) {
     final nameController = TextEditingController(text: student['username'] ?? '');
     final emailController = TextEditingController(text: student['email'] ?? '');
-    final rollNoController = TextEditingController(text: student['roll_no'] ?? '');
     bool isSaving = false;
 
     showDialog(
@@ -348,16 +330,6 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                       decoration: InputDecoration(
                         labelText: 'Email',
                         prefixIcon: const Icon(Icons.email_outlined, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: rollNoController,
-                      decoration: InputDecoration(
-                        labelText: 'Roll No',
-                        prefixIcon: const Icon(Icons.numbers, size: 20),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),

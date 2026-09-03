@@ -73,25 +73,17 @@ def admin_semester_classes(request, semester):
             status=status.HTTP_403_FORBIDDEN
         )
 
-    classes = Class.objects.filter(semester=semester).prefetch_related(
-        'enrollments__student__student_profile'
-    )
+    classes = Class.objects.filter(semester=semester)
 
     result = []
     for cls in classes:
         student_list = []
         for enrollment in cls.enrollments.all():
             student = enrollment.student
-            try:
-                profile = student.student_profile
-                roll_no = 'N/A'
-            except StudentProfile.DoesNotExist:
-                roll_no = 'N/A'
             student_list.append({
                 'id': student.id,
                 'username': student.username,
                 'email': student.email,
-                'roll_no': roll_no,
             })
 
         result.append({
@@ -127,25 +119,17 @@ def admin_semester_students(request, semester):
             status=status.HTTP_403_FORBIDDEN
         )
 
-    classes = Class.objects.filter(semester=semester).prefetch_related(
-        'enrollments__student__student_profile'
-    )
+    classes = Class.objects.filter(semester=semester)
 
     students_map = {}
     for cls in classes:
         for enrollment in cls.enrollments.all():
             student = enrollment.student
             if student.id not in students_map:
-                try:
-                    profile = student.student_profile
-                    roll_no = 'N/A'
-                except StudentProfile.DoesNotExist:
-                    roll_no = 'N/A'
                 students_map[student.id] = {
                     'id': student.id,
                     'username': student.username,
                     'email': student.email,
-                    'roll_no': roll_no,
                     'classes': [],
                 }
             students_map[student.id]['classes'].append({
@@ -310,16 +294,11 @@ def admin_users_list(request, role):
     else:
         data = []
         for u in users:
-            try:
-                roll_no = 'N/A'
-            except StudentProfile.DoesNotExist:
-                roll_no = 'N/A'
             data.append({
                 'id': u.id,
                 'username': u.username,
                 'full_name': u.get_full_name() or u.username,
                 'email': u.email,
-                'roll_no': roll_no,
                 'is_active': u.is_active,
             })
 
@@ -371,7 +350,6 @@ def admin_create_user(request):
     email = request.data.get('email', '').strip().lower()
     password = request.data.get('password', '')
     role = request.data.get('role', '')
-    roll_no = request.data.get('roll_no', '').strip()
 
     if not username:
         return Response({'error': 'Name is required'}, status=status.HTTP_400_BAD_REQUEST)
@@ -396,8 +374,6 @@ def admin_create_user(request):
     new_user.save()
 
     if role == 'student':
-        if not roll_no:
-            roll_no = f'STU-{new_user.id}'
         StudentProfile.objects.create(student=new_user)
 
     return Response({
@@ -407,7 +383,6 @@ def admin_create_user(request):
             'username': new_user.username,
             'email': new_user.email,
             'role': new_user.role,
-            'roll_no': 'N/A' if role == 'student' else None,
         }
     }, status=status.HTTP_201_CREATED)
 
@@ -546,20 +521,14 @@ def admin_class_detail(request, class_id):
             status=status.HTTP_404_NOT_FOUND
         )
 
-    enrollments = class_obj.enrollments.select_related('student__student_profile')
+    enrollments = class_obj.enrollments.select_related('student')
     students_list = []
     for enrollment in enrollments:
         student = enrollment.student
-        try:
-            profile = student.student_profile
-            roll_no = 'N/A'
-        except StudentProfile.DoesNotExist:
-            roll_no = 'N/A'
         students_list.append({
             'id': student.id,
             'username': student.username,
             'email': student.email,
-            'roll_no': roll_no,
         })
 
     return Response({
@@ -632,7 +601,6 @@ def admin_update_student(request, student_id):
 
     username = request.data.get('username')
     email = request.data.get('email')
-    roll_no = request.data.get('roll_no')
 
     if username is not None:
         username = username.strip()
@@ -666,6 +634,5 @@ def admin_update_student(request, student_id):
             'id': student.id,
             'username': student.username,
             'email': student.email,
-            'roll_no': 'N/A',
         }
     })

@@ -208,22 +208,6 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      'Roll: ${student['roll_no'] ?? 'N/A'}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -343,7 +327,6 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
   void _showEditStudentDialog(Map<String, dynamic> student) {
     final nameController = TextEditingController(text: student['username'] ?? '');
     final emailController = TextEditingController(text: student['email'] ?? '');
-    final rollNoController = TextEditingController(text: student['roll_no'] ?? '');
     bool isSaving = false;
 
     showDialog(
@@ -373,16 +356,6 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
                       decoration: InputDecoration(
                         labelText: 'Email',
                         prefixIcon: const Icon(Icons.email_outlined, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: rollNoController,
-                      decoration: InputDecoration(
-                        labelText: 'Roll No',
-                        prefixIcon: const Icon(Icons.numbers, size: 20),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),

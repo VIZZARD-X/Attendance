@@ -35,8 +35,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
       result = result.where((s) {
         final name = (s['full_name'] ?? '').toString().toLowerCase();
         final email = (s['email'] ?? '').toString().toLowerCase();
-        final rollNo = (s['roll_no'] ?? '').toString().toLowerCase();
-        return name.contains(q) || email.contains(q) || rollNo.contains(q);
+        return name.contains(q) || email.contains(q);
       }).toList();
     }
 
@@ -599,7 +598,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 100),
         ],
       ),
     );
@@ -608,7 +606,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
   Widget _buildTableRow(Map<String, dynamic> student, int index, bool isCompact) {
     final name = student['full_name'] ?? 'Unknown';
     final email = student['email'] ?? '';
-    final rollNo = student['roll_no'] ?? '';
     final hasAccess = student['is_active'] == true;
 
     return Container(
@@ -645,17 +642,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
               padding: const EdgeInsets.only(left: 8),
               child: Text(
                 email,
-                style: const TextStyle(fontSize: 14),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: Text(
-                rollNo,
                 style: const TextStyle(fontSize: 14),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -699,7 +685,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
   Widget _buildStudentCard(Map<String, dynamic> student, int index) {
     final name = student['full_name'] ?? 'Unknown';
     final email = student['email'] ?? '';
-    final rollNo = student['roll_no'] ?? '';
     final hasAccess = student['is_active'] == true;
 
     return Dismissible(
@@ -781,17 +766,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
                         color: _AppColors.textMuted,
                       ),
                     ),
-                    if (rollNo.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        rollNo,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: _AppColors.tealDark,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: 10),
                     Row(
                       children: [
@@ -874,17 +848,14 @@ class _StudentListScreenState extends State<StudentListScreen> {
     final nameController = TextEditingController();
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
-    final rollNoController = TextEditingController();
     final nameFocus = FocusNode();
     final emailFocus = FocusNode();
     final passwordFocus = FocusNode();
-    final rollNoFocus = FocusNode();
 
     bool isSaving = false;
     String? nameError;
     String? emailError;
     String? passwordError;
-    String? rollNoError;
 
     showDialog(
       context: context,
@@ -933,27 +904,11 @@ class _StudentListScreenState extends State<StudentListScreen> {
                       controller: passwordController,
                       focusNode: passwordFocus,
                       obscureText: true,
-                      textInputAction: TextInputAction.next,
-                      onSubmitted: (_) => rollNoFocus.requestFocus(),
                       onChanged: (_) => setDialogState(() => passwordError = null),
                       decoration: InputDecoration(
                         labelText: 'Password (min 6 chars)',
                         errorText: passwordError,
                         prefixIcon: const Icon(Icons.lock_outline, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: rollNoController,
-                      focusNode: rollNoFocus,
-                      textInputAction: TextInputAction.done,
-                      onChanged: (_) => setDialogState(() => rollNoError = null),
-                      decoration: InputDecoration(
-                        labelText: 'Roll No (optional)',
-                        errorText: rollNoError,
-                        prefixIcon: const Icon(Icons.numbers, size: 20),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
@@ -973,7 +928,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
                           final name = nameController.text.trim();
                           final email = emailController.text.trim();
                           final password = passwordController.text;
-                          final rollNo = rollNoController.text.trim();
 
                           bool hasError = false;
 
