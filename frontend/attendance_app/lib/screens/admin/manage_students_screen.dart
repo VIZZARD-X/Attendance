@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/class_service.dart';
 import '../../widgets/admin_web_layout.dart';
 import 'semester_classes_screen.dart';
+import 'widgets/add_student_dialog.dart';
 
 abstract class _AppColors {
   static const tealDark = Color(0xFF007C91);
@@ -38,6 +39,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
   String? _errorMessage;
   final ClassService _classService = ClassService();
   List<_SemesterCard> _semesters = [];
+  List<Map<String, dynamic>> _unassignedStudents = [];
 
   @override
   void initState() {
@@ -52,7 +54,11 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
     });
 
     try {
-      final summary = await _classService.getAdminClassesSummary();
+      final summaryFuture = _classService.getAdminClassesSummary();
+      final unassignedFuture = _classService.getAdminUnassignedStudents();
+      final results = await Future.wait([summaryFuture, unassignedFuture]);
+      final summary = results[0] as List<Map<String, dynamic>>;
+      final unassignedData = results[1] as Map<String, dynamic>;
 
       if (mounted) {
         const colorPalette = [
@@ -87,6 +93,9 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
               gradient: gradientPalette[index % gradientPalette.length],
             );
           }).toList();
+          _unassignedStudents = List<Map<String, dynamic>>.from(
+            unassignedData['students'] ?? [],
+          );
           _isLoading = false;
         });
       }
@@ -104,6 +113,11 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
   String _semesterDisplay(String raw) {
     final trimmed = raw.trim();
     return int.tryParse(trimmed) != null ? 'Semester $trimmed' : trimmed;
+  }
+
+  String _initialOf(dynamic raw) {
+    final name = raw?.toString() ?? '';
+    return name.isEmpty ? 'S' : name.substring(0, 1).toUpperCase();
   }
 
   @override
@@ -131,6 +145,8 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
             children: [
               _buildHeaderSection(isMobile),
               const SizedBox(height: 24),
+              if (!_isLoading && _errorMessage == null)
+                _buildNewlyAddedSection(isMobile),
               _isLoading
                   ? const Center(
                       child: Padding(
@@ -161,7 +177,10 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDesktopHeader(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
+            if (!_isLoading && _errorMessage == null)
+              _buildNewlyAddedSection(false),
+            const SizedBox(height: 16),
             _isLoading
                 ? const Center(
                     child: Padding(
@@ -188,13 +207,16 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
         Container(
           width: 76,
           height: 76,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
+          decoration: const BoxDecoration(
+            // BUG FIX: was BorderRadius.circular(63.5) on a 76x76 box, which
+            // doesn't correspond to any meaningful dimension. Using
+            // BoxShape.circle is correct regardless of the box size.
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
               colors: [_AppColors.tealDark, _AppColors.teal],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
-            borderRadius: BorderRadius.circular(63.5),
           ),
           child: const Icon(Icons.people_alt_rounded, color: Colors.white, size: 38),
         ),
@@ -225,6 +247,20 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
             ],
           ),
         ),
+        ElevatedButton.icon(
+          onPressed: _showAddStudentDialog,
+          icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+          label: const Text('Add Student'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _AppColors.tealDark,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
         IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
@@ -244,23 +280,123 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
           ),
         const Icon(Icons.people_alt_rounded, color: _AppColors.tealDark, size: 32),
         const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            'Manage Students',
+            style: TextStyle(
+              fontSize: isMobile ? 22 : 28,
+              fontWeight: FontWeight.w700,
+              color: _AppColors.textPrimary,
+            ),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.person_add_alt_1_rounded, color: _AppColors.tealDark, size: 26),
+          onPressed: _showAddStudentDialog,
+          tooltip: 'Add Student',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNewlyAddedSection(bool isMobile) {
+    if (_unassignedStudents.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         Text(
-          'Manage Students',
+          'Newly Added',
           style: TextStyle(
-            fontSize: isMobile ? 22 : 28,
+            fontSize: isMobile ? 16 : 18,
             fontWeight: FontWeight.w700,
             color: _AppColors.textPrimary,
           ),
         ),
+        const SizedBox(height: 4),
+        const Text(
+          'Students whom you have added but are not yet enrolled in any class',
+          style: TextStyle(fontSize: 13, color: _AppColors.textMuted),
+        ),
+        const SizedBox(height: 12),
+        ..._unassignedStudents.map((s) {
+          final initial = _initialOf(s['username']);
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: const Color(0xFFD1ECF1),
+                  radius: isMobile ? 18 : 20,
+                  child: Text(
+                    initial,
+                    style: const TextStyle(
+                      color: Color(0xFF007C91),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        s['username'] ?? 'Unknown',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        s['email'] ?? '',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAF7FA),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    _semesterDisplay((s['semester'] ?? '').toString()),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF007C91),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+        const SizedBox(height: 16),
       ],
     );
   }
 
   Widget _buildSemesterGrid(int crossAxisCount, bool isMobile) {
     final isCompact = crossAxisCount < 3;
+
+    // BUG FIX: previous ratios (1.35 / 1.45 / 1.6) made single- and
+    // two-column cards nearly as tall as they were wide - big oversized
+    // square-ish tiles for what is really just one row of content (an
+    // icon, two short text lines, and an arrow). These are tuned to give
+    // compact, row-like cards on mobile/tablet and a slightly taller,
+    // more spacious tile on the 3-column desktop grid.
     final childAspectRatio = crossAxisCount == 1
-        ? 1.35
-        : (crossAxisCount == 2 ? 1.45 : 1.6);
+        ? 2.6
+        : (crossAxisCount == 2 ? 1.7 : 1.6);
 
     return GridView.builder(
       itemCount: _semesters.length,
@@ -268,8 +404,11 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
       shrinkWrap: true,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        mainAxisSpacing: isCompact ? 20 : 42,
-        crossAxisSpacing: isCompact ? 16 : 55,
+        // BUG FIX: cross spacing was larger than main-axis spacing on the
+        // desktop grid (42 vs 55), which reads as an unbalanced/uneven
+        // rhythm compared to the compact case. Keep spacing consistent.
+        mainAxisSpacing: isCompact ? 16 : 32,
+        crossAxisSpacing: isCompact ? 16 : 32,
         childAspectRatio: childAspectRatio,
       ),
       itemBuilder: (context, idx) => _buildSemesterCard(_semesters[idx], isCompact),
@@ -342,6 +481,14 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
     );
   }
 
+  void _showAddStudentDialog() {
+    AddStudentDialog.show(
+      context: context,
+      classService: _classService,
+      onStudentCreated: _loadSemesters,
+    );
+  }
+
   Widget _buildSemesterCard(_SemesterCard semester, bool isCompact) {
     return InkWell(
       onTap: () {
@@ -356,7 +503,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
           ),
         );
       },
-      borderRadius: BorderRadius.circular(43),
+      borderRadius: BorderRadius.circular(24),
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: isCompact ? 20 : 32,
@@ -364,77 +511,76 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
         ),
         decoration: ShapeDecoration(
           gradient: LinearGradient(
-            begin: const Alignment(-0.05, -0.07),
-            end: const Alignment(1.18, 1.28),
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: semester.gradient,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(43),
+            // BUG FIX: 43px radius was disproportionately large for these
+            // card sizes (especially the shorter compact cards), making
+            // them look like pills and clipping content into the curved
+            // corners. 24px keeps the same soft-rounded style at a scale
+            // that fits the card dimensions.
+            borderRadius: BorderRadius.circular(24),
             side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  width: isCompact ? 52 : 68,
-                  height: isCompact ? 52 : 68,
-                  padding: EdgeInsets.all(isCompact ? 8 : 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
-                    border: Border.all(
-                      color: semester.color.withOpacity(0.70),
-                      width: 1.5,
+            Container(
+              width: isCompact ? 52 : 68,
+              height: isCompact ? 52 : 68,
+              padding: EdgeInsets.all(isCompact ? 8 : 12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.25),
+                border: Border.all(
+                  color: semester.color.withOpacity(0.70),
+                  width: 1.5,
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.school_rounded,
+                color: semester.color,
+                size: isCompact ? 22 : 30,
+              ),
+            ),
+            SizedBox(width: isCompact ? 12 : 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    semester.semesterDisplay,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 18,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
                     ),
-                    shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    Icons.school_rounded,
-                    color: semester.color,
-                    size: isCompact ? 22 : 30,
+                  const SizedBox(height: 4),
+                  Text(
+                    '${semester.studentCount} Students',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                    ),
                   ),
-                ),
-                SizedBox(width: isCompact ? 12 : 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        semester.semesterDisplay,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 18,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${semester.studentCount} Students',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.black87,
-                          fontSize: 13,
-                          fontFamily: 'Inter',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: semester.color,
-                  size: isCompact ? 16 : 20,
-                ),
-              ],
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: semester.color,
+              size: isCompact ? 16 : 20,
             ),
           ],
         ),

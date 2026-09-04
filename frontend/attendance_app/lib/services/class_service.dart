@@ -180,6 +180,27 @@ class ClassService {
     }
   }
 
+  /// Admin: Get pre-registered students (assigned a semester, not yet enrolled)
+  Future<Map<String, dynamic>> getAdminUnassignedStudents() async {
+    try {
+      final token = await _getToken();
+
+      final response = await _dio.get(
+        '/admin/students/unassigned/',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+
+      return {'students': [], 'total': 0};
+    } catch (e) {
+      print('Error fetching unassigned students: $e');
+      return {'students': [], 'total': 0};
+    }
+  }
+
   /// Admin: Get all teachers with their class details
   Future<Map<String, dynamic>> getTeachers() async {
     try {
@@ -361,6 +382,7 @@ class ClassService {
     required String email,
     required String password,
     required String role,
+    String? semester,
   }) async {
     try {
       final token = await _getToken();
@@ -372,6 +394,7 @@ class ClassService {
           'email': email,
           'password': password,
           'role': role,
+          if (semester != null && semester.isNotEmpty) 'semester': semester,
         },
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );

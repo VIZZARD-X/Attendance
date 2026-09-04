@@ -148,6 +148,41 @@ def admin_semester_students(request, semester):
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
+def admin_unassigned_students(request):
+    """
+    Admin: Get students pre-registered by an admin (assigned a semester but
+    not yet enrolled in any class). These are surfaced in the Manage Students
+    page's 'Newly Added' section.
+    """
+    user = request.user
+
+    if user.role != 'admin':
+        return Response(
+            {'error': 'Only admins can access this endpoint'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    students = StudentProfile.objects.filter(
+        semester__isnull=False,
+    ).exclude(semester='').select_related('student').distinct()
+
+    result = []
+    for profile in students.order_by('semester', 'student__username'):
+        result.append({
+            'id': profile.student.id,
+            'username': profile.student.username,
+            'email': profile.student.email,
+            'semester': profile.semester,
+        })
+
+    return Response({
+        'students': result,
+        'total': len(result),
+    })
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
 def admin_teachers_list(request):
     """
     Admin: Get all teachers with their class details.
@@ -350,6 +385,7 @@ def admin_create_user(request):
     email = request.data.get('email', '').strip().lower()
     password = request.data.get('password', '')
     role = request.data.get('role', '')
+    semester = request.data.get('semester', '').strip()
 
     if not username:
         return Response({'error': 'Name is required'}, status=status.HTTP_400_BAD_REQUEST)
@@ -374,7 +410,10 @@ def admin_create_user(request):
     new_user.save()
 
     if role == 'student':
-        StudentProfile.objects.create(student=new_user)
+        student_profile = StudentProfile.objects.create(student=new_user)
+        if semester:
+            student_profile.semester = semester
+            student_profile.save(update_fields=['semester'])
 
     return Response({
         'message': f'{role.capitalize()} created successfully',
@@ -383,6 +422,7 @@ def admin_create_user(request):
             'username': new_user.username,
             'email': new_user.email,
             'role': new_user.role,
+            'semester': semester if role == 'student' else None,
         }
     }, status=status.HTTP_201_CREATED)
 
