@@ -76,7 +76,7 @@ class BulkStudentsService {
   final Dio _dio = ApiClient().dio;
 
   /// Temporary switch: `true` until the backend bulk endpoints are live.
-  static const bool bulkMockMode = true;
+  static const bool bulkMockMode = false;
 
   BulkStudentsService() {
     _dio.options.baseUrl = ApiConfig.baseUrl;

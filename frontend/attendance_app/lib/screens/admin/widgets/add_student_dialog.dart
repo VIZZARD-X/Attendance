@@ -53,70 +53,80 @@ class _AddStudentDialogState extends State<AddStudentDialog>
 
   @override
   Widget build(BuildContext context) {
-    final screenH = MediaQuery.of(context).size.height;
-    final bulkHeight = (screenH * 0.85).clamp(0.0, 640.0);
-
     return AnimatedBuilder(
       animation: _tabController,
       builder: (context, _) {
         final isBulk = _tabController.index == 1;
+        // Keep the dialog within the viewport: subtract the fixed header
+        // (title + tab bar + paddings, ~170px) and the dialog's 48px vertical
+        // inset from the screen height, and give the rest to the Excel
+        // division. This guarantees the footer with 'Cancel' /
+        // 'Upload & Validate' always fits on screen. Because the whole dialog
+        // is wrapped in a SingleChildScrollView, even on extremely short
+        // screens or large text scales the footer stays reachable.
+        final screenH = MediaQuery.sizeOf(context).height;
+        final bulkHeight = isBulk
+            ? (screenH - 218.0).clamp(240.0, 640.0).toDouble()
+            : 0.0;
         return Dialog(
           insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: isBulk ? 840 : 660),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text(
-                    'Add Student',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: DialogColors.teal.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
+          child: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: isBulk ? 840 : 660),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Add Student',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
                     ),
-                    child: TabBar(
-                      controller: _tabController,
-                      indicator: BoxDecoration(
-                        color: DialogColors.tealDark,
+                    const SizedBox(height: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: DialogColors.teal.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      dividerColor: Colors.transparent,
-                      labelColor: Colors.white,
-                      unselectedLabelColor: DialogColors.textMuted,
-                      labelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                      tabs: const [
-                        Tab(text: 'Individual'),
-                        Tab(text: 'Excel Upload'),
-                      ],
+                      child: TabBar(
+                        controller: _tabController,
+                        indicator: BoxDecoration(
+                          color: DialogColors.tealDark,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        dividerColor: Colors.transparent,
+                        labelColor: Colors.white,
+                        unselectedLabelColor: DialogColors.textMuted,
+                        labelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                        tabs: const [
+                          Tab(text: 'Individual'),
+                          Tab(text: 'Excel Upload'),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 18),
-                  // The Individual division is rendered directly so the Dialog
-                  // self-sizes to the form exactly like the previous single
-                  // student dialog. The Excel division gets a bounded box so
-                  // its table can scroll.
-                  if (isBulk)
-                    SizedBox(
-                      height: bulkHeight,
-                      child: BulkStudentsTab(
+                    const SizedBox(height: 18),
+                    // The Individual division is rendered directly so the Dialog
+                    // self-sizes to the form exactly like the previous single
+                    // student dialog. The Excel division gets a bounded box so
+                    // its table can scroll.
+                    if (isBulk)
+                      SizedBox(
+                        height: bulkHeight,
+                        child: BulkStudentsTab(
+                          classService: widget.classService,
+                          onStudentCreated: widget.onStudentCreated,
+                        ),
+                      )
+                    else
+                      _IndividualStudentTab(
                         classService: widget.classService,
                         onStudentCreated: widget.onStudentCreated,
                       ),
-                    )
-                  else
-                    _IndividualStudentTab(
-                      classService: widget.classService,
-                      onStudentCreated: widget.onStudentCreated,
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
