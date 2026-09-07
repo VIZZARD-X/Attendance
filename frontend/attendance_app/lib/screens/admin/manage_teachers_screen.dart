@@ -596,6 +596,16 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                 onPressed: () => _showEditTeacherDialog(teacher),
                 tooltip: 'Edit teacher',
               ),
+              IconButton(
+                icon: const Icon(Icons.swap_horiz, color: _AppColors.tealDark, size: 20),
+                onPressed: () => _showReassignTeacherDialog(teacher),
+                tooltip: 'Reassign classes',
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                onPressed: () => _showDeleteTeacherDialog(teacher),
+                tooltip: 'Delete teacher',
+              ),
             ],
           ),
         ),
@@ -614,6 +624,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
               classes: classes,
               dense: true,
               onTapClass: _openClassDetail,
+              onReassignClass: (cls) => _showReassignClassDialog(cls, teacher),
             ),
           ),
           secondChild: const SizedBox.shrink(),
@@ -726,6 +737,16 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                     onPressed: () => _showEditTeacherDialog(teacher),
                     tooltip: 'Edit teacher',
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.swap_horiz, color: _AppColors.tealDark, size: 20),
+                    onPressed: () => _showReassignTeacherDialog(teacher),
+                    tooltip: 'Reassign classes',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                    onPressed: () => _showDeleteTeacherDialog(teacher),
+                    tooltip: 'Delete teacher',
+                  ),
                 ],
               ),
             ),
@@ -753,6 +774,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                 classes: classes,
                 dense: false,
                 onTapClass: _openClassDetail,
+                onReassignClass: (cls) => _showReassignClassDialog(cls, teacher),
               ),
             ),
             secondChild: const SizedBox.shrink(),
@@ -1008,6 +1030,321 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
       emailController.dispose();
     });
   }
+
+  void _showReassignClassDialog(Map<String, dynamic> cls, Map<String, dynamic> currentTeacher) {
+    final classId = cls['id'];
+    if (classId == null) return;
+
+    final className = cls['class_name'] ?? '';
+    final classCode = cls['class_code'] ?? '';
+    final currentName = currentTeacher['username'] ?? 'Unknown';
+
+    final candidateTeachers = _teachers.where((t) =>
+      t != currentTeacher &&
+      _teacherIdOf(t) != _teacherIdOf(currentTeacher)
+    ).toList();
+
+    if (candidateTeachers.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Reassign class', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: const Text('No other teacher is available to assign this class to.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final candidateIds = candidateTeachers.map((t) => _teacherIdOf(t)!).toList();
+    int? selectedId = candidateIds.first;
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Reassign class', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: SizedBox(
+              width: 420,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '"$className" ($classCode) is currently taught by $currentName.',
+                    style: const TextStyle(fontSize: 14, color: _AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<int>(
+                    initialValue: selectedId,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: 'New teacher',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    ),
+                    items: candidateTeachers.map((t) {
+                      final id = _teacherIdOf(t)!;
+                      return DropdownMenuItem<int>(
+                        value: id,
+                        child: Text(
+                          t['username'] ?? 'Unknown',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (v) {
+                      if (v != null) setDialogState(() => selectedId = v);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: isSaving
+                    ? null
+                    : () async {
+                        setDialogState(() => isSaving = true);
+                        final id = selectedId ?? candidateIds.first;
+                        final newName = candidateTeachers
+                            .firstWhere((t) => _teacherIdOf(t) == id)['username'] ?? 'Unknown';
+                        final result = await _classService.updateClassDetails(
+                          classId: classId,
+                          teacherId: id,
+                        );
+                        if (!dialogCtx.mounted) return;
+                        Navigator.pop(dialogCtx);
+                        if (!mounted) return;
+                        if (result['success'] == true || result['class'] != null) {
+                          _loadTeachers();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('"$className" reassigned to $newName'),
+                              backgroundColor: _AppColors.tealDark,
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(result['error']?.toString() ?? 'Failed to reassign class'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _AppColors.tealDark,
+                  foregroundColor: Colors.white,
+                ),
+                child: isSaving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Reassign'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showReassignTeacherDialog(Map<String, dynamic> teacher) {
+    final classes = List<Map<String, dynamic>>.from(teacher['classes'] ?? []);
+    if (classes.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Reassign classes', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: const Text('This teacher has no classes to reassign.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final teacherName = teacher['username'] ?? 'Unknown';
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Reassign classes', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: SizedBox(
+          width: 420,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$teacherName teaches ${classes.length} '
+                  'class${classes.length == 1 ? '' : 'es'}. Choose a class to move '
+                  'to another teacher.',
+                  style: const TextStyle(fontSize: 14, color: _AppColors.textMuted),
+                ),
+                const SizedBox(height: 12),
+                _ReassignableTeacherClasses(
+                  classes: classes,
+                  onReassign: (cls) {
+                    Navigator.pop(ctx);
+                    _showReassignClassDialog(cls, teacher);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteTeacherDialog(Map<String, dynamic> teacher) {
+    final teacherId = _teacherIdOf(teacher);
+    if (teacherId == null) return;
+
+    final teacherName = teacher['username'] ?? 'Unknown';
+    final classCount =
+        int.tryParse(teacher['class_count']?.toString() ?? '') ?? 0;
+
+    if (classCount > 0) {
+      final classes = List<Map<String, dynamic>>.from(teacher['classes'] ?? []);
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text(
+            'Cannot delete teacher',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: SizedBox(
+            width: 420,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$teacherName still has $classCount '
+                    'class${classCount == 1 ? '' : 'es'} assigned. Reassign or delete '
+                    'these classes before deleting the teacher.',
+                    style: const TextStyle(fontSize: 14, color: _AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 12),
+                  _ReassignableTeacherClasses(
+                    classes: classes,
+                    onReassign: (cls) {
+                      Navigator.pop(ctx);
+                      _showReassignClassDialog(cls, teacher);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    bool isDeleting = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text(
+              'Delete Teacher',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: Text(
+              'Delete $teacherName from the database?\n\n'
+              'This permanently removes the teacher and cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: isDeleting
+                    ? null
+                    : () async {
+                        setDialogState(() => isDeleting = true);
+                        final result = await _classService.adminDeleteUser(teacherId);
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
+                        if (!mounted) return;
+                        if (result['error'] == null) {
+                          _loadTeachers();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Teacher "$teacherName" deleted'),
+                              backgroundColor: const Color(0xFF007C91),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(result['error'].toString()),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: isDeleting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Delete'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 }
 
 /// Shared "Classes:" expandable section used by both the desktop table row
@@ -1016,11 +1353,13 @@ class _ClassListSection extends StatelessWidget {
   const _ClassListSection({
     required this.classes,
     required this.onTapClass,
+    required this.onReassignClass,
     this.dense = false,
   });
 
   final List<Map<String, dynamic>> classes;
   final void Function(Map<String, dynamic> cls) onTapClass;
+  final void Function(Map<String, dynamic> cls) onReassignClass;
   final bool dense;
 
   @override
@@ -1093,6 +1432,14 @@ class _ClassListSection extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.swap_horiz, size: 18, color: _AppColors.tealDark),
+                      onPressed: () => onReassignClass(cls),
+                      tooltip: 'Reassign teacher',
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
                     Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
                   ],
                 ),
@@ -1100,6 +1447,50 @@ class _ClassListSection extends StatelessWidget {
             ),
           )),
       ],
+    );
+  }
+}
+
+/// Lists a teacher's classes, each with a reassign action. Used by both the
+/// "Cannot delete teacher" dialog and the teacher-level reassign dialog.
+class _ReassignableTeacherClasses extends StatelessWidget {
+  const _ReassignableTeacherClasses({
+    required this.classes,
+    required this.onReassign,
+  });
+
+  final List<Map<String, dynamic>> classes;
+  final void Function(Map<String, dynamic> cls) onReassign;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: classes.map((cls) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${cls['class_name'] ?? ''} (${cls['class_code'] ?? ''})',
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => onReassign(cls),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 32),
+              ),
+              icon: const Icon(Icons.swap_horiz, size: 14, color: _AppColors.tealDark),
+              label: const Text('Reassign', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+      )).toList(),
     );
   }
 }

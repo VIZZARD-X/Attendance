@@ -427,6 +427,45 @@ class ClassService {
     }
   }
 
+  /// Admin: Permanently delete a student from the database
+  Future<Map<String, dynamic>> adminDeleteStudent(int studentId) async {
+    try {
+      final token = await _getToken();
+
+      final response = await _dio.delete(
+        '/admin/students/$studentId/delete/',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'error': e.response?.data['error'] ?? 'Failed to delete student',
+      };
+    }
+  }
+
+  /// Admin: Permanently delete every student of a given semester
+  Future<Map<String, dynamic>> adminDeleteAllStudents(String semester) async {
+    try {
+      final token = await _getToken();
+
+      final response = await _dio.delete(
+        '/admin/students/delete-all/$semester/',
+        data: {'confirm': true},
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'error': e.response?.data['error'] ?? 'Failed to delete students',
+      };
+    }
+  }
+
   /// Get student's enrolled classes
   Future<List<Map<String, dynamic>>> getStudentEnrolledClasses() async {
     try {
@@ -551,6 +590,7 @@ class ClassService {
     String? classCode,
     String? className,
     String? semester,
+    int? teacherId,
   }) async {
     try {
       final token = await _getToken();
@@ -561,6 +601,7 @@ class ClassService {
           if (classCode != null) 'class_code': classCode,
           if (className != null) 'class_name': className,
           if (semester != null) 'semester': semester,
+          if (teacherId != null) 'teacher_id': teacherId,
         },
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 
 import 'admin_dashboard_screen.dart';
+import 'manage_classes_screen.dart';
 import 'manage_students_screen.dart';
 import 'manage_teachers_screen.dart';
-import 'reset_login_screen.dart';
 import 'admin_profile_screen.dart';
 
 const List<AdminNavItem> kAdminNavItems = [
   AdminNavItem(title: 'Dashboard', icon: Icons.dashboard_rounded),
   AdminNavItem(title: 'Manage Students', icon: Icons.people_alt_rounded),
   AdminNavItem(title: 'Manage Teachers', icon: Icons.person_rounded),
-  AdminNavItem(title: 'Reset Login', icon: Icons.lock_reset_rounded),
+  AdminNavItem(title: 'Manage Classes', icon: Icons.class_rounded),
   AdminNavItem(title: 'Profile', icon: Icons.person_outline_rounded),
 ];
 
@@ -40,8 +40,8 @@ Widget _pageForRoute(String title) {
       return const ManageStudentsScreen();
     case 'Manage Teachers':
       return const ManageTeachersScreen();
-    case 'Reset Login':
-      return const ResetLoginScreen();
+    case 'Manage Classes':
+      return const ManageClassesScreen();
     case 'Profile':
       return const AdminProfileScreen();
     default:

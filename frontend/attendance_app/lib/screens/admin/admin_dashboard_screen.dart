@@ -52,11 +52,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       gradient: [Color(0xFF14B8A6), Colors.white],
     ),
     _DashboardCard(
-      title: 'Reset Login',
-      subtitle: 'Provide Login Access to a Device',
-      icon: Icons.lock_reset_rounded,
-      color: Color(0xFFCC4899),
-      gradient: [Color(0xFFDE6ACB), Colors.white],
+      title: 'Manage Classes',
+      subtitle: 'Browse Classes and Students',
+      icon: Icons.class_rounded,
+      color: Color(0xFF6C5CE7),
+      gradient: [Color(0xFF9C8BFF), Colors.white],
     ),
     _DashboardCard(
       title: 'Profile',

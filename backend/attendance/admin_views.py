@@ -37,7 +37,10 @@ User = get_user_model()
 def admin_classes_summary(request):
     """
     Admin: Get all classes grouped by semester with student counts.
-    Returns a summary per semester: semester label + total students.
+    Returns a summary per semester: semester label + class count + enrolled
+    student count + total students (includes newly added, not-yet-enrolled
+    students of that semester). Semesters that only have newly added students
+    (no classes yet) are still included so those students remain reachable.
     """
     user = request.user
 
@@ -49,13 +52,54 @@ def admin_classes_summary(request):
 
     from django.db.models import Count
 
-    classes_by_semester = Class.objects.values('semester').annotate(
-        student_count=Count('enrollments')
-    ).order_by('semester')
+    class_counts = dict(
+        Class.objects
+        .values_list('semester')
+        .annotate(classes_count=Count('id'))
+    )
+
+    row_counts = dict(
+        Enrollment.objects
+        .filter(class_obj__semester__isnull=False)
+        .values_list('class_obj__semester')
+        .annotate(student_count=Count('id'))
+    )
+
+    enrolled_map = {}
+    for enrollment in Enrollment.objects.values('class_obj__semester', 'student_id'):
+        if enrollment['class_obj__semester']:
+            enrolled_map.setdefault(
+                enrollment['class_obj__semester'], set()
+            ).add(enrollment['student_id'])
+
+    unassigned_map = {}
+    for profile in (
+        StudentProfile.objects
+        .filter(semester__isnull=False)
+        .exclude(semester='')
+        .exclude(student__enrolled_classes__isnull=False)
+        .values('semester', 'student_id')
+    ):
+        unassigned_map.setdefault(profile['semester'], set()).add(
+            profile['student_id']
+        )
+
+    semester_names = set(class_counts) | set(enrolled_map) | set(unassigned_map)
+
+    semesters = []
+    for semester in sorted(semester_names):
+        enrolled = enrolled_map.get(semester, set())
+        unassigned = unassigned_map.get(semester, set())
+        semesters.append({
+            'semester': semester,
+            'class_count': class_counts.get(semester, 0),
+            'student_count': row_counts.get(semester, 0),
+            'total_students': len(enrolled | unassigned),
+        })
 
     return Response({
-        'semesters': list(classes_by_semester),
-        'total_semesters': classes_by_semester.count(),
+        'semesters': semesters,
+        'total_semesters': len(semesters),
     })
 
 
@@ -164,7 +208,9 @@ def admin_unassigned_students(request):
 
     students = StudentProfile.objects.filter(
         semester__isnull=False,
-    ).exclude(semester='').select_related('student').distinct()
+    ).exclude(semester='').exclude(
+        student__enrolled_classes__isnull=False
+    ).select_related('student').distinct()
 
     result = []
     for profile in students.order_by('semester', 'student__username'):
@@ -210,6 +256,7 @@ def admin_teachers_list(request):
                 'id': cls.id,
                 'class_code': cls.class_code,
                 'class_name': cls.class_name,
+                'semester': cls.semester,
                 'student_count': cls.student_count,
             })
 
@@ -471,6 +518,34 @@ def admin_delete_user(request, user_id):
     })
 
 
+@api_view(['DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def admin_delete_student(request, student_id):
+    """Admin: Permanently delete a student and all of their data"""
+    user = request.user
+
+    if user.role != 'admin':
+        return Response(
+            {'error': 'Only admins can delete students'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    try:
+        student = User.objects.get(id=student_id, role='student')
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'Student not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    username = student.username
+    student.delete()
+
+    return Response({
+        'message': f'Student "{username}" deleted permanently',
+    })
+
+
 @api_view(['PUT'])
 @permission_classes([permissions.IsAuthenticated])
 def admin_update_class(request, class_id):
@@ -494,6 +569,7 @@ def admin_update_class(request, class_id):
     class_code = request.data.get('class_code')
     class_name = request.data.get('class_name')
     semester = request.data.get('semester')
+    teacher_id = request.data.get('teacher_id')
 
     if class_code is not None:
         class_code = class_code.strip()
@@ -527,6 +603,23 @@ def admin_update_class(request, class_id):
             )
         class_obj.semester = semester
 
+    if teacher_id is not None:
+        try:
+            teacher_id = int(teacher_id)
+        except (TypeError, ValueError):
+            return Response(
+                {'error': 'Invalid teacher id'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            teacher = User.objects.get(id=teacher_id, role='teacher')
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'Teacher not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        class_obj.teacher = teacher
+
     class_obj.save()
 
     return Response({
@@ -536,6 +629,7 @@ def admin_update_class(request, class_id):
             'class_code': class_obj.class_code,
             'class_name': class_obj.class_name,
             'semester': class_obj.semester,
+            'teacher_name': class_obj.teacher_name,
             'student_count': class_obj.student_count,
         }
     })
@@ -675,4 +769,63 @@ def admin_update_student(request, student_id):
             'username': student.username,
             'email': student.email,
         }
+    })
+
+
+@api_view(['DELETE'])
+@permission_classes([permissions.IsAuthenticated])
+def admin_delete_all_students(request, semester):
+    """Admin: Permanently delete every student of a given semester.
+
+    Targets the union of students enrolled in any class of the semester and
+    students whose profile semester matches (i.e. the semester page contents).
+    Because a student can only belong to one semester, this is safe.
+    """
+    user = request.user
+
+    if user.role != 'admin':
+        return Response(
+            {'error': 'Only admins can delete students'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    semester = (semester or '').strip()
+    if not semester:
+        return Response(
+            {'error': 'Semester is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if not request.data.get('confirm'):
+        return Response(
+            {'error': 'Confirmation required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    enrolled_ids = set(
+        Enrollment.objects
+        .filter(class_obj__semester=semester)
+        .values_list('student_id', flat=True)
+    )
+    profile_ids = set(
+        StudentProfile.objects
+        .filter(semester=semester)
+        .values_list('student_id', flat=True)
+    )
+    student_ids = enrolled_ids | profile_ids
+
+    if not student_ids:
+        return Response(
+            {'error': 'No students in this semester'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    deleted, _ = (
+        User.objects
+        .filter(id__in=student_ids, role='student')
+        .delete()
+    )
+
+    return Response({
+        'message': f'Deleted {deleted} students from {semester}',
     })

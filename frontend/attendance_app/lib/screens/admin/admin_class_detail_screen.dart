@@ -23,6 +23,7 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
   List<Map<String, dynamic>> _students = [];
   String _classCode = '';
   String _className = '';
+  String _teacherName = '';
 
   @override
   void initState() {
@@ -42,6 +43,7 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
         setState(() {
           _classCode = data['class_code'] ?? widget.classCode;
           _className = data['class_name'] ?? widget.className;
+          _teacherName = data['teacher_name']?.toString() ?? '';
           _students = List<Map<String, dynamic>>.from(data['students'] ?? []);
           _isLoading = false;
         });
@@ -92,11 +94,12 @@ class _AdminClassDetailScreenState extends State<AdminClassDetailScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    '$_classCode \u2022 ${_students.length} students',
+                    '$_classCode \u2022 ${_students.length} students \u2022 ${_teacherName.isEmpty ? 'Teacher not assigned' : _teacherName}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF6B7280),
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
