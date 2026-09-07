@@ -42,14 +42,6 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
     return name.isEmpty ? 'S' : name.substring(0, 1).toUpperCase();
   }
 
-  /// Safely parses a class id that may arrive as int or String.
-  int? _classIdOf(Map<String, dynamic> cls) {
-    final raw = cls['id'];
-    if (raw is int) return raw;
-    if (raw is String) return int.tryParse(raw);
-    return null;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -69,11 +61,37 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
     });
 
     try {
-      final data = await _classService.getSemesterStudents(widget.semesterLabel);
+      final results = await Future.wait([
+        _classService.getSemesterStudents(widget.semesterLabel),
+        _classService.getAdminUnassignedStudents(),
+      ]);
+      final data = results[0];
+      final unassignedData = results[1];
+
+      final unassigned = List<Map<String, dynamic>>.from(
+        unassignedData['students'] ?? [],
+      ).where((s) =>
+          (s['semester']?.toString() ?? '').trim() ==
+          widget.semesterLabel.trim());
+
+      final seen = <int>{};
+      final merged = <Map<String, dynamic>>[
+        ...List<Map<String, dynamic>>.from(data['students'] ?? []),
+      ];
+      for (final student in merged) {
+        final id = student['id'];
+        if (id is int) seen.add(id);
+      }
+      for (final student in unassigned) {
+        final id = student['id'];
+        if (id is int && seen.add(id)) {
+          merged.add({...student, 'classes': [], 'unassigned': true});
+        }
+      }
 
       if (mounted) {
         setState(() {
-          _students = List<Map<String, dynamic>>.from(data['students'] ?? []);
+          _students = merged;
           _isLoading = false;
         });
       }
@@ -137,6 +155,14 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
             ),
           ],
         ),
+        actions: [
+          if (_students.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_sweep_outlined, color: Colors.red, size: 22),
+              onPressed: _showDeleteAllDialog,
+              tooltip: 'Delete all students in this semester',
+            ),
+        ],
       ),
       body: _isLoading
           ? const Center(
@@ -319,35 +345,38 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      if (classes.isNotEmpty)
-                        Expanded(
-                          child: Text(
-                            'Classes: ${classes.map((c) => c['class_code']).join(', ')}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: const Color(0xFF007C91).withOpacity(0.8),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                  if (classes.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Text(
+                        'Not assigned to any class',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFE65100),
                         ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+                      ),
+),
+          ],
+        ),
+      ),
             const SizedBox(width: 4),
             IconButton(
               icon: const Icon(Icons.edit_outlined, color: Color(0xFF007C91), size: 20),
               onPressed: () => _showEditDialog(student),
             ),
-            if (classes.isNotEmpty)
-              IconButton(
-                icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
-                onPressed: () => _showRemoveStudentDialog(student),
-                tooltip: 'Remove from class',
-              ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+              onPressed: () => _showDeleteStudentDialog(student),
+              tooltip: 'Delete student',
+            ),
           ],
         ),
       ),
@@ -450,165 +479,165 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
     );
   }
 
-  void _showRemoveStudentDialog(Map<String, dynamic> student) {
-    final classes = List<Map<String, dynamic>>.from(student['classes'] ?? []);
+  void _showDeleteStudentDialog(Map<String, dynamic> student) {
     final studentName = student['username'] ?? 'Unknown';
-
-    if (classes.isEmpty) return;
-
-    if (classes.length == 1) {
-      final cls = classes.first;
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Remove Student', style: TextStyle(fontWeight: FontWeight.bold)),
-          content: Text('Remove $studentName from ${cls['class_code']}?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(ctx);
-                final classId = _classIdOf(cls);
-                if (classId == null) {
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Failed to remove student'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                  return;
-                }
-                final success = await _classService.adminRemoveStudentFromClass(
-                  classId,
-                  student['id'],
-                );
-                if (!mounted) return;
-                if (success) {
-                  _loadStudents();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('$studentName removed from ${cls['class_code']}'),
-                      backgroundColor: const Color(0xFF007C91),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Failed to remove student'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Remove'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    final selectedClasses = <int>{};
 
     showDialog(
       context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Text('Remove from Classes', style: TextStyle(fontWeight: FontWeight.bold)),
-              content: Column(
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Student', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(
+          'Delete $studentName from the database?\n\n'
+          'This permanently removes the student, their class enrollments, '
+          'and attendance history. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final result = await _classService.adminDeleteStudent(
+                student['id'],
+              );
+              if (!mounted) return;
+              if (result['error'] == null) {
+                _loadStudents();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$studentName deleted successfully'),
+                    backgroundColor: const Color(0xFF007C91),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(result['error'].toString()),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAllDialog() {
+    final count = _students.length;
+    final semesterLabel = widget.semesterLabel;
+    final confirmController = TextEditingController();
+    bool isDeleting = false;
+    bool canDelete = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text(
+              'Delete All Students',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Select classes to remove $studentName from:',
-                    style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                    'Delete all $count students in semester $semesterLabel?',
+                    style: const TextStyle(fontSize: 15),
                   ),
-                  const SizedBox(height: 12),
-                  ...classes.map((cls) {
-                    final classId = _classIdOf(cls);
-                    if (classId == null) return const SizedBox.shrink();
-                    final isSelected = selectedClasses.contains(classId);
-                    return CheckboxListTile(
-                      value: isSelected,
-                      title: Text(cls['class_code'] ?? ''),
-                      subtitle: Text(cls['class_code'] ?? ''),
-                      controlAffinity: ListTileControlAffinity.leading,
-                      dense: true,
-                      onChanged: (v) {
-                        setDialogState(() {
-                          if (v == true) {
-                            selectedClasses.add(classId);
-                          } else {
-                            selectedClasses.remove(classId);
-                          }
-                        });
-                      },
-                    );
-                  }),
+                  const SizedBox(height: 10),
+                  Text(
+                    'This permanently removes every student in this semester, '
+                    'their class enrollments, and attendance history. '
+                    'This action cannot be undone.',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: confirmController,
+                    onChanged: (v) => setDialogState(
+                      () => canDelete = v.trim().toUpperCase() == 'DELETE',
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Type DELETE to confirm',
+                      hintText: 'DELETE',
+                      prefixIcon: const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    ),
+                  ),
                 ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: selectedClasses.isEmpty
-                      ? null
-                      : () async {
-                          Navigator.pop(ctx);
-                          var removed = 0;
-                          var failed = 0;
-                          for (final classId in selectedClasses) {
-                            final ok = await _classService.adminRemoveStudentFromClass(
-                              classId,
-                              student['id'],
-                            );
-                            if (ok) {
-                              removed++;
-                            } else {
-                              failed++;
-                            }
-                          }
-                          if (!mounted) return;
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  confirmController.dispose();
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: isDeleting || !canDelete
+                    ? null
+                    : () async {
+                        setDialogState(() => isDeleting = true);
+                        final result = await _classService.adminDeleteAllStudents(
+                          semesterLabel,
+                        );
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
+                        confirmController.dispose();
+                        if (!mounted) return;
+                        if (result['error'] == null) {
                           _loadStudents();
-                          final message = failed == 0
-                              ? 'Student removed from selected classes'
-                              : removed > 0
-                                  ? 'Removed from $removed class(es); failed to remove from $failed'
-                                  : 'Failed to remove student from selected classes';
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(message),
-                              backgroundColor: failed == 0
-                                  ? const Color(0xFF007C91)
-                                  : Colors.red,
+                              content: Text(
+                                result['message']?.toString() ??
+                                    'All students deleted successfully',
+                              ),
+                              backgroundColor: const Color(0xFF007C91),
                             ),
                           );
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Remove'),
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(result['error'].toString()),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
                 ),
-              ],
-            );
-          },
-        );
-      },
+                child: isDeleting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Delete All'),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

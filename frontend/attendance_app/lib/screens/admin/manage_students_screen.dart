@@ -39,7 +39,6 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
   String? _errorMessage;
   final ClassService _classService = ClassService();
   List<_SemesterCard> _semesters = [];
-  List<Map<String, dynamic>> _unassignedStudents = [];
 
   @override
   void initState() {
@@ -54,11 +53,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
     });
 
     try {
-      final summaryFuture = _classService.getAdminClassesSummary();
-      final unassignedFuture = _classService.getAdminUnassignedStudents();
-      final results = await Future.wait([summaryFuture, unassignedFuture]);
-      final summary = results[0] as List<Map<String, dynamic>>;
-      final unassignedData = results[1] as Map<String, dynamic>;
+      final summary = await _classService.getAdminClassesSummary();
 
       if (mounted) {
         const colorPalette = [
@@ -88,14 +83,13 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
               semesterDisplay: _semesterDisplay(semesterStr),
               semesterLabel: semesterStr,
               studentCount:
-                  int.tryParse(data['student_count']?.toString() ?? '') ?? 0,
+                  int.tryParse(data['total_students']?.toString() ?? '') ??
+                      int.tryParse(data['student_count']?.toString() ?? '') ??
+                      0,
               color: colorPalette[index % colorPalette.length],
               gradient: gradientPalette[index % gradientPalette.length],
             );
           }).toList();
-          _unassignedStudents = List<Map<String, dynamic>>.from(
-            unassignedData['students'] ?? [],
-          );
           _isLoading = false;
         });
       }
@@ -113,11 +107,6 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
   String _semesterDisplay(String raw) {
     final trimmed = raw.trim();
     return int.tryParse(trimmed) != null ? 'Semester $trimmed' : trimmed;
-  }
-
-  String _initialOf(dynamic raw) {
-    final name = raw?.toString() ?? '';
-    return name.isEmpty ? 'S' : name.substring(0, 1).toUpperCase();
   }
 
   @override
@@ -145,8 +134,6 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
             children: [
               _buildHeaderSection(isMobile),
               const SizedBox(height: 24),
-              if (!_isLoading && _errorMessage == null)
-                _buildNewlyAddedSection(isMobile),
               _isLoading
                   ? const Center(
                       child: Padding(
@@ -178,9 +165,6 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
           children: [
             _buildDesktopHeader(),
             const SizedBox(height: 24),
-            if (!_isLoading && _errorMessage == null)
-              _buildNewlyAddedSection(false),
-            const SizedBox(height: 16),
             _isLoading
                 ? const Center(
                     child: Padding(
@@ -299,92 +283,6 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
     );
   }
 
-  Widget _buildNewlyAddedSection(bool isMobile) {
-    if (_unassignedStudents.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Newly Added',
-          style: TextStyle(
-            fontSize: isMobile ? 16 : 18,
-            fontWeight: FontWeight.w700,
-            color: _AppColors.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Students whom you have added but are not yet enrolled in any class',
-          style: TextStyle(fontSize: 13, color: _AppColors.textMuted),
-        ),
-        const SizedBox(height: 12),
-        ..._unassignedStudents.map((s) {
-          final initial = _initialOf(s['username']);
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: const Color(0xFFD1ECF1),
-                  radius: isMobile ? 18 : 20,
-                  child: Text(
-                    initial,
-                    style: const TextStyle(
-                      color: Color(0xFF007C91),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        s['username'] ?? 'Unknown',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        s['email'] ?? '',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEAF7FA),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    _semesterDisplay((s['semester'] ?? '').toString()),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF007C91),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
-        const SizedBox(height: 16),
-      ],
-    );
-  }
-
   Widget _buildSemesterGrid(int crossAxisCount, bool isMobile) {
     final isCompact = crossAxisCount < 3;
 
@@ -491,8 +389,8 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
 
   Widget _buildSemesterCard(_SemesterCard semester, bool isCompact) {
     return InkWell(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => SemesterClassesScreen(
@@ -502,6 +400,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
             ),
           ),
         );
+        _loadSemesters();
       },
       borderRadius: BorderRadius.circular(24),
       child: Container(
