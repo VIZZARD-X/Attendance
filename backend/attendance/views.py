@@ -27,6 +27,11 @@ from .serializers import (
     AnnouncementSerializer,
 )
 from .models import Class, Enrollment, StudentProfile, AttendanceSession, AttendanceRecord, Announcement
+from .semester_rules import (
+    enforce_single_semester,
+    set_student_semester,
+    student_current_semester,
+)
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
@@ -285,11 +290,22 @@ def add_student_to_class(request, class_id):
                         status=status.HTTP_400_BAD_REQUEST
                     )
                 
+                # Enforce single semester per student
+                semester_error = enforce_single_semester(existing_user, class_obj)
+                if semester_error:
+                    return Response(
+                        {'error': semester_error},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
                 # Enroll existing student
                 Enrollment.objects.create(
                     class_obj=class_obj,
                     student=existing_user
                 )
+                
+                if student_current_semester(existing_user) is None:
+                    set_student_semester(existing_user, class_obj.semester)
                 
                 return Response({
                     'message': f'Student {existing_user.username} successfully added to class',
@@ -331,7 +347,8 @@ def add_student_to_class(request, class_id):
                 
                 # Create profile
                 StudentProfile.objects.create(
-                    student=student
+                    student=student,
+                    semester=class_obj.semester
                 )
                 
                 # Create enrollment
@@ -1730,8 +1747,16 @@ def join_class_by_code(request):
     # Check if already enrolled
     if Enrollment.objects.filter(class_obj=class_obj, student=user).exists():
         return Response({'message': 'Already enrolled'}, status=status.HTTP_200_OK)
-        
+    
+    # Enforce single semester per student
+    semester_error = enforce_single_semester(user, class_obj)
+    if semester_error:
+        return Response({'error': semester_error}, status=status.HTTP_400_BAD_REQUEST)
+    
     Enrollment.objects.create(class_obj=class_obj, student=user)
+    
+    if student_current_semester(user) is None:
+        set_student_semester(user, class_obj.semester)
     
     return Response({
         'message': f"Successfully joined {class_obj.class_name}",
