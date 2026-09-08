@@ -267,6 +267,30 @@ class ClassService {
     }
   }
 
+  /// Get the full roster for a class: enrolled students plus same-semester
+  /// students who are still available to be added.
+  /// Returns {class_code, class_name, semester, students, total,
+  ///          available_students, total_available} or null on failure.
+  Future<Map<String, dynamic>?> getClassRoster(int classId) async {
+    try {
+      final token = await _getToken();
+
+      final response = await _dio.get(
+        '/classes/$classId/students/',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 200 && response.data is Map) {
+        return Map<String, dynamic>.from(response.data);
+      }
+
+      return null;
+    } catch (e) {
+      print('Error fetching class roster: $e');
+      return null;
+    }
+  }
+
   /// Update class details
   Future<bool> updateClass({
     required int classId,

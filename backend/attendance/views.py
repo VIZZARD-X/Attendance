@@ -230,12 +230,31 @@ def get_class_students(request, class_id):
                 'enrolled_at': enrollment.enrolled_at
             })
     
+    # Students registered for this class's semester who are not yet enrolled
+    # in this class (candidates the teacher can add).
+    enrolled_ids = [enrollment.student_id for enrollment in enrollments]
+    available_profiles = StudentProfile.objects.filter(
+        semester=class_obj.semester
+    ).exclude(
+        semester=''
+    ).exclude(
+        student_id__in=enrolled_ids
+    ).select_related('student').order_by('student__username')
+    
+    available_students = [{
+        'id': profile.student.id,
+        'username': profile.student.username,
+        'email': profile.student.email,
+    } for profile in available_profiles]
+    
     return Response({
         'class_code': class_obj.class_code,
         'class_name': class_obj.class_name,
         'semester': class_obj.semester,
         'students': students_data,
-        'total': len(students_data)
+        'total': len(students_data),
+        'available_students': available_students,
+        'total_available': len(available_students)
     })
 
 
