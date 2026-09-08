@@ -3,6 +3,9 @@ import '../../services/class_service.dart';
 import '../../widgets/admin_web_layout.dart';
 import 'semester_classes_screen.dart';
 import 'widgets/add_student_dialog.dart';
+import 'widgets/admin_animated_card.dart';
+import 'widgets/admin_entrance.dart';
+import 'widgets/admin_header_actions.dart';
 
 abstract class _AppColors {
   static const tealDark = Color(0xFF007C91);
@@ -124,66 +127,81 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
   Widget _buildMobileBody(bool isMobile) {
     final crossAxisCount = isMobile ? 1 : 2;
 
-    return SafeArea(
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Padding(
-          padding: EdgeInsets.all(isMobile ? 16 : 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeaderSection(isMobile),
-              const SizedBox(height: 24),
-              _isLoading
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.only(top: 60),
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal),
-                        ),
-                      ),
-                    )
-                  : _errorMessage != null
-                      ? _buildErrorState()
-                      : _semesters.isEmpty
-                          ? _buildEmptyState()
-                          : _buildSemesterGrid(crossAxisCount, isMobile),
-            ],
+    return Stack(
+      children: [
+        SafeArea(
+          child: AdminEntrance(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: EdgeInsets.all(isMobile ? 16 : 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeaderSection(isMobile),
+                    const SizedBox(height: 24),
+                    _errorMessage != null
+                        ? _buildErrorState()
+                        : _semesters.isEmpty
+                            ? _buildEmptyState()
+                            : _buildSemesterGrid(crossAxisCount, isMobile),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
-      ),
+        if (_isLoading) _buildLoadingOverlay(),
+      ],
     );
   }
 
   Widget _buildDesktopBody() {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDesktopHeader(),
-            const SizedBox(height: 24),
-            _isLoading
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 60),
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal),
-                      ),
-                    ),
-                  )
-                : _errorMessage != null
-                    ? _buildErrorState()
-                    : _semesters.isEmpty
-                        ? _buildEmptyState()
-                        : _buildSemesterGrid(3, false),
-          ],
+    return Stack(
+      children: [
+        AdminEntrance(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDesktopHeader(),
+                  const SizedBox(height: 24),
+                  _errorMessage != null
+                      ? _buildErrorState()
+                      : _semesters.isEmpty
+                          ? _buildEmptyState()
+                          : _buildSemesterGrid(3, false),
+                ],
+              ),
+            ),
+          ),
         ),
-      ),
+        if (_isLoading) _buildLoadingOverlay(),
+      ],
     );
   }
+
+  Widget _buildLoadingOverlay() => Container(
+        color: Colors.black26,
+        child: const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
 
   Widget _buildDesktopHeader() {
     return Row(
@@ -245,6 +263,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
           ),
         ),
         const SizedBox(width: 16),
+        AdminHeaderActions(onRefresh: _loadSemesters, showLogout: false),
         IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
@@ -279,22 +298,17 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
           onPressed: _showAddStudentDialog,
           tooltip: 'Add Student',
         ),
+        const SizedBox(width: 8),
+        AdminHeaderActions(onRefresh: _loadSemesters, showLogout: false),
       ],
     );
   }
 
   Widget _buildSemesterGrid(int crossAxisCount, bool isMobile) {
-    final isCompact = crossAxisCount < 3;
-
-    // BUG FIX: previous ratios (1.35 / 1.45 / 1.6) made single- and
-    // two-column cards nearly as tall as they were wide - big oversized
-    // square-ish tiles for what is really just one row of content (an
-    // icon, two short text lines, and an arrow). These are tuned to give
-    // compact, row-like cards on mobile/tablet and a slightly taller,
-    // more spacious tile on the 3-column desktop grid.
-    final childAspectRatio = crossAxisCount == 1
-        ? 2.6
-        : (crossAxisCount == 2 ? 1.7 : 1.6);
+    final isCompact = isMobile || crossAxisCount == 2;
+    final childAspectRatio = isMobile
+        ? 0.96
+        : (crossAxisCount == 2 ? 1.22 : 1.6);
 
     return GridView.builder(
       itemCount: _semesters.length,
@@ -302,15 +316,50 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
       shrinkWrap: true,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        // BUG FIX: cross spacing was larger than main-axis spacing on the
-        // desktop grid (42 vs 55), which reads as an unbalanced/uneven
-        // rhythm compared to the compact case. Keep spacing consistent.
-        mainAxisSpacing: isCompact ? 16 : 32,
-        crossAxisSpacing: isCompact ? 16 : 32,
+        mainAxisSpacing: isMobile ? 18 : 42,
+        crossAxisSpacing: isMobile ? 18 : 55,
         childAspectRatio: childAspectRatio,
       ),
-      itemBuilder: (context, idx) => _buildSemesterCard(_semesters[idx], isCompact),
+      itemBuilder: (context, idx) {
+        final semester = _semesters[idx];
+        final animated = AdminAnimatedCard(
+          title: semester.semesterDisplay,
+          subtitle: '${semester.studentCount} Students',
+          icon: Icons.school_rounded,
+          color: semester.color,
+          gradient: semester.gradient,
+          onTap: () => _openSemester(semester),
+          trailing: Icon(
+            Icons.arrow_forward_ios_rounded,
+            color: semester.color,
+            size: 20,
+          ),
+        );
+        if (isCompact) {
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 340),
+              child: animated,
+            ),
+          );
+        }
+        return animated;
+      },
     );
+  }
+
+  Future<void> _openSemester(_SemesterCard semester) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SemesterClassesScreen(
+          semesterLabel: semester.semesterLabel,
+          semesterDisplay: semester.semesterDisplay,
+          totalEnrollments: semester.studentCount,
+        ),
+      ),
+    );
+    _loadSemesters();
   }
 
   Widget _buildErrorState() {
@@ -384,106 +433,6 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
       context: context,
       classService: _classService,
       onStudentCreated: _loadSemesters,
-    );
-  }
-
-  Widget _buildSemesterCard(_SemesterCard semester, bool isCompact) {
-    return InkWell(
-      onTap: () async {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SemesterClassesScreen(
-              semesterLabel: semester.semesterLabel,
-              semesterDisplay: semester.semesterDisplay,
-              totalEnrollments: semester.studentCount,
-            ),
-          ),
-        );
-        _loadSemesters();
-      },
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: isCompact ? 20 : 32,
-          vertical: isCompact ? 18 : 24,
-        ),
-        decoration: ShapeDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: semester.gradient,
-          ),
-          shape: RoundedRectangleBorder(
-            // BUG FIX: 43px radius was disproportionately large for these
-            // card sizes (especially the shorter compact cards), making
-            // them look like pills and clipping content into the curved
-            // corners. 24px keeps the same soft-rounded style at a scale
-            // that fits the card dimensions.
-            borderRadius: BorderRadius.circular(24),
-            side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: isCompact ? 52 : 68,
-              height: isCompact ? 52 : 68,
-              padding: EdgeInsets.all(isCompact ? 8 : 12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.25),
-                border: Border.all(
-                  color: semester.color.withOpacity(0.70),
-                  width: 1.5,
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.school_rounded,
-                color: semester.color,
-                size: isCompact ? 22 : 30,
-              ),
-            ),
-            SizedBox(width: isCompact ? 12 : 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    semester.semesterDisplay,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 18,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${semester.studentCount} Students',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontSize: 13,
-                      fontFamily: 'Inter',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: semester.color,
-              size: isCompact ? 16 : 20,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

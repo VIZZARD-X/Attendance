@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
+import '../../services/class_service.dart';
 import '../../widgets/admin_web_layout.dart';
+import '../../widgets/offline_indicator.dart';
 import 'admin_navigation.dart';
+import 'widgets/admin_animated_card.dart';
+import 'widgets/admin_entrance.dart';
+import 'widgets/admin_header_actions.dart';
 
 abstract class _AppColors {
   static const tealDark = Color(0xFF007C91);
   static const teal = Color(0xFF0097A7);
   static const tealLight = Color(0xFF0288A3);
+  static const textPrimary = Color(0xFF1F2937);
   static const textMuted = Color(0xFF6B7280);
 }
 
@@ -33,8 +40,23 @@ class AdminDashboardPage extends StatefulWidget {
 }
 
 class _AdminDashboardPageState extends State<AdminDashboardPage> {
+  final AuthService _authService = AuthService();
+  final ClassService _classService = ClassService();
+
   bool _isLoading = false;
-  String _username = 'Admin';
+  String _adminName = 'Admin';
+  String _username = '';
+  int _studentCount = 0;
+  int _teacherCount = 0;
+
+  Map<String, dynamic>? _cachedUserData;
+  DateTime? _lastFetch;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
 
   static const _cards = <_DashboardCard>[
     _DashboardCard(
@@ -67,8 +89,58 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     ),
   ];
 
+  Future<void> _loadUserData({bool forceRefresh = false}) async {
+    final cacheValid =
+        _cachedUserData != null &&
+        _lastFetch != null &&
+        DateTime.now().difference(_lastFetch!) < const Duration(minutes: 5);
+
+    if (!forceRefresh && cacheValid) {
+      if (!mounted) return;
+      setState(() {
+        _adminName = _cachedUserData!['first_name'] ?? 'Admin';
+        _username = _cachedUserData!['username'] ?? '';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final results = await Future.wait([
+        _authService.getCurrentUser(),
+        _classService.getAdminStats(),
+      ]);
+
+      if (!mounted) return;
+      final userData = results[0];
+      final stats = results[1]!;
+
+      setState(() {
+        _cachedUserData = userData;
+        _lastFetch = DateTime.now();
+        _adminName = userData?['first_name'] ?? 'Admin';
+        _username = userData?['username'] ?? '';
+        _studentCount =
+            int.tryParse(stats['students_count']?.toString() ?? '') ?? 0;
+        _teacherCount =
+            int.tryParse(stats['teachers_count']?.toString() ?? '') ?? 0;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading admin dashboard data: $e');
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   Future<void> _handleCardTap(String title) async {
     await navigateToAdminScreen(context, title);
+    _loadUserData(forceRefresh: true);
   }
 
   @override
@@ -78,6 +150,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
     return AdminWebLayout(
       currentRoute: 'Dashboard',
+      showMobileAppBar: false,
       mobileChild: _buildMobileBody(isMobile),
       desktopBody: _buildDesktopBody(),
     );
@@ -88,21 +161,41 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
     return Stack(
       children: [
-        SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Padding(
-              padding: EdgeInsets.all(isMobile ? 16 : 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader(),
-                  const SizedBox(height: 16),
-                  _buildDashboardGrid(crossAxisCount, isMobile),
-                ],
+        Column(
+          children: [
+            _buildMobileTopBar(),
+            Expanded(
+              child: SafeArea(
+                top: false,
+                child: AdminEntrance(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Padding(
+                      padding: EdgeInsets.all(isMobile ? 12 : 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildStatsSection(isMobile),
+                          const SizedBox(height: 24),
+                          _buildSectionHeader(isCompact: isMobile),
+                          const SizedBox(height: 16),
+                          Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 1100),
+                              child: _buildDashboardGrid(
+                                crossAxisCount,
+                                isMobile,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
         ),
         if (_isLoading) _buildLoadingOverlay(),
       ],
@@ -112,19 +205,23 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   Widget _buildDesktopBody() {
     return Stack(
       children: [
-        SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDesktopHeader(),
-                const SizedBox(height: 48),
-                _buildSectionHeader(),
-                const SizedBox(height: 24),
-                _buildDashboardGrid(3, false),
-              ],
+        AdminEntrance(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDesktopHeader(),
+                  const SizedBox(height: 32),
+                  _buildStatsRow(),
+                  const SizedBox(height: 48),
+                  _buildSectionHeader(),
+                  const SizedBox(height: 24),
+                  _buildDashboardGrid(3, false),
+                ],
+              ),
             ),
           ),
         ),
@@ -134,32 +231,32 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   Widget _buildLoadingOverlay() => Container(
-        color: Colors.black26,
-        child: const Center(
-          child: Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Loading...'),
-                ],
-              ),
-            ),
+    color: Colors.black26,
+    child: const Center(
+      child: Card(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading...'),
+            ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 
-  Widget _buildSectionHeader() {
+  Widget _buildSectionHeader({bool isCompact = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Admin Dashboard',
+        Text(
+          'Overview',
           style: TextStyle(
-            fontSize: 26,
+            fontSize: isCompact ? 20 : 26,
             fontFamily: 'Inter',
             fontWeight: FontWeight.w700,
             color: Colors.black,
@@ -169,20 +266,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         Row(
           children: [
             Container(
-              width: 12,
-              height: 43,
+              width: isCompact ? 4 : 12,
+              height: isCompact ? 24 : 43,
               decoration: ShapeDecoration(
                 color: _AppColors.tealLight,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(isCompact ? 2 : 6),
                 ),
               ),
             ),
             const SizedBox(width: 12),
-            const Text(
+            Text(
               'Quick Actions',
               style: TextStyle(
-                fontSize: 33,
+                fontSize: isCompact ? 18 : 33,
                 fontFamily: 'Inter',
                 fontWeight: FontWeight.w700,
                 color: Colors.black,
@@ -195,8 +292,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }
 
   Widget _buildDashboardGrid(int crossAxisCount, bool isMobile) {
-    final childAspectRatio =
-        crossAxisCount == 1 ? 1.5 : (crossAxisCount == 2 ? 1.3 : 1.6);
+    final isCompact = isMobile || crossAxisCount == 2;
+    final childAspectRatio = isMobile
+        ? 0.96
+        : (crossAxisCount == 2 ? 1.22 : 1.6);
 
     return GridView.builder(
       itemCount: _cards.length,
@@ -204,87 +303,232 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       shrinkWrap: true,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        mainAxisSpacing: 42,
-        crossAxisSpacing: 55,
+        mainAxisSpacing: isCompact ? 18 : 42,
+        crossAxisSpacing: isCompact ? 18 : 55,
         childAspectRatio: childAspectRatio,
       ),
-      itemBuilder: (context, idx) => _buildActionCard(_cards[idx], isMobile),
+      itemBuilder: (context, idx) {
+        final card = _cards[idx];
+        final animated = AdminAnimatedCard(
+          title: card.title,
+          subtitle: card.subtitle,
+          icon: card.icon,
+          color: card.color,
+          gradient: card.gradient,
+          compact: isCompact,
+          onTap: () => _handleCardTap(card.title),
+        );
+        if (isCompact) {
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: animated,
+            ),
+          );
+        }
+        return animated;
+      },
     );
   }
 
-  Widget _buildActionCard(_DashboardCard card, bool isMobile) {
-    return InkWell(
-      onTap: () => _handleCardTap(card.title),
-      borderRadius: BorderRadius.circular(43),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-        decoration: ShapeDecoration(
-          gradient: LinearGradient(
-            begin: const Alignment(-0.05, -0.07),
-            end: const Alignment(1.18, 1.28),
-            colors: card.gradient,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(43),
-            side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
+  /// Mobile top bar — now a proper elevated surface (matches the AppBar
+  /// treatment on the teacher dashboard) instead of floating bare text
+  /// over the page background.
+  Widget _buildMobileTopBar() {
+    return Material(
+      elevation: 1,
+      color: Colors.white,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 12, 12),
+          child: Row(
+            children: [
+              Builder(
+                builder: (ctx) => IconButton(
+                  icon: const Icon(
+                    Icons.menu_rounded,
+                    color: _AppColors.tealDark,
+                  ),
+                  onPressed: () => Scaffold.of(ctx).openDrawer(),
+                  tooltip: 'Menu',
+                ),
+              ),
+              const SizedBox(width: 4),
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [_AppColors.tealDark, _AppColors.teal],
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                padding: const EdgeInsets.all(8),
+                child: const Icon(
+                  Icons.admin_panel_settings_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome, $_username',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: _AppColors.textPrimary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Admin',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const OfflineIndicator(),
+              AdminHeaderActions(
+                onRefresh: () => _loadUserData(forceRefresh: true),
+              ),
+            ],
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
+      ),
+    );
+  }
+
+  Widget _buildStatsSection(bool isMobile) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = isMobile || constraints.maxWidth < 700;
+        if (constraints.maxWidth < 700) {
+          return Column(
+            children: [
+              _studentStatCard(isCompact: isCompact),
+              const SizedBox(height: 16),
+              _teacherStatCard(isCompact: isCompact),
+            ],
+          );
+        }
+        return Row(
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            Expanded(child: _studentStatCard(isCompact: isCompact)),
+            const SizedBox(width: 16),
+            Expanded(child: _teacherStatCard(isCompact: isCompact)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildStatsRow() => Row(
+    children: [
+      Expanded(child: _studentStatCard()),
+      const SizedBox(width: 24),
+      Expanded(child: _teacherStatCard()),
+    ],
+  );
+
+  Widget _studentStatCard({bool isCompact = false}) => _buildStatCard(
+    value: _studentCount.toString(),
+    label: 'Total Students',
+    iconColor: const Color(0xFF14DCCA),
+    gradientColors: [const Color(0xFF65E8E1), Colors.white],
+    borderColor: _AppColors.teal,
+    isCompact: isCompact,
+  );
+
+  Widget _teacherStatCard({bool isCompact = false}) => _buildStatCard(
+    value: _teacherCount.toString(),
+    label: 'Total Teachers',
+    iconColor: const Color(0xFF22C55E),
+    gradientColors: [const Color(0xFFA8E6A7), Colors.white],
+    borderColor: const Color(0xFF1EBA57),
+    isCompact: isCompact,
+  );
+
+  Widget _buildStatCard({
+    required String value,
+    required String label,
+    required Color iconColor,
+    required List<Color> gradientColors,
+    required Color borderColor,
+    bool isCompact = false,
+  }) {
+    return Container(
+      height: isCompact ? 100 : 108,
+      padding: EdgeInsets.symmetric(horizontal: isCompact ? 12 : 24),
+      decoration: ShapeDecoration(
+        gradient: LinearGradient(
+          begin: const Alignment(-0.13, 0),
+          end: const Alignment(1.12, 1),
+          colors: gradientColors,
+        ),
+        shape: RoundedRectangleBorder(
+          side: BorderSide(width: 2, color: borderColor),
+          borderRadius: BorderRadius.circular(23),
+        ),
+        shadows: [
+          BoxShadow(
+            color: borderColor.withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: isCompact ? 52 : 68,
+            height: isCompact ? 52 : 68,
+            decoration: BoxDecoration(color: iconColor, shape: BoxShape.circle),
+            padding: const EdgeInsets.all(10),
+            child: Icon(
+              Icons.bar_chart_rounded,
+              color: Colors.white,
+              size: isCompact ? 24 : 28,
+            ),
+          ),
+          SizedBox(width: isCompact ? 12 : 38),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 68,
-                  height: 68,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
-                    border: Border.all(
-                      color: card.color.withOpacity(0.70),
-                      width: 1.5,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: isCompact ? 28 : 40,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
                     ),
-                    shape: BoxShape.circle,
                   ),
-                  child: Icon(card.icon, color: card.color, size: 30),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        card.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 20,
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        card.subtitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 14,
-                          fontFamily: 'Inter',
-                        ),
-                      ),
-                    ],
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: _AppColors.textMuted,
+                    fontSize: isCompact ? 13 : 17,
+                    fontFamily: 'Inter',
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -303,7 +547,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             ),
             borderRadius: BorderRadius.circular(63.5),
           ),
-          child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 38),
+          child: const Icon(
+            Icons.admin_panel_settings_rounded,
+            color: Colors.white,
+            size: 38,
+          ),
         ),
         const SizedBox(width: 20),
         Expanded(
@@ -311,7 +559,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Welcome, $_username',
+                'Welcome, $_adminName',
                 style: const TextStyle(
                   color: _AppColors.tealDark,
                   fontSize: 38,
@@ -321,9 +569,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Admin Panel',
-                style: TextStyle(
+              Text(
+                '@$_username',
+                style: const TextStyle(
                   fontSize: 16,
                   color: _AppColors.textMuted,
                   fontFamily: 'Inter',
@@ -332,8 +580,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             ],
           ),
         ),
+        const OfflineIndicator(),
+        AdminHeaderActions(onRefresh: () => _loadUserData(forceRefresh: true)),
       ],
     );
   }
-
-  }
+}

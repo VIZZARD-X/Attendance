@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../services/class_service.dart';
 import '../../widgets/admin_web_layout.dart';
 import 'admin_class_detail_screen.dart';
+import 'widgets/admin_animated_card.dart';
+import 'widgets/admin_entrance.dart';
+import 'widgets/admin_header_actions.dart';
 
 abstract class _AppColors {
   static const tealDark = Color(0xFF007C91);
@@ -202,78 +205,93 @@ class _ManageClassesScreenState extends State<ManageClassesScreen> {
   Widget _buildMobileBody(bool isMobile) {
     final crossAxisCount = isMobile ? 1 : 2;
 
-    return SafeArea(
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Padding(
-          padding: EdgeInsets.all(isMobile ? 16 : 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeaderSection(isMobile),
-              const SizedBox(height: 16),
-              if (_teachers.isNotEmpty && !_isLoading) ...[
-                _buildTeacherFilter(isMobile),
-                const SizedBox(height: 20),
-              ],
-              _isLoading
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.only(top: 60),
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal),
-                        ),
-                      ),
-                    )
-                  : _errorMessage != null
+    return Stack(
+      children: [
+        SafeArea(
+          child: AdminEntrance(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Padding(
+                padding: EdgeInsets.all(isMobile ? 16 : 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeaderSection(isMobile),
+                    const SizedBox(height: 16),
+                    if (_teachers.isNotEmpty && !_isLoading) ...[
+                      _buildTeacherFilter(isMobile),
+                      const SizedBox(height: 20),
+                    ],
+                    _errorMessage != null
+                        ? _buildErrorState()
+                        : _selectedTeacher != null
+                            ? _buildTeacherClassesView()
+                            : _semesters.isEmpty
+                                ? _buildEmptyState()
+                                : _buildSemesterGrid(crossAxisCount, isMobile),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (_isLoading) _buildLoadingOverlay(),
+      ],
+    );
+  }
+
+  Widget _buildDesktopBody() {
+    return Stack(
+      children: [
+        AdminEntrance(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDesktopHeader(),
+                  const SizedBox(height: 20),
+                  if (_teachers.isNotEmpty && !_isLoading) ...[
+                    _buildTeacherFilter(false),
+                    const SizedBox(height: 24),
+                  ],
+                  _errorMessage != null
                       ? _buildErrorState()
                       : _selectedTeacher != null
                           ? _buildTeacherClassesView()
                           : _semesters.isEmpty
                               ? _buildEmptyState()
-                              : _buildSemesterGrid(crossAxisCount, isMobile),
-            ],
+                              : _buildSemesterGrid(3, false),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
+        if (_isLoading) _buildLoadingOverlay(),
+      ],
     );
   }
 
-  Widget _buildDesktopBody() {
-    return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(40, 20, 40, 40),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDesktopHeader(),
-            const SizedBox(height: 20),
-            if (_teachers.isNotEmpty && !_isLoading) ...[
-              _buildTeacherFilter(false),
-              const SizedBox(height: 24),
-            ],
-            _isLoading
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 60),
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal),
-                      ),
-                    ),
-                  )
-                : _errorMessage != null
-                    ? _buildErrorState()
-                    : _selectedTeacher != null
-                        ? _buildTeacherClassesView()
-                        : _semesters.isEmpty
-                            ? _buildEmptyState()
-                            : _buildSemesterGrid(3, false),
-          ],
+  Widget _buildLoadingOverlay() => Container(
+        color: Colors.black26,
+        child: const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading...'),
+                ],
+              ),
+            ),
+          ),
         ),
-      ),
-    );
-  }
+      );
 
   Widget _buildDesktopHeader() {
     return Row(
@@ -318,6 +336,7 @@ class _ManageClassesScreenState extends State<ManageClassesScreen> {
             ],
           ),
         ),
+        AdminHeaderActions(onRefresh: _loadSemesters, showLogout: false),
         IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
@@ -347,15 +366,16 @@ class _ManageClassesScreenState extends State<ManageClassesScreen> {
             ),
           ),
         ),
+        AdminHeaderActions(onRefresh: _loadSemesters, showLogout: false),
       ],
     );
   }
 
   Widget _buildSemesterGrid(int crossAxisCount, bool isMobile) {
-    final isCompact = crossAxisCount < 3;
-    final childAspectRatio = crossAxisCount == 1
-        ? 2.6
-        : (crossAxisCount == 2 ? 1.7 : 1.6);
+    final isCompact = isMobile || crossAxisCount == 2;
+    final childAspectRatio = isMobile
+        ? 0.96
+        : (crossAxisCount == 2 ? 1.22 : 1.6);
 
     return GridView.builder(
       itemCount: _semesters.length,
@@ -363,105 +383,47 @@ class _ManageClassesScreenState extends State<ManageClassesScreen> {
       shrinkWrap: true,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        mainAxisSpacing: isCompact ? 16 : 32,
-        crossAxisSpacing: isCompact ? 16 : 32,
+        mainAxisSpacing: isMobile ? 18 : 42,
+        crossAxisSpacing: isMobile ? 18 : 55,
         childAspectRatio: childAspectRatio,
       ),
-      itemBuilder: (context, idx) =>
-          _buildSemesterCard(_semesters[idx], isCompact),
-    );
-  }
-
-  Widget _buildSemesterCard(_SemesterCard semester, bool isCompact) {
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ManageSemesterClassesScreen(
-              semesterLabel: semester.semesterLabel,
-              semesterDisplay: semester.semesterDisplay,
-            ),
+      itemBuilder: (context, idx) {
+        final semester = _semesters[idx];
+        final animated = AdminAnimatedCard(
+          title: semester.semesterDisplay,
+          subtitle:
+              '${semester.classCount} class${semester.classCount == 1 ? '' : 'es'} '
+              '\u2022 ${semester.studentCount} students',
+          icon: Icons.class_rounded,
+          color: semester.color,
+          gradient: semester.gradient,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ManageSemesterClassesScreen(
+                  semesterLabel: semester.semesterLabel,
+                  semesterDisplay: semester.semesterDisplay,
+                ),
+              ),
+            );
+          },
+          trailing: Icon(
+            Icons.arrow_forward_ios_rounded,
+            color: semester.color,
+            size: 20,
           ),
         );
+        if (isCompact) {
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 340),
+              child: animated,
+            ),
+          );
+        }
+        return animated;
       },
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: isCompact ? 20 : 32,
-          vertical: isCompact ? 18 : 24,
-        ),
-        decoration: ShapeDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: semester.gradient,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-            side: const BorderSide(color: Color(0xFFE5E7EB), width: 1.5),
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: isCompact ? 52 : 68,
-              height: isCompact ? 52 : 68,
-              padding: EdgeInsets.all(isCompact ? 8 : 12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.25),
-                border: Border.all(
-                  color: semester.color.withOpacity(0.70),
-                  width: 1.5,
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.class_rounded,
-                color: semester.color,
-                size: isCompact ? 22 : 30,
-              ),
-            ),
-            SizedBox(width: isCompact ? 12 : 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    semester.semesterDisplay,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 18,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${semester.classCount} class${semester.classCount == 1 ? '' : 'es'} \u2022 ${semester.studentCount} students',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontSize: 13,
-                      fontFamily: 'Inter',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: semester.color,
-              size: isCompact ? 16 : 20,
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -720,7 +682,7 @@ class _ManageClassesScreenState extends State<ManageClassesScreen> {
             border: Border.all(color: Colors.grey.shade200),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -1165,7 +1127,7 @@ class _ManageSemesterClassesScreenState
             border: Border.all(color: Colors.grey.shade200),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),

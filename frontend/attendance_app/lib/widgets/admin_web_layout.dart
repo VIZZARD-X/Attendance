@@ -12,12 +12,14 @@ class AdminWebLayout extends StatefulWidget {
   final Widget mobileChild;
   final Widget desktopBody;
   final String currentRoute;
+  final bool showMobileAppBar;
 
   const AdminWebLayout({
     super.key,
     required this.mobileChild,
     required this.desktopBody,
     required this.currentRoute,
+    this.showMobileAppBar = true,
   });
 
   @override
@@ -268,16 +270,18 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: Builder(
-          builder: (ctx) => IconButton(
-            icon: const Icon(Icons.menu_rounded, color: _AppColors.tealDark),
-            onPressed: () => Scaffold.of(ctx).openDrawer(),
-          ),
-        ),
-      ),
+      appBar: widget.showMobileAppBar
+          ? AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: Builder(
+                builder: (ctx) => IconButton(
+                  icon: const Icon(Icons.menu_rounded, color: _AppColors.tealDark),
+                  onPressed: () => Scaffold.of(ctx).openDrawer(),
+                ),
+              ),
+            )
+          : null,
       drawer: _buildMobileDrawer(),
       body: widget.mobileChild,
     );

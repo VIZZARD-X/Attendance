@@ -6,8 +6,6 @@ import 'admin_class_detail_screen.dart';
 abstract class _AppColors {
   static const tealDark = Color(0xFF007C91);
   static const teal = Color(0xFF0097A7);
-  static const tealLight = Color(0xFF0288A3);
-  static const textPrimary = Color(0xFF1F2937);
   static const textMuted = Color(0xFF6B7280);
 }
 
@@ -23,9 +21,11 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isLoading = false;
+  bool _mobileSearchOpen = false;
   String? _errorMessage;
   List<Map<String, dynamic>> _teachers = [];
   final Set<int> _expandedTeacherIds = {};
+  final ScrollController _tableHScroll = ScrollController();
 
   List<Map<String, dynamic>> get _filteredTeachers {
     if (_searchQuery.isEmpty) return _teachers;
@@ -45,6 +45,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _tableHScroll.dispose();
     super.dispose();
   }
 
@@ -88,42 +89,180 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
     final screenW = MediaQuery.of(context).size.width;
     final isMobile = screenW < 600;
 
+    final Widget mainContent = Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_AppColors.tealDark, _AppColors.teal],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: SafeArea(
+        child: Column(
+          children: [
+            _buildModernAppBar(isMobile),
+            if (_mobileSearchOpen) _buildSearchBar(),
+            Expanded(
+              child: RefreshIndicator(
+                color: _AppColors.tealDark,
+                onRefresh: _loadTeachers,
+                child: _buildContent(isMobile),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
     return AdminWebLayout(
       currentRoute: 'Manage Teachers',
-      mobileChild: _buildMobileBody(isMobile),
-      desktopBody: _buildDesktopBody(),
+      showMobileAppBar: false,
+      mobileChild: mainContent,
+      desktopBody: mainContent,
     );
   }
 
-  Widget _buildMobileBody(bool isMobile) {
-    return SafeArea(
-      child: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal),
+  Widget _buildModernAppBar(bool isMobile) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 20,
+        vertical: isMobile ? 10 : 14,
+      ),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_AppColors.tealDark, _AppColors.teal],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black26,
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final searchWidth = isMobile
+              ? double.infinity
+              : (constraints.maxWidth * 0.4).clamp(240.0, 340.0);
+          return Row(
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isMobile)
+                Builder(
+                  builder: (context) => Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.menu_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      onPressed: () => Scaffold.of(context).openDrawer(),
+                      tooltip: 'Menu',
+                    ),
+                  ),
+                ),
+              if (isMobile) const SizedBox(width: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  tooltip: 'Back',
+                ),
               ),
-            )
-          : Column(
+            ],
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeaderSection(isMobile),
-                _buildMobileSearch(),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: RefreshIndicator(
-                    color: _AppColors.teal,
-                    onRefresh: _loadTeachers,
-                    child: _buildContent(isMobile),
+                Text(
+                  'Manage Teachers',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isMobile ? 18 : 22,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.6,
                   ),
                 ),
               ],
             ),
+          ),
+          if (!isMobile) ...[
+            const SizedBox(width: 16),
+            _buildSearchField(width: searchWidth),
+            const SizedBox(width: 8),
+          ] else ...[
+            const SizedBox(width: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                icon: Icon(
+                  _mobileSearchOpen
+                      ? Icons.close_rounded
+                      : Icons.search_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
+                onPressed: () =>
+                    setState(() => _mobileSearchOpen = !_mobileSearchOpen),
+                tooltip: _mobileSearchOpen ? 'Close search' : 'Search',
+              ),
+            ),
+          ],
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: IconButton(
+              icon: const Icon(
+                Icons.person_add_alt_1_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+              onPressed: _showAddTeacherDialog,
+              tooltip: 'Add Teacher',
+            ),
+          ),
+        ],
+      );
+        },
+      ),
     );
   }
 
-  Widget _buildMobileSearch() {
+  Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: _buildSearchField(autofocus: true),
+    );
+  }
+
+  Widget _buildSearchField({double? width, bool autofocus = false}) {
+    return SizedBox(
+      width: width ?? double.infinity,
       child: TextField(
+        autofocus: autofocus,
         controller: _searchController,
         onChanged: (v) => setState(() => _searchQuery = v),
         decoration: InputDecoration(
@@ -150,156 +289,73 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
     );
   }
 
-  Widget _buildDesktopBody() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(38, 20, 38, 38),
-      child: Column(
-        children: [
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: ShapeDecoration(
-                  gradient: const LinearGradient(
-                    colors: [_AppColors.tealDark, _AppColors.teal],
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                ),
-                child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Text(
-                  'Manage Teachers',
-                  style: TextStyle(
-                    color: _AppColors.tealDark,
-                    fontSize: 36,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.person_add_alt_1_rounded, color: _AppColors.tealDark),
-                onPressed: _showAddTeacherDialog,
-                tooltip: 'Add Teacher',
-              ),
-              IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
-                onPressed: () => Navigator.pop(context),
-                tooltip: 'Back',
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(_AppColors.teal),
-                    ),
-                  )
-                : _buildContent(false),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderSection(bool isMobile) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(isMobile ? 16 : 24, isMobile ? 6 : 12, isMobile ? 16 : 24, 0),
-      child: Row(
-        children: [
-          if (isMobile)
-            IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: _AppColors.textPrimary),
-              onPressed: () => Navigator.pop(context),
-            ),
-          const Icon(Icons.person_rounded, color: _AppColors.tealDark, size: 32),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Manage Teachers',
-                  style: TextStyle(
-                    fontSize: isMobile ? 22 : 28,
-                    fontWeight: FontWeight.w700,
-                    color: _AppColors.textPrimary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_add_alt_1_rounded, color: _AppColors.tealDark),
-            onPressed: _showAddTeacherDialog,
-            tooltip: 'Add Teacher',
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Central place that decides between the error state, empty state,
-  /// and the actual teacher list/table.
+  /// Central place that decides between the loading state, error state,
+  /// empty state, and the actual teacher list/table.
   Widget _buildContent(bool isMobile) {
+    if (_isLoading) {
+      return _buildScrollableState(_buildLoadingState());
+    }
+
     if (_errorMessage != null) {
-      return _buildErrorState();
+      return _buildScrollableState(_buildErrorState());
     }
 
     final filtered = _filteredTeachers;
 
     if (filtered.isEmpty) {
-      return _buildEmptyState();
+      return _buildScrollableState(_buildEmptyState());
     }
 
     if (isMobile) {
       return ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        physics: const BouncingScrollPhysics(),
         itemCount: filtered.length,
         itemBuilder: (context, index) =>
             _buildTeacherCard(filtered[index], index + 1),
       );
     }
 
-    return _buildTable(filtered);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(38, 4, 38, 26),
+      child: _buildTable(filtered),
+    );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildScrollableState(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: constraints.maxHeight,
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLoadingState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline_rounded, size: 72, color: Colors.red.shade300),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              _errorMessage!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 15,
-                color: _AppColors.textMuted,
-                fontWeight: FontWeight.w500,
-              ),
+          const SizedBox(
+            width: 60,
+            height: 60,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
             ),
           ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: _loadTeachers,
-            icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: const Text('Try again'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _AppColors.tealDark,
-              foregroundColor: Colors.white,
+          const SizedBox(height: 24),
+          Text(
+            'Loading teachers...',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.9),
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -307,32 +363,131 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildErrorState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.person_off_outlined, size: 80, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
-          Text(
-            _searchQuery.isNotEmpty ? 'No teachers match your search' : 'No teachers found',
-            style: const TextStyle(
-              fontSize: 18,
-              color: _AppColors.textMuted,
-              fontWeight: FontWeight.w600,
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                size: 64,
+                color: Colors.white,
+              ),
             ),
-          ),
-          if (_searchQuery.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () {
-                _searchController.clear();
-                setState(() => _searchQuery = '');
-              },
-              child: const Text('Clear search'),
+            const SizedBox(height: 24),
+            const Text(
+              'Oops!',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 16,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: _loadTeachers,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Try Again'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: _AppColors.tealDark,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 8,
+              ),
             ),
           ],
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    final isSearchActive = _searchQuery.isNotEmpty;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.person_off_rounded,
+                size: 80,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              isSearchActive ? 'No teachers match your search' : 'No Teachers Found',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              isSearchActive
+                  ? 'Try a different name or email'
+                  : 'No teachers have been added yet',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 16,
+                height: 1.5,
+              ),
+            ),
+            if (isSearchActive) ...[
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Clear search'),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -340,10 +495,12 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
   Widget _buildTable(List<Map<String, dynamic>> filtered) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isTablet = constraints.maxWidth < 1100;
-        final tableMinWidth = isTablet ? 860.0 : 1040.0;
+        final rowWidth = constraints.maxWidth >= 1040
+            ? constraints.maxWidth
+            : 1040.0;
 
-        final table = Container(
+        return Container(
+          clipBehavior: Clip.antiAlias,
           decoration: ShapeDecoration(
             color: Colors.white,
             shape: RoundedRectangleBorder(
@@ -352,82 +509,33 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
           ),
           child: Column(
             children: [
-              _buildTableTopBar(isTablet),
-              _buildTableHeader(),
+              SingleChildScrollView(
+                controller: _tableHScroll,
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: rowWidth,
+                  child: _buildTableHeader(),
+                ),
+              ),
               Expanded(
-                child: ListView.builder(
-                  padding: EdgeInsets.zero,
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) =>
-                      _buildTableRow(filtered[index], index + 1, isTablet),
+                child: SingleChildScrollView(
+                  controller: _tableHScroll,
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: rowWidth,
+                    child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) =>
+                          _buildTableRow(filtered[index], index + 1),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
         );
-
-        if (isTablet) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: tableMinWidth),
-              child: table,
-            ),
-          );
-        }
-
-        return table;
       },
-    );
-  }
-
-  Widget _buildTableTopBar(bool isCompact) {
-    return Container(
-      height: isCompact ? 72 : 92,
-      decoration: const ShapeDecoration(
-        gradient: LinearGradient(
-          colors: [_AppColors.tealDark, _AppColors.teal],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(30),
-            topRight: Radius.circular(30),
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          const Spacer(),
-          Padding(
-            padding: EdgeInsets.only(right: isCompact ? 16 : 24),
-            child: SizedBox(
-              width: isCompact ? 220 : 320,
-              height: isCompact ? 38 : 42,
-              child: TextField(
-                controller: _searchController,
-                onChanged: (v) => setState(() => _searchQuery = v),
-                decoration: InputDecoration(
-                  hintText: 'Search by name or email',
-                  hintStyle: TextStyle(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    fontSize: isCompact ? 14 : 18,
-                  ),
-                  prefixIcon: const Icon(Icons.search, color: _AppColors.tealLight, size: 22),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -486,7 +594,7 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
     );
   }
 
-  Widget _buildTableRow(Map<String, dynamic> teacher, int displayIndex, bool isCompact) {
+  Widget _buildTableRow(Map<String, dynamic> teacher, int displayIndex) {
     final classes = List<Map<String, dynamic>>.from(teacher['classes'] ?? []);
     final teacherId = _teacherIdOf(teacher);
     final hasClasses = classes.isNotEmpty;
@@ -717,15 +825,6 @@ class _ManageTeachersScreenState extends State<ManageTeachersScreen> {
                           style: const TextStyle(
                             fontSize: 14,
                             color: _AppColors.textMuted,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          '${teacher['class_count'] ?? 0} classes',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: _AppColors.tealDark,
-                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
@@ -1364,89 +1463,248 @@ class _ClassListSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Classes:',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: _AppColors.tealDark,
-          ),
-        ),
-        SizedBox(height: dense ? 6 : 8),
-        if (classes.isEmpty)
-          Text(
-            'No classes assigned',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-          )
-        else
-          ...classes.map((cls) => Padding(
-            padding: EdgeInsets.only(bottom: dense ? 4 : 6),
-            child: InkWell(
-              onTap: () => onTapClass(cls),
-              borderRadius: BorderRadius.circular(dense ? 8 : 10),
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: dense ? 4 : 8,
-                  vertical: dense ? 4 : 6,
+    return Container(
+      width: double.infinity,
+      margin: EdgeInsets.only(top: dense ? 4 : 8),
+      padding: EdgeInsets.all(dense ? 10 : 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(dense ? 12 : 16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: dense
+            ? null
+            : [
+                BoxShadow(
+                  color: const Color(0xFF007C91).withOpacity(0.07),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
+              ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Classes',
+                style: TextStyle(
+                  fontSize: dense ? 12 : 14,
+                  fontWeight: FontWeight.w700,
+                  color: _AppColors.tealDark,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(dense ? 8 : 10),
+                  color: _AppColors.tealDark.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                child: Row(
+                child: Text(
+                  '${classes.length}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: _AppColors.tealDark,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (classes.isEmpty)
+            Row(
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 16,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'No classes assigned',
+                  style: TextStyle(
+                    fontSize: dense ? 12 : 13,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+              ],
+            )
+          else
+            ...classes.map((cls) => Padding(
+              padding: EdgeInsets.only(bottom: dense ? 6 : 8),
+              child: _ClassTile(
+                cls: cls,
+                dense: dense,
+                onTap: () => onTapClass(cls),
+                onReassign: () => onReassignClass(cls),
+              ),
+            )),
+        ],
+      ),
+    );
+  }
+}
+
+/// One cascading tile for a teacher's class inside [_ClassListSection].
+class _ClassTile extends StatelessWidget {
+  const _ClassTile({
+    required this.cls,
+    required this.dense,
+    required this.onTap,
+    required this.onReassign,
+  });
+
+  final Map<String, dynamic> cls;
+  final bool dense;
+  final VoidCallback onTap;
+  final VoidCallback onReassign;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFF8FBFB),
+      borderRadius: BorderRadius.circular(dense ? 10 : 12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(dense ? 10 : 12),
+        child: Container(
+          padding: EdgeInsets.all(dense ? 8 : 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(dense ? 10 : 12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: dense ? 34 : 42,
+                height: dense ? 34 : 42,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [_AppColors.tealDark, _AppColors.teal],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(dense ? 9 : 12),
+                ),
+                child: Icon(
+                  Icons.class_rounded,
+                  color: Colors.white,
+                  size: dense ? 16 : 22,
+                ),
+              ),
+              SizedBox(width: dense ? 10 : 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: dense ? 8 : 10,
-                        vertical: dense ? 2 : 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _AppColors.teal.withValues(alpha: dense ? 0.08 : 0.08),
-                        borderRadius: BorderRadius.circular(dense ? 6 : 8),
-                      ),
-                      child: Text(
-                        cls['class_code'] ?? '',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _AppColors.tealDark,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: dense ? 8 : 10),
-                    Expanded(
-                      child: Text(
-                        cls['class_name'] ?? '',
-                        style: TextStyle(fontSize: dense ? 13 : 14),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
                     Text(
-                      '${cls['student_count'] ?? 0} students',
+                      cls['class_name'] ?? '',
                       style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                        fontSize: dense ? 13 : 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade800,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(width: 4),
-                    IconButton(
-                      icon: const Icon(Icons.swap_horiz, size: 18, color: _AppColors.tealDark),
-                      onPressed: () => onReassignClass(cls),
-                      tooltip: 'Reassign teacher',
-                      visualDensity: VisualDensity.compact,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        _ClassMetaChip(
+                          label: cls['class_code'] ?? '',
+                          dense: dense,
+                        ),
+                        _ClassMetaChip(
+                          label: '${cls['student_count'] ?? 0} students',
+                          dense: dense,
+                        ),
+                      ],
                     ),
-                    Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
                   ],
                 ),
               ),
-            ),
-          )),
-      ],
+              SizedBox(width: dense ? 8 : 10),
+              if (dense)
+                IconButton(
+                  icon: const Icon(
+                    Icons.swap_horiz,
+                    size: 18,
+                    color: _AppColors.tealDark,
+                  ),
+                  onPressed: onReassign,
+                  tooltip: 'Reassign teacher',
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                )
+              else
+                OutlinedButton.icon(
+                  onPressed: onReassign,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _AppColors.tealDark,
+                    side: BorderSide(color: _AppColors.tealDark.withOpacity(0.4)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    minimumSize: const Size(0, 32),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  icon: const Icon(Icons.swap_horiz, size: 16),
+                  label: const Text(
+                    'Reassign',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              SizedBox(width: dense ? 4 : 6),
+              Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: Colors.grey.shade400,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Small teal pill used for class metadata inside [_ClassTile].
+class _ClassMetaChip extends StatelessWidget {
+  const _ClassMetaChip({required this.label, required this.dense});
+
+  final String label;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: dense ? 6 : 8,
+        vertical: dense ? 2 : 3,
+      ),
+      decoration: BoxDecoration(
+        color: _AppColors.tealDark.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: dense ? 11 : 12,
+          fontWeight: FontWeight.w600,
+          color: _AppColors.tealDark,
+        ),
+      ),
     );
   }
 }
