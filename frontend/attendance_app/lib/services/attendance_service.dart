@@ -204,6 +204,8 @@ class AttendanceService {
     required String imagePath,
     required double focalDistance,
     bool flashFired = false,
+    int? bleHopCount,
+    int? bleRssi,
   }) async {
     try {
       final token = await _getToken();
@@ -213,6 +215,8 @@ class AttendanceService {
         'focal_distance': focalDistance,
         'flash_fired': flashFired,
         'student_image': await MultipartFile.fromFile(imagePath),
+        if (bleHopCount != null) 'ble_hop_count': bleHopCount,
+        if (bleRssi != null) 'ble_rssi': bleRssi,
       });
 
       final response = await _dio.post(
@@ -247,6 +251,8 @@ class AttendanceService {
   Future<Map<String, dynamic>> syncOfflinePattern({
     required String imagePath,
     required String timestamp,
+    int? bleHopCount,
+    int? bleRssi,
   }) async {
     try {
       final token = await _getToken();
@@ -254,6 +260,8 @@ class AttendanceService {
       final formData = FormData.fromMap({
         'timestamp': timestamp,
         'student_image': await MultipartFile.fromFile(imagePath),
+        if (bleHopCount != null) 'ble_hop_count': bleHopCount,
+        if (bleRssi != null) 'ble_rssi': bleRssi,
       });
 
       final response = await _dio.post(

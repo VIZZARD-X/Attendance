@@ -98,6 +98,59 @@ class BleMeshService {
     return completer.future;
   }
 
+  /// Scans for ANY mesh signal, extracts the session ID, and relays it (Hop + 1).
+  /// Used for offline Pattern scanning where the student doesn't know the session_id beforehand.
+  Future<Map<String, dynamic>> startStudentScanAnySession({Duration timeout = const Duration(seconds: 15)}) async {
+    await stopAll();
+    
+    final completer = Completer<Map<String, dynamic>>();
+    _isScanning = true;
+    
+    await FlutterBluePlus.startScan(timeout: timeout);
+    
+    _scanSubscription = FlutterBluePlus.scanResults.listen((results) async {
+      for (ScanResult r in results) {
+        final mData = r.advertisementData.manufacturerData;
+        if (mData.containsKey(customManufacturerId)) {
+          final data = mData[customManufacturerId]!;
+          if (data.length >= 17) {
+            final rxSessionBytes = data.sublist(0, 16);
+            final rxHopCount = data[16];
+            final rssi = r.rssi;
+            final sessionId = _bytesToUuid(rxSessionBytes);
+            
+            print("Match found (ANY)! Rx Hop: $rxHopCount, RSSI: $rssi, Session: $sessionId");
+            
+            await FlutterBluePlus.stopScan();
+            _scanSubscription?.cancel();
+            
+            final newHopCount = rxHopCount + 1;
+            _startStudentRelay(sessionId, newHopCount);
+            
+            if (!completer.isCompleted) {
+              completer.complete({
+                'session_id': sessionId,
+                'hop_count': rxHopCount,
+                'rssi': rssi,
+              });
+            }
+            break;
+          }
+        }
+      }
+    });
+    
+    Future.delayed(timeout, () {
+      if (!completer.isCompleted) {
+        FlutterBluePlus.stopScan();
+        _scanSubscription?.cancel();
+        completer.completeError("BLE Verification timeout: Could not find any teacher/student signal in range.");
+      }
+    });
+
+    return completer.future;
+  }
+
   /// Starts broadcasting as a Student relaying the signal
   Future<void> _startStudentRelay(String sessionId, int myHopCount) async {
     final payload = _createPayload(sessionId, myHopCount);
@@ -146,6 +199,13 @@ class BleMeshService {
       bytes.add(int.parse(clean.substring(i, i + 2), radix: 16));
     }
     return bytes;
+  }
+
+  /// Helper: Convert 16 bytes to UUID string
+  String _bytesToUuid(List<int> bytes) {
+    if (bytes.length != 16) return '';
+    final hexString = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join('');
+    return '${hexString.substring(0, 8)}-${hexString.substring(8, 12)}-${hexString.substring(12, 16)}-${hexString.substring(16, 20)}-${hexString.substring(20)}';
   }
   
   /// Helper: Compare two lists

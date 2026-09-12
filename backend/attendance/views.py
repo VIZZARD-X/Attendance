@@ -884,10 +884,39 @@ def verify_image(request):
         if not is_valid_distance:
             return Response({'error': distance_result}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Extract BLE Mesh Proofs
+        ble_hop_count = request.data.get('ble_hop_count')
+        ble_rssi = request.data.get('ble_rssi')
+        
+        verification_reasons_dict = {}
+        if ble_hop_count is not None and ble_rssi is not None:
+            verification_reasons_dict['ble_verified'] = True
+            try:
+                verification_reasons_dict['ble_hop_count'] = int(ble_hop_count)
+                verification_reasons_dict['ble_rssi'] = int(float(ble_rssi))
+            except (ValueError, TypeError):
+                pass
+        else:
+            return Response({
+                'error': 'Proxy attendance detected: BLE verification missing. Ensure Bluetooth is on and you are near the teacher.',
+                'status': 'proxy_detected'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         matched, final_score, reasons = verify_offline_code(
             session.pattern_code, session.reference_image, student_image, flash_fired
         )
         
+        if matched:
+            verification_reasons_dict['ai_verified'] = True
+            verification_reasons_dict['ai_score'] = final_score
+        
+        verification_reasons_dict['reasons'] = reasons
+
+        # Penalize score slightly for higher hop counts (further from teacher)
+        if 'ble_hop_count' in verification_reasons_dict:
+            score_penalty = verification_reasons_dict['ble_hop_count'] * 0.05
+            final_score = max(0.0, final_score - score_penalty)
+
         status_val = 'present' if matched else 'pending_review'
 
         record = AttendanceRecord.objects.create(
@@ -895,7 +924,7 @@ def verify_image(request):
             student=user,
             status=status_val,
             verification_score=final_score,
-            verification_reasons=json.dumps(reasons)
+            verification_reasons=json.dumps(verification_reasons_dict)
         )
 
         if not matched:
@@ -1113,6 +1142,24 @@ def sync_offline_pattern(request):
             else:
                 return Response({'error': 'Attendance already marked', 'marked_at': existing_record.marked_at, 'status': existing_record.status}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Extract BLE Mesh Proofs
+        ble_hop_count = request.data.get('ble_hop_count')
+        ble_rssi = request.data.get('ble_rssi')
+        
+        verification_reasons_dict = {}
+        if ble_hop_count is not None and ble_rssi is not None:
+            verification_reasons_dict['ble_verified'] = True
+            try:
+                verification_reasons_dict['ble_hop_count'] = int(ble_hop_count)
+                verification_reasons_dict['ble_rssi'] = int(float(ble_rssi))
+            except (ValueError, TypeError):
+                pass
+        else:
+            return Response({
+                'error': 'Proxy attendance detected: BLE verification missing. Ensure Bluetooth is on and you are near the teacher.',
+                'status': 'proxy_detected'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         from attendance.verification import verify_offline_code
         
         # Focal distance not recorded offline, pass default or assume None
@@ -1120,6 +1167,17 @@ def sync_offline_pattern(request):
             session.pattern_code, session.reference_image, student_image, False
         )
         
+        if matched:
+            verification_reasons_dict['ai_verified'] = True
+            verification_reasons_dict['ai_score'] = final_score
+        
+        verification_reasons_dict['reasons'] = reasons
+
+        # Penalize score slightly for higher hop counts (further from teacher)
+        if 'ble_hop_count' in verification_reasons_dict:
+            score_penalty = verification_reasons_dict['ble_hop_count'] * 0.05
+            final_score = max(0.0, final_score - score_penalty)
+
         status_val = 'present' if matched else 'pending_review'
 
         record = AttendanceRecord.objects.create(
@@ -1127,7 +1185,7 @@ def sync_offline_pattern(request):
             student=user,
             status=status_val,
             verification_score=final_score,
-            verification_reasons=json.dumps(reasons)
+            verification_reasons=json.dumps(verification_reasons_dict)
         )
 
         if scan_time:

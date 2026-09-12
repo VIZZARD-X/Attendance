@@ -365,9 +365,75 @@ class _QRScannerScreenState extends State<QRScannerScreen>
           connectivityResults.isEmpty ||
           connectivityResults.contains(ConnectivityResult.none);
 
+      // Fetch active sessions if online
+      String? sessionId;
+      if (!isOffline) {
+        List<Map<String, dynamic>> sessions = [];
+        try {
+          sessions = await _sessionService.getStudentActiveSessions();
+        } catch (e) {
+          _showError('Network/API Error: $e');
+          setState(() => isProcessing = false);
+          await _cameraController!.resumePreview();
+          return;
+        }
+
+        final patternSessions = sessions
+            .where((s) => s['class_type'] == 'pattern')
+            .toList();
+
+        if (patternSessions.isEmpty) {
+          _showError(
+            'No active pattern session found. Ask your teacher to start an pattern session.',
+          );
+          setState(() => isProcessing = false);
+          await _cameraController!.resumePreview();
+          return;
+        }
+
+        final session = patternSessions.first;
+
+        // Check if teacher has uploaded the reference image yet
+        if (session['has_reference_image'] == false) {
+          _showError(
+            'Teacher has not uploaded the board photo yet. Please wait and try again.',
+          );
+          setState(() => isProcessing = false);
+          await _cameraController!.resumePreview();
+          return;
+        }
+
+        sessionId = session['session_id'].toString();
+      }
+
+      // BLE MESH VERIFICATION (Enforced for Pattern mode too)
+      int bleHopCount;
+      int bleRssi;
+      
+      try {
+        _showBleVerificationDialog();
+        if (isOffline) {
+           final bleResult = await BleMeshService().startStudentScanAnySession(timeout: const Duration(seconds: 15));
+           bleHopCount = bleResult['hop_count'];
+           bleRssi = bleResult['rssi'];
+        } else {
+           final bleResult = await BleMeshService().startStudentScanAndRelay(sessionId!, timeout: const Duration(seconds: 15));
+           bleHopCount = bleResult['hop_count'];
+           bleRssi = bleResult['rssi'];
+        }
+        Navigator.of(context, rootNavigator: true).pop();
+      } catch (e) {
+        print("BLE mesh verification failed for pattern: $e");
+        Navigator.of(context, rootNavigator: true).pop();
+        _showError('BLE Verification failed. Ensure Bluetooth is on and you are near the teacher.');
+        setState(() => isProcessing = false);
+        await _cameraController!.resumePreview();
+        return;
+      }
+
       if (isOffline) {
         final timestamp = DateTime.now().toUtc().toIso8601String();
-        await SyncService().enqueuePatternScan(imagePath, timestamp);
+        await SyncService().enqueuePatternScan(imagePath, timestamp, bleHopCount: bleHopCount, bleRssi: bleRssi);
         if (mounted) {
           setState(() => hasScanned = true);
           _showSuccessDialog(
@@ -377,49 +443,12 @@ class _QRScannerScreenState extends State<QRScannerScreen>
         return;
       }
 
-      // Fetch active sessions
-      List<Map<String, dynamic>> sessions = [];
-      try {
-        sessions = await _sessionService.getStudentActiveSessions();
-      } catch (e) {
-        _showError('Network/API Error: $e');
-        setState(() => isProcessing = false);
-        await _cameraController!.resumePreview();
-        return;
-      }
-
-      final patternSessions = sessions
-          .where((s) => s['class_type'] == 'pattern')
-          .toList();
-
-      if (patternSessions.isEmpty) {
-        _showError(
-          'No active pattern session found. Ask your teacher to start an pattern session.',
-        );
-        setState(() => isProcessing = false);
-        await _cameraController!.resumePreview();
-        return;
-      }
-
-      final session = patternSessions.first;
-
-      // Check if teacher has uploaded the reference image yet
-      // has_reference_image is null on older backends - only block if explicitly false
-      if (session['has_reference_image'] == false) {
-        _showError(
-          'Teacher has not uploaded the board photo yet. Please wait and try again.',
-        );
-        setState(() => isProcessing = false);
-        await _cameraController!.resumePreview();
-        return;
-      }
-
-      final String sessionId = session['session_id'].toString();
-
       final result = await _attendanceService.verifyImage(
-        sessionId: sessionId,
+        sessionId: sessionId!,
         imagePath: imagePath,
         focalDistance: 2.0,
+        bleHopCount: bleHopCount,
+        bleRssi: bleRssi,
       );
 
       if (mounted) {
