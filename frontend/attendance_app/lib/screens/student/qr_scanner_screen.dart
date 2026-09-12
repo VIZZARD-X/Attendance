@@ -272,9 +272,30 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       final isOfflineSession = data['is_offline'] == true;
       final isOffline = isNetworkOffline || isOfflineSession;
 
+      int bleHopCount;
+      int bleRssi;
+      try {
+        // STRICT BLE ENFORCEMENT: Verify presence via BLE Mesh FIRST
+        _showBleVerificationDialog();
+        final bleResult = await BleMeshService().startStudentScanAndRelay(
+            sessionId,
+            timeout: const Duration(seconds: 15));
+        bleHopCount = bleResult['hop_count'];
+        bleRssi = bleResult['rssi'];
+        // pop the verifying dialog
+        Navigator.of(context, rootNavigator: true).pop();
+      } catch (e) {
+        print("BLE mesh verification failed: $e");
+        // Pop the verifying dialog
+        Navigator.of(context, rootNavigator: true).pop();
+        _showError('BLE Verification failed. Ensure Bluetooth is on and you are near the teacher.');
+        setState(() => isProcessing = false);
+        return;
+      }
+
       if (isOffline) {
         final timestamp = DateTime.now().toUtc().toIso8601String();
-        await SyncService().enqueueQRScan(sessionId, timestamp);
+        await SyncService().enqueueQRScan(sessionId, timestamp, bleHopCount: bleHopCount, bleRssi: bleRssi);
 
         setState(() {
           hasScanned = true;
@@ -285,24 +306,6 @@ class _QRScannerScreenState extends State<QRScannerScreen>
           'Offline Mode: QR scan saved locally. It will sync automatically when internet is restored.',
         );
         return;
-      }
-
-      int? bleHopCount;
-      int? bleRssi;
-      try {
-        // Attempt to verify presence via BLE Mesh
-        _showBleVerificationDialog();
-        final bleResult = await BleMeshService().startStudentScanAndRelay(
-            sessionId,
-            timeout: const Duration(seconds: 15));
-        bleHopCount = bleResult['hop_count'];
-        bleRssi = bleResult['rssi'];
-        // pop the verifying dialog if we showed it
-        Navigator.of(context, rootNavigator: true).pop();
-      } catch (e) {
-        print("BLE mesh verification failed: $e");
-        // Pop the verifying dialog if we showed it
-        Navigator.of(context, rootNavigator: true).pop();
       }
 
       final result = await _attendanceService.markAttendance(

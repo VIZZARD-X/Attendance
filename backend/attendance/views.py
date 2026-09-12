@@ -708,20 +708,26 @@ def mark_attendance(request, session_id):
     verification_reasons_dict = {}
     verification_score = 1.0 # Default score
     
-    if ble_hop_count is not None and ble_rssi is not None:
-        verification_reasons_dict['ble_verified'] = True
-        try:
-            verification_reasons_dict['ble_hop_count'] = int(ble_hop_count)
-            verification_reasons_dict['ble_rssi'] = int(float(ble_rssi))
-            
-            # Penalize score slightly for higher hop counts (further from teacher)
-            score_penalty = verification_reasons_dict['ble_hop_count'] * 0.05
-            verification_score = max(0.0, 1.0 - score_penalty)
-        except (ValueError, TypeError):
-            pass
+    if session.class_type == 'qr':
+        if ble_hop_count is not None and ble_rssi is not None:
+            verification_reasons_dict['ble_verified'] = True
+            try:
+                verification_reasons_dict['ble_hop_count'] = int(ble_hop_count)
+                verification_reasons_dict['ble_rssi'] = int(float(ble_rssi))
+                
+                # Penalize score slightly for higher hop counts (further from teacher)
+                score_penalty = verification_reasons_dict['ble_hop_count'] * 0.05
+                verification_score = max(0.0, 1.0 - score_penalty)
+            except (ValueError, TypeError):
+                pass
+        else:
+            return Response({
+                'error': 'Proxy attendance detected: BLE verification missing. Ensure Bluetooth is on and you are near the teacher.',
+                'status': 'proxy_detected'
+            }, status=status.HTTP_400_BAD_REQUEST)
     else:
-        verification_reasons_dict['ble_verified'] = False
-        verification_score = 0.5 # Missing BLE proof lowers confidence
+        # Pattern mode or other modes might not require BLE strictly yet
+        pass
 
     # Mark attendance
     record = AttendanceRecord.objects.create(
