@@ -6,6 +6,7 @@ import '../screens/teacher/session_create_screen.dart';
 import '../screens/teacher/teacher_attendance_history_screen.dart';
 import '../screens/teacher/teacher_profile_screen.dart';
 import '../screens/teacher/teacher_analytics_screen.dart';
+import '../screens/common/ble_test_screen.dart';
 import '../services/auth_service.dart';
 import '../services/class_service.dart';
 
@@ -141,6 +142,9 @@ class _TeacherDrawerState extends State<TeacherDrawer> {
       case 'Profile':
         nextScreen = const TeacherProfileScreen();
         break;
+      case 'BLE Test':
+        nextScreen = const BleTestScreen();
+        break;
     }
 
     if (nextScreen != null) {
@@ -160,6 +164,7 @@ class _TeacherDrawerState extends State<TeacherDrawer> {
       {'title': 'Create Session', 'icon': Icons.timer},
       {'title': 'Attendance History', 'icon': Icons.history},
       {'title': 'Profile', 'icon': Icons.person},
+      {'title': 'BLE Test', 'icon': Icons.bluetooth_audio},
     ];
 
     return Drawer(
