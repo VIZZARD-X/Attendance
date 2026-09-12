@@ -1,13 +1,14 @@
 import 'dart:async';
+import 'dart:js_interop';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:web/web.dart' as web;
 
 import '../../../services/bulk_students_service.dart';
 import '../../../services/class_service.dart';
 import 'dialog_colors.dart';
-import 'web_helpers.dart' if (dart.library.js_interop) 'web_helpers_web.dart';
 
 enum _BulkPhase { setup, review }
 
@@ -402,7 +403,13 @@ class _BulkStudentsTabState extends State<BulkStudentsTab> {
       final data = await rootBundle.load('assets/templates/student_add_template.xlsx');
       final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
       if (kIsWeb) {
-        downloadExcelWeb(bytes, 'student_add_template.xlsx');
+        final blob = web.Blob([bytes.toJS].toJS);
+        final url = web.URL.createObjectURL(blob);
+        final anchor = web.HTMLAnchorElement()
+          ..href = url
+          ..download = 'student_add_template.xlsx';
+        anchor.click();
+        web.URL.revokeObjectURL(url);
       } else {
         await FilePicker.platform.saveFile(
           fileName: 'student_add_template.xlsx',
@@ -431,12 +438,36 @@ class _BulkStudentsTabState extends State<BulkStudentsTab> {
 
   Future<void> _pickFile() async {
     if (kIsWeb) {
+      final input = web.HTMLInputElement()
+        ..type = 'file'
+        ..accept = '.xlsx'
+        ..style.display = 'none';
+      web.document.body?.append(input);
+      final picked = Completer<web.File?>();
+      final cancelSub =
+          web.EventStreamProviders.focusEvent.forTarget(web.window).listen((_) {
+        Future<void>.delayed(const Duration(milliseconds: 500)).then((_) {
+          if (!picked.isCompleted) picked.complete(null);
+        });
+      });
+      input.onChange.first.then((_) => picked.complete(input.files?.item(0)));
+      input.click();
+      web.File? file;
       try {
-        final result = await pickExcelWeb();
-        if (result == null || !mounted) return;
+        file = await picked.future;
+      } finally {
+        await cancelSub.cancel();
+        input.remove();
+      }
+      if (file == null || !mounted) return;
+      final selected = file;
+      try {
+        final buffer = await selected.arrayBuffer().toDart;
+        final bytes = buffer.toDart.asUint8List();
+        if (!mounted) return;
         setState(() {
-          _fileName = result['name'] as String;
-          _fileBytes = result['bytes'] as Uint8List;
+          _fileName = selected.name;
+          _fileBytes = bytes;
           _batchError = null;
         });
       } catch (_) {
