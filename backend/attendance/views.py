@@ -200,11 +200,20 @@ def get_class_students(request, class_id):
     
     try:
         class_obj = Class.objects.get(id=class_id, teacher=user)
+        # test query to see if student_profile is missing
+        list(StudentProfile.objects.all()[:1])
     except Class.DoesNotExist:
         return Response(
             {'error': 'Class not found'},
             status=status.HTTP_404_NOT_FOUND
         )
+    except Exception as e:
+        # If SQLite says no such column, force a migration!
+        from django.core.management import call_command
+        try:
+            call_command('migrate', interactive=False)
+        except Exception as migrate_e:
+            print("Migrate failed:", migrate_e)
     
     # Get all enrollments with student profiles
     enrollments = Enrollment.objects.filter(
@@ -1425,9 +1434,9 @@ def check_student_by_email(request):
         user = User.objects.get(email=email, role='student')
         
         # Try to get student profile
-        if hasattr(user, 'student_profile'):
+        try:
             profile = user.student_profile
-        else:
+        except Exception:
             profile = None
         
         return Response({

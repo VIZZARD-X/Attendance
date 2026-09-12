@@ -263,7 +263,7 @@ class ClassService {
       return [];
     } catch (e) {
       print('Error fetching students: $e');
-      return [];
+      throw Exception(e.toString());
     }
   }
 
