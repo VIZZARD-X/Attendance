@@ -264,7 +264,12 @@ class _QRScannerScreenState extends State<QRScannerScreen>
         return;
       }
 
-      final connectivityResults = await Connectivity().checkConnectivity();
+      List<ConnectivityResult> connectivityResults = [];
+      try {
+        connectivityResults = await Connectivity().checkConnectivity();
+      } catch (_) {
+        // Fallback to empty list (assume online) if connectivity plugin crashes
+      }
       final isNetworkOffline =
           connectivityResults.isEmpty ||
           connectivityResults.contains(ConnectivityResult.none);
@@ -350,7 +355,12 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       // Pause preview immediately so the user knows photo was taken
       await _cameraController!.pausePreview();
 
-      final connectivityResults = await Connectivity().checkConnectivity();
+      List<ConnectivityResult> connectivityResults = [];
+      try {
+        connectivityResults = await Connectivity().checkConnectivity();
+      } catch (_) {
+        // Fallback to empty list (assume online) if connectivity plugin crashes
+      }
       final isOffline =
           connectivityResults.isEmpty ||
           connectivityResults.contains(ConnectivityResult.none);

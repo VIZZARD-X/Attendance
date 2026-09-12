@@ -898,10 +898,6 @@ def verify_image(request):
             verification_reasons=json.dumps(reasons)
         )
 
-        if scan_time:
-            AttendanceRecord.objects.filter(id=record.id).update(marked_at=scan_time)
-            record.refresh_from_db()
-
         if not matched:
             return Response({
                 'status': 'fail',
