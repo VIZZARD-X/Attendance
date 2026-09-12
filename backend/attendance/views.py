@@ -1133,13 +1133,7 @@ def sync_offline_pattern(request):
 
         existing_record = AttendanceRecord.objects.filter(session=session, student=user).first()
         if existing_record:
-            if existing_record.status == 'absent':
-                existing_record.status = 'pending_review'
-                existing_record.save()
-                if scan_time:
-                    AttendanceRecord.objects.filter(id=existing_record.id).update(marked_at=scan_time)
-                    existing_record.refresh_from_db()
-            else:
+            if existing_record.status not in ['absent', 'pending_review']:
                 return Response({'error': 'Attendance already marked', 'marked_at': existing_record.marked_at, 'status': existing_record.status}, status=status.HTTP_400_BAD_REQUEST)
 
         # Extract BLE Mesh Proofs
@@ -1180,13 +1174,20 @@ def sync_offline_pattern(request):
 
         status_val = 'present' if matched else 'pending_review'
 
-        record = AttendanceRecord.objects.create(
-            session=session,
-            student=user,
-            status=status_val,
-            verification_score=final_score,
-            verification_reasons=json.dumps(verification_reasons_dict)
-        )
+        if existing_record:
+            existing_record.status = status_val
+            existing_record.verification_score = final_score
+            existing_record.verification_reasons = json.dumps(verification_reasons_dict)
+            existing_record.save()
+            record = existing_record
+        else:
+            record = AttendanceRecord.objects.create(
+                session=session,
+                student=user,
+                status=status_val,
+                verification_score=final_score,
+                verification_reasons=json.dumps(verification_reasons_dict)
+            )
 
         if scan_time:
             AttendanceRecord.objects.filter(id=record.id).update(marked_at=scan_time)
