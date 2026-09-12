@@ -8,6 +8,7 @@ import '../../widgets/pattern_painter.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../services/sync_service.dart';
 import '../../widgets/offline_indicator.dart';
+import '../../services/ble_mesh_service.dart';
 
 class SessionActiveScreen extends StatefulWidget {
   final Map<String, dynamic> sessionData;
@@ -45,6 +46,11 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
     super.initState();
     _initializeSession();
     _startAutoRefresh();
+    
+    // Start BLE Mesh Broadcast as Teacher
+    if (widget.sessionData['session_id'] != null) {
+      BleMeshService().startTeacherBroadcast(widget.sessionData['session_id']);
+    }
     _syncSubscription = SyncService().onSyncComplete.listen((_) {
       if (mounted) {
         setState(() {
@@ -72,6 +78,7 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
     _connectivitySubscription?.cancel();
     _countdownTimer?.cancel();
     _refreshTimer?.cancel();
+    BleMeshService().stopAll();
     super.dispose();
   }
 
@@ -573,6 +580,15 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
         elevation: 0,
         actions: [
           const OfflineIndicator(),
+          IconButton(
+            icon: const Icon(Icons.bluetooth_connected, color: Colors.blueAccent),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('BLE Mesh Broadcast is Active and verifiable by students.')),
+              );
+            },
+            tooltip: 'BLE Broadcast Active',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => _fetchAttendanceData(),

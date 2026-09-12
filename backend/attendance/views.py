@@ -214,21 +214,12 @@ def get_class_students(request, class_id):
     students_data = []
     for enrollment in enrollments:
         student = enrollment.student
-        try:
-            profile = student.student_profile
-            students_data.append({
-                'id': student.id,
-                'username': student.username,
-                'email': student.email,
-                'enrolled_at': enrollment.enrolled_at
-            })
-        except StudentProfile.DoesNotExist:
-            students_data.append({
-                'id': student.id,
-                'username': student.username,
-                'email': student.email,
-                'enrolled_at': enrollment.enrolled_at
-            })
+        students_data.append({
+            'id': student.id,
+            'username': student.username,
+            'email': student.email,
+            'enrolled_at': enrollment.enrolled_at
+        })
     
     # Students registered for this class's semester who are not yet enrolled
     # in this class (candidates the teacher can add).
@@ -701,11 +692,35 @@ def mark_attendance(request, session_id):
             'status': existing_record.status
         }, status=status.HTTP_400_BAD_REQUEST)
     
+    # Extract BLE Mesh Proofs
+    ble_hop_count = request.data.get('ble_hop_count')
+    ble_rssi = request.data.get('ble_rssi')
+    
+    verification_reasons_dict = {}
+    verification_score = 1.0 # Default score
+    
+    if ble_hop_count is not None and ble_rssi is not None:
+        verification_reasons_dict['ble_verified'] = True
+        try:
+            verification_reasons_dict['ble_hop_count'] = int(ble_hop_count)
+            verification_reasons_dict['ble_rssi'] = int(float(ble_rssi))
+            
+            # Penalize score slightly for higher hop counts (further from teacher)
+            score_penalty = verification_reasons_dict['ble_hop_count'] * 0.05
+            verification_score = max(0.0, 1.0 - score_penalty)
+        except (ValueError, TypeError):
+            pass
+    else:
+        verification_reasons_dict['ble_verified'] = False
+        verification_score = 0.5 # Missing BLE proof lowers confidence
+
     # Mark attendance
     record = AttendanceRecord.objects.create(
         session=session,
         student=user,
-        status='present'
+        status='present',
+        verification_score=verification_score,
+        verification_reasons=json.dumps(verification_reasons_dict)
     )
     if scan_time:
         AttendanceRecord.objects.filter(id=record.id).update(marked_at=scan_time)
@@ -1367,6 +1382,7 @@ def get_student_attendance_history(request):
             'id': record.id,
             'class_code': session.class_obj.class_code,
             'class_name': session.class_obj.class_name,
+            'teacher_name': session.class_obj.teacher_name if session.class_obj else 'Unknown Teacher',
             'semester': session.class_obj.semester,
             'date': session.start_time.date(),
             'time': session.start_time.time(),
@@ -1409,9 +1425,9 @@ def check_student_by_email(request):
         user = User.objects.get(email=email, role='student')
         
         # Try to get student profile
-        try:
+        if hasattr(user, 'student_profile'):
             profile = user.student_profile
-        except StudentProfile.DoesNotExist:
+        else:
             profile = None
         
         return Response({

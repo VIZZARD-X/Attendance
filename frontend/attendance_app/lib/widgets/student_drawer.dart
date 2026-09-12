@@ -7,6 +7,8 @@ import '../screens/student/pattern_sessions_screen.dart';
 import '../screens/student/attendance_history_screen.dart';
 import '../screens/student/student_profile_screen.dart';
 import '../screens/student/student_analytics_screen.dart';
+import '../screens/common/ble_diagnostics_screen.dart';
+import '../services/auth_service.dart';
 import '../services/auth_service.dart';
 
 class StudentDrawer extends StatefulWidget {
@@ -100,6 +102,9 @@ class _StudentDrawerState extends State<StudentDrawer> {
       case 'Profile':
         nextScreen = const StudentProfileScreen();
         break;
+      case 'BLE Test':
+        nextScreen = const BleDiagnosticsScreen();
+        break;
     }
 
     if (nextScreen != null) {
@@ -129,6 +134,7 @@ class _StudentDrawerState extends State<StudentDrawer> {
       {'title': 'Scan QR', 'icon': Icons.qr_code_scanner_rounded},
       {'title': 'Attendance History', 'icon': Icons.history_rounded},
       {'title': 'Profile', 'icon': Icons.person_rounded},
+      {'title': 'BLE Test', 'icon': Icons.bluetooth_audio},
     ];
 
     return Drawer(

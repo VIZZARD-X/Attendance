@@ -48,5 +48,11 @@
 	<!-- Camera Permission -->
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs camera access to scan QR codes for attendance</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>This app needs Bluetooth to verify attendance via a secure local mesh network.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>This app needs Bluetooth to broadcast attendance presence to nearby devices.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs Location access to properly scan for Bluetooth devices.</string>
 </dict>
 </plist>

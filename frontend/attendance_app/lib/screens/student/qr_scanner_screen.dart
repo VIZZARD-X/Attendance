@@ -11,6 +11,7 @@ import '../../services/attendance_service.dart';
 import '../../services/session_service.dart';
 import '../../services/sync_service.dart';
 import '../../widgets/offline_indicator.dart';
+import '../../services/ble_mesh_service.dart';
 
 class QRScannerScreen extends StatefulWidget {
   const QRScannerScreen({super.key});
@@ -286,7 +287,29 @@ class _QRScannerScreenState extends State<QRScannerScreen>
         return;
       }
 
-      final result = await _attendanceService.markAttendance(sessionId);
+      int? bleHopCount;
+      int? bleRssi;
+      try {
+        // Attempt to verify presence via BLE Mesh
+        _showBleVerificationDialog();
+        final bleResult = await BleMeshService().startStudentScanAndRelay(
+            sessionId,
+            timeout: const Duration(seconds: 15));
+        bleHopCount = bleResult['hop_count'];
+        bleRssi = bleResult['rssi'];
+        // pop the verifying dialog if we showed it
+        Navigator.of(context, rootNavigator: true).pop();
+      } catch (e) {
+        print("BLE mesh verification failed: $e");
+        // Pop the verifying dialog if we showed it
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      final result = await _attendanceService.markAttendance(
+          sessionId,
+          bleHopCount: bleHopCount,
+          bleRssi: bleRssi
+      );
 
       if (mounted) {
         if (result['success']) {
@@ -424,6 +447,36 @@ class _QRScannerScreenState extends State<QRScannerScreen>
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  void _showBleVerificationDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 20),
+            const CircularProgressIndicator(color: Color(0xFF007C91)),
+            const SizedBox(height: 24),
+            const Text(
+              'Verifying location via BLE Mesh...',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Please stay close to the teacher or other students.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
       ),
     );
   }
