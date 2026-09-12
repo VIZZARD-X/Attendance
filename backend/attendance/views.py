@@ -929,11 +929,11 @@ def verify_image(request):
 
         if not matched:
             return Response({
-                'status': 'fail',
+                'status': 'pending_review',
                 'score': final_score,
                 'reasons': reasons,
-                'error': f'Verification failed. Reasons: {", ".join(reasons)}'
-            }, status=status.HTTP_400_BAD_REQUEST)
+                'message': f'Verification failed. Marked for manual review. Reasons: {", ".join(reasons)}'
+            }, status=status.HTTP_200_OK)
 
         return Response({
             'status': 'pass',
@@ -1194,7 +1194,7 @@ def sync_offline_pattern(request):
             record.refresh_from_db()
 
         if not matched:
-            return Response({'status': 'fail', 'error': f'Verification failed. Reasons: {", ".join(reasons)}'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'status': 'pending_review', 'message': f'Verification failed. Marked for manual review. Reasons: {", ".join(reasons)}'}, status=status.HTTP_200_OK)
 
         return Response({'status': 'pass', 'message': f'Offline attendance synced for {session.class_obj.class_code}'}, status=status.HTTP_201_CREATED)
     except Exception as e:

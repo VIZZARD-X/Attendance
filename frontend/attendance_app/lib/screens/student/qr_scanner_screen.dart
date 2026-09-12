@@ -361,7 +361,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       } catch (_) {
         // Fallback to empty list (assume online) if connectivity plugin crashes
       }
-      final isOffline =
+      bool isOffline =
           connectivityResults.isEmpty ||
           connectivityResults.contains(ConnectivityResult.none);
 
@@ -372,38 +372,45 @@ class _QRScannerScreenState extends State<QRScannerScreen>
         try {
           sessions = await _sessionService.getStudentActiveSessions();
         } catch (e) {
-          _showError('Network/API Error: $e');
-          setState(() => isProcessing = false);
-          await _cameraController!.resumePreview();
-          return;
+          final errorStr = e.toString().toLowerCase();
+          if (errorStr.contains('dioexception') || errorStr.contains('socketexception') || errorStr.contains('failed host lookup') || errorStr.contains('connection error')) {
+            isOffline = true;
+          } else {
+            _showError('Network/API Error: $e');
+            setState(() => isProcessing = false);
+            await _cameraController!.resumePreview();
+            return;
+          }
         }
 
-        final patternSessions = sessions
-            .where((s) => s['class_type'] == 'pattern')
-            .toList();
+        if (!isOffline) {
+          final patternSessions = sessions
+              .where((s) => s['class_type'] == 'pattern')
+              .toList();
 
-        if (patternSessions.isEmpty) {
-          _showError(
-            'No active pattern session found. Ask your teacher to start an pattern session.',
-          );
-          setState(() => isProcessing = false);
-          await _cameraController!.resumePreview();
-          return;
+          if (patternSessions.isEmpty) {
+            _showError(
+              'No active pattern session found. Ask your teacher to start an pattern session.',
+            );
+            setState(() => isProcessing = false);
+            await _cameraController!.resumePreview();
+            return;
+          }
+
+          final session = patternSessions.first;
+
+          // Check if teacher has uploaded the reference image yet
+          if (session['has_reference_image'] == false) {
+            _showError(
+              'Teacher has not uploaded the board photo yet. Please wait and try again.',
+            );
+            setState(() => isProcessing = false);
+            await _cameraController!.resumePreview();
+            return;
+          }
+
+          sessionId = session['session_id'].toString();
         }
-
-        final session = patternSessions.first;
-
-        // Check if teacher has uploaded the reference image yet
-        if (session['has_reference_image'] == false) {
-          _showError(
-            'Teacher has not uploaded the board photo yet. Please wait and try again.',
-          );
-          setState(() => isProcessing = false);
-          await _cameraController!.resumePreview();
-          return;
-        }
-
-        sessionId = session['session_id'].toString();
       }
 
       // BLE MESH VERIFICATION (Enforced for Pattern mode too)
