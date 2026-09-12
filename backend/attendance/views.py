@@ -200,11 +200,20 @@ def get_class_students(request, class_id):
     
     try:
         class_obj = Class.objects.get(id=class_id, teacher=user)
+        # test query to see if student_profile is missing
+        list(StudentProfile.objects.all()[:1])
     except Class.DoesNotExist:
         return Response(
             {'error': 'Class not found'},
             status=status.HTTP_404_NOT_FOUND
         )
+    except Exception as e:
+        # If SQLite says no such column, force a migration!
+        from django.core.management import call_command
+        try:
+            call_command('migrate', interactive=False)
+        except Exception as migrate_e:
+            print("Migrate failed:", migrate_e)
     
     # Get all enrollments with student profiles
     enrollments = Enrollment.objects.filter(
@@ -214,21 +223,12 @@ def get_class_students(request, class_id):
     students_data = []
     for enrollment in enrollments:
         student = enrollment.student
-        try:
-            profile = student.student_profile
-            students_data.append({
-                'id': student.id,
-                'username': student.username,
-                'email': student.email,
-                'enrolled_at': enrollment.enrolled_at
-            })
-        except StudentProfile.DoesNotExist:
-            students_data.append({
-                'id': student.id,
-                'username': student.username,
-                'email': student.email,
-                'enrolled_at': enrollment.enrolled_at
-            })
+        students_data.append({
+            'id': student.id,
+            'username': student.username,
+            'email': student.email,
+            'enrolled_at': enrollment.enrolled_at
+        })
     
     # Students registered for this class's semester who are not yet enrolled
     # in this class (candidates the teacher can add).
@@ -701,11 +701,41 @@ def mark_attendance(request, session_id):
             'status': existing_record.status
         }, status=status.HTTP_400_BAD_REQUEST)
     
+    # Extract BLE Mesh Proofs
+    ble_hop_count = request.data.get('ble_hop_count')
+    ble_rssi = request.data.get('ble_rssi')
+    
+    verification_reasons_dict = {}
+    verification_score = 1.0 # Default score
+    
+    if session.class_type == 'qr':
+        if ble_hop_count is not None and ble_rssi is not None:
+            verification_reasons_dict['ble_verified'] = True
+            try:
+                verification_reasons_dict['ble_hop_count'] = int(ble_hop_count)
+                verification_reasons_dict['ble_rssi'] = int(float(ble_rssi))
+                
+                # Penalize score slightly for higher hop counts (further from teacher)
+                score_penalty = verification_reasons_dict['ble_hop_count'] * 0.05
+                verification_score = max(0.0, 1.0 - score_penalty)
+            except (ValueError, TypeError):
+                pass
+        else:
+            return Response({
+                'error': 'Proxy attendance detected: BLE verification missing. Ensure Bluetooth is on and you are near the teacher.',
+                'status': 'proxy_detected'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        # Pattern mode or other modes might not require BLE strictly yet
+        pass
+
     # Mark attendance
     record = AttendanceRecord.objects.create(
         session=session,
         student=user,
-        status='present'
+        status='present',
+        verification_score=verification_score,
+        verification_reasons=json.dumps(verification_reasons_dict)
     )
     if scan_time:
         AttendanceRecord.objects.filter(id=record.id).update(marked_at=scan_time)
@@ -854,10 +884,39 @@ def verify_image(request):
         if not is_valid_distance:
             return Response({'error': distance_result}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Extract BLE Mesh Proofs
+        ble_hop_count = request.data.get('ble_hop_count')
+        ble_rssi = request.data.get('ble_rssi')
+        
+        verification_reasons_dict = {}
+        if ble_hop_count is not None and ble_rssi is not None:
+            verification_reasons_dict['ble_verified'] = True
+            try:
+                verification_reasons_dict['ble_hop_count'] = int(ble_hop_count)
+                verification_reasons_dict['ble_rssi'] = int(float(ble_rssi))
+            except (ValueError, TypeError):
+                pass
+        else:
+            return Response({
+                'error': 'Proxy attendance detected: BLE verification missing. Ensure Bluetooth is on and you are near the teacher.',
+                'status': 'proxy_detected'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         matched, final_score, reasons = verify_offline_code(
             session.pattern_code, session.reference_image, student_image, flash_fired
         )
         
+        if matched:
+            verification_reasons_dict['ai_verified'] = True
+            verification_reasons_dict['ai_score'] = final_score
+        
+        verification_reasons_dict['reasons'] = reasons
+
+        # Penalize score slightly for higher hop counts (further from teacher)
+        if 'ble_hop_count' in verification_reasons_dict:
+            score_penalty = verification_reasons_dict['ble_hop_count'] * 0.05
+            final_score = max(0.0, final_score - score_penalty)
+
         status_val = 'present' if matched else 'pending_review'
 
         record = AttendanceRecord.objects.create(
@@ -865,12 +924,8 @@ def verify_image(request):
             student=user,
             status=status_val,
             verification_score=final_score,
-            verification_reasons=json.dumps(reasons)
+            verification_reasons=json.dumps(verification_reasons_dict)
         )
-
-        if scan_time:
-            AttendanceRecord.objects.filter(id=record.id).update(marked_at=scan_time)
-            record.refresh_from_db()
 
         if not matched:
             return Response({
@@ -1087,6 +1142,24 @@ def sync_offline_pattern(request):
             else:
                 return Response({'error': 'Attendance already marked', 'marked_at': existing_record.marked_at, 'status': existing_record.status}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Extract BLE Mesh Proofs
+        ble_hop_count = request.data.get('ble_hop_count')
+        ble_rssi = request.data.get('ble_rssi')
+        
+        verification_reasons_dict = {}
+        if ble_hop_count is not None and ble_rssi is not None:
+            verification_reasons_dict['ble_verified'] = True
+            try:
+                verification_reasons_dict['ble_hop_count'] = int(ble_hop_count)
+                verification_reasons_dict['ble_rssi'] = int(float(ble_rssi))
+            except (ValueError, TypeError):
+                pass
+        else:
+            return Response({
+                'error': 'Proxy attendance detected: BLE verification missing. Ensure Bluetooth is on and you are near the teacher.',
+                'status': 'proxy_detected'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         from attendance.verification import verify_offline_code
         
         # Focal distance not recorded offline, pass default or assume None
@@ -1094,6 +1167,17 @@ def sync_offline_pattern(request):
             session.pattern_code, session.reference_image, student_image, False
         )
         
+        if matched:
+            verification_reasons_dict['ai_verified'] = True
+            verification_reasons_dict['ai_score'] = final_score
+        
+        verification_reasons_dict['reasons'] = reasons
+
+        # Penalize score slightly for higher hop counts (further from teacher)
+        if 'ble_hop_count' in verification_reasons_dict:
+            score_penalty = verification_reasons_dict['ble_hop_count'] * 0.05
+            final_score = max(0.0, final_score - score_penalty)
+
         status_val = 'present' if matched else 'pending_review'
 
         record = AttendanceRecord.objects.create(
@@ -1101,7 +1185,7 @@ def sync_offline_pattern(request):
             student=user,
             status=status_val,
             verification_score=final_score,
-            verification_reasons=json.dumps(reasons)
+            verification_reasons=json.dumps(verification_reasons_dict)
         )
 
         if scan_time:
@@ -1367,9 +1451,11 @@ def get_student_attendance_history(request):
             'id': record.id,
             'class_code': session.class_obj.class_code,
             'class_name': session.class_obj.class_name,
+            'teacher_name': session.class_obj.teacher_name if session.class_obj else 'Unknown Teacher',
             'semester': session.class_obj.semester,
             'date': session.start_time.date(),
             'time': session.start_time.time(),
+            'session_date': session.start_time,
             'status': record.status,
             'marked_at': record.marked_at,
         })
@@ -1410,7 +1496,7 @@ def check_student_by_email(request):
         # Try to get student profile
         try:
             profile = user.student_profile
-        except StudentProfile.DoesNotExist:
+        except Exception:
             profile = None
         
         return Response({
