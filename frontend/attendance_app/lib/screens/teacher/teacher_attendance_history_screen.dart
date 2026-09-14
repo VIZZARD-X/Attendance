@@ -760,6 +760,7 @@ class _TeacherAttendanceHistoryScreenState
 
   Widget _buildModernAttendanceRow(Map<String, dynamic> record, bool isMobile) {
     final status = record['status'] ?? 'unknown';
+    final isPresent = status == 'present';
     
     Color statusColor;
     Color gradientStart;

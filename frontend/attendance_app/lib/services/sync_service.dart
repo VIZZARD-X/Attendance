@@ -85,6 +85,7 @@ class SyncService {
             // Ignore if columns already exist
           }
         }
+        if (oldVersion < 6) {
           try {
             await db.execute('ALTER TABLE offline_queue ADD COLUMN ble_hop_count INTEGER');
             await db.execute('ALTER TABLE offline_queue ADD COLUMN ble_rssi INTEGER');
