@@ -3,7 +3,6 @@ import '../../widgets/enhanced_dashboard_card.dart';
 import '../../services/class_service.dart';
 import '../../widgets/student_drawer.dart';
 import 'attendance_history_screen.dart';
-import '../../widgets/skeleton_loader.dart';
 
 class StudentMyClassesScreen extends StatefulWidget {
   const StudentMyClassesScreen({super.key});
@@ -174,8 +173,29 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen>
 
   Widget _buildBody(bool isMobile) {
     if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.white),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 60,
+              height: 60,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Loading your classes...',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       );
     }
 

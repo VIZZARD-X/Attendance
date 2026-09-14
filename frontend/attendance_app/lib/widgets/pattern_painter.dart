@@ -83,20 +83,8 @@ class PatternPainter extends CustomPainter {
     _drawShape(canvas, outer, center, outerRadius, paint);
 
     // 2. Draw Inner Shape (Optional)
-    Offset innerCenter = center;
-    if (outer == 'triangle') {
-      innerCenter = Offset(center.dx, center.dy + outerRadius * 0.2);
-    }
-
-    double adjustedInnerRadius = innerRadius;
-    if (outer == 'triangle') {
-      adjustedInnerRadius = outerRadius * 0.40;
-    } else if (outer == 'diamond') {
-      adjustedInnerRadius = outerRadius * 0.45;
-    }
-
     if (inner != 'none') {
-      _drawShape(canvas, inner, innerCenter, adjustedInnerRadius, paint);
+      _drawShape(canvas, inner, center, innerRadius, paint);
     }
 
     // 3. Draw Number perfectly centered
@@ -124,8 +112,8 @@ class PatternPainter extends CustomPainter {
     textPainter.paint(
       canvas,
       Offset(
-        innerCenter.dx - textPainter.width / 2,
-        innerCenter.dy - textPainter.height / 2,
+        center.dx - textPainter.width / 2,
+        center.dy - textPainter.height / 2,
       ),
     );
   }

@@ -42,7 +42,7 @@ class SyncService {
 
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute('''
@@ -85,7 +85,6 @@ class SyncService {
             // Ignore if columns already exist
           }
         }
-        if (oldVersion < 6) {
           try {
             await db.execute('ALTER TABLE offline_queue ADD COLUMN ble_hop_count INTEGER');
             await db.execute('ALTER TABLE offline_queue ADD COLUMN ble_rssi INTEGER');
@@ -93,11 +92,17 @@ class SyncService {
             // Ignore if columns already exist
           }
         }
+        if (oldVersion < 7) {
+          try {
+            await db.execute('ALTER TABLE offline_queue ADD COLUMN session_id TEXT');
+          } catch (e) {}
+        }
       },
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE offline_queue (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT,
             image_path TEXT NOT NULL,
             timestamp TEXT NOT NULL,
             ble_hop_count INTEGER,
@@ -172,9 +177,10 @@ class SyncService {
     debugPrint('Queued offline session ${sessionData['id']}');
   }
 
-  Future<void> enqueuePatternScan(String imagePath, String timestamp, {int? bleHopCount, int? bleRssi}) async {
+  Future<void> enqueuePatternScan(String imagePath, String timestamp, {String? sessionId, int? bleHopCount, int? bleRssi}) async {
     final item = {
       'id': DateTime.now().millisecondsSinceEpoch,
+      if (sessionId != null) 'session_id': sessionId,
       'image_path': imagePath,
       'timestamp': timestamp,
       'ble_hop_count': bleHopCount,
@@ -207,32 +213,6 @@ class SyncService {
       ['pending'],
     );
     return Sqflite.firstIntValue(result) ?? 0;
-  }
-
-  Future<List<Map<String, dynamic>>> getPendingPatternScans() async {
-    if (kIsWeb) {
-      final list = await _getWebList('offline_queue');
-      return list.where((e) => e['status'] == 'pending').toList();
-    }
-    final db = await database;
-    return await db.query(
-      'offline_queue',
-      where: 'status = ?',
-      whereArgs: ['pending'],
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> getPendingQRScans() async {
-    if (kIsWeb) {
-      final list = await _getWebList('offline_qr_queue');
-      return list.where((e) => e['status'] == 'pending').toList();
-    }
-    final db = await database;
-    return await db.query(
-      'offline_qr_queue',
-      where: 'status = ?',
-      whereArgs: ['pending'],
-    );
   }
 
   Future<void> enqueueSession({
@@ -338,16 +318,6 @@ class SyncService {
             );
 
             if (result['success']) {
-              if (!kIsWeb && referenceImagePath != null) {
-                try {
-                  final refFile = File(referenceImagePath);
-                  if (await refFile.exists()) {
-                    await refFile.delete();
-                  }
-                } catch (e) {
-                  debugPrint('Error deleting synced reference image file: $e');
-                }
-              }
               if (kIsWeb) {
                 final list = await _getWebList('offline_sessions');
                 list.removeWhere((e) => e['id'] == id);
@@ -401,16 +371,6 @@ class SyncService {
           final scanTime = DateTime.parse(timestamp);
           if (DateTime.now().toUtc().difference(scanTime.toUtc()).inHours >= 24) {
             debugPrint('Discarding expired pattern scan $id (older than 24 hours)');
-            if (!kIsWeb) {
-              try {
-                final file = File(imagePath);
-                if (await file.exists()) {
-                  await file.delete();
-                }
-              } catch (e) {
-                debugPrint('Error deleting expired image file: $e');
-              }
-            }
             if (kIsWeb) {
               final list = await _getWebList('offline_queue');
               list.removeWhere((e) => e['id'] == id);
@@ -442,9 +402,11 @@ class SyncService {
 
           final bleHopCount = record['ble_hop_count'] as int?;
           final bleRssi = record['ble_rssi'] as int?;
+          final sessionId = record['session_id'] as String?;
 
           try {
             final result = await _attendanceService.syncOfflinePattern(
+              sessionId: sessionId,
               imagePath: imagePath,
               timestamp: timestamp,
               bleHopCount: bleHopCount,
@@ -452,16 +414,6 @@ class SyncService {
             );
 
             if (result['success']) {
-              if (!kIsWeb) {
-                try {
-                  final file = File(imagePath);
-                  if (await file.exists()) {
-                    await file.delete();
-                  }
-                } catch (e) {
-                  debugPrint('Error deleting synced image file: $e');
-                }
-              }
               if (kIsWeb) {
                 final list = await _getWebList('offline_queue');
                 list.removeWhere((e) => e['id'] == id);

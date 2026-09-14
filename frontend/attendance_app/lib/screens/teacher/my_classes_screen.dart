@@ -7,7 +7,6 @@ import '../../config/api_config.dart';
 import '../../services/auth_service.dart';
 import 'add_students_screen.dart';
 import '../../widgets/teacher_web_layout.dart';
-import '../../widgets/skeleton_loader.dart';
 import '../../services/class_service.dart';
 import '../../widgets/teacher_drawer.dart';
 import '../../widgets/hover_wrapper.dart';
@@ -665,10 +664,8 @@ class _MyClassesScreenState extends State<MyClassesScreen>
         // Students list
         Expanded(
           child: isStudentsLoading
-              ? ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: 4,
-                  itemBuilder: (context, index) => const SkeletonCard(height: 80),
+              ? const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF007C91)),
                 )
               : students.isEmpty
                   ? Center(
@@ -1027,7 +1024,10 @@ class _MyClassesScreenState extends State<MyClassesScreen>
           Expanded(
             child: isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      strokeWidth: 3,
+                    ),
                   )
                 : classes.isEmpty
                 ? _buildEmptyState()

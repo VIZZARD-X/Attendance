@@ -7,8 +7,6 @@ import 'package:camera/camera.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 import '../../services/attendance_service.dart';
 import '../../services/session_service.dart';
 import '../../services/sync_service.dart';
@@ -71,17 +69,13 @@ class _QRScannerScreenState extends State<QRScannerScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    if (state == AppLifecycleState.inactive) return; // Prevent stutter/reset when pulling down control center
-
     if (state == AppLifecycleState.resumed) {
       if (!isPatternMode) {
         _scannerController.start();
-      } else {
-        if (_cameraController == null || !_cameraController!.value.isInitialized) {
-          _initializePatternCamera();
-        }
+      } else if (_cameraController == null || !_cameraController!.value.isInitialized) {
+        _initializePatternCamera();
       }
-    } else if (state == AppLifecycleState.paused) {
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
       if (!isPatternMode) {
         _scannerController.stop();
       } else if (_cameraController != null) {
@@ -327,13 +321,8 @@ class _QRScannerScreenState extends State<QRScannerScreen>
 
       if (mounted) {
         if (result['success']) {
-          if ((result['message'] ?? '').toLowerCase().contains('manual review')) {
-            _showError('Ambiguous scan detected. Please try scanning again.');
-            setState(() => isProcessing = false);
-          } else {
-            setState(() => hasScanned = true);
-            _showSuccessDialog(result['message'] ?? 'Attendance marked successfully');
-          }
+          setState(() => hasScanned = true);
+          _showSuccessDialog(result['message']);
         } else {
           _showError(result['message']);
           setState(() => isProcessing = false);
@@ -400,20 +389,27 @@ class _QRScannerScreenState extends State<QRScannerScreen>
               .toList();
 
           if (patternSessions.isEmpty) {
-            // Auto fallback to offline if the teacher hasn't synced the session yet
-            isOffline = true;
-          } else {
-            final session = patternSessions.first;
-
-            // Check if teacher has uploaded the reference image yet
-            if (session['has_reference_image'] == false) {
-              // The teacher might have uploaded it while offline, or is taking time.
-              // We'll also fallback to offline so the student isn't blocked.
-              isOffline = true;
-            } else {
-              sessionId = session['session_id'].toString();
-            }
+            _showError(
+              'No active pattern session found. Ask your teacher to start an pattern session.',
+            );
+            setState(() => isProcessing = false);
+            await _cameraController!.resumePreview();
+            return;
           }
+
+          final session = patternSessions.first;
+
+          // Check if teacher has uploaded the reference image yet
+          if (session['has_reference_image'] == false) {
+            _showError(
+              'Teacher has not uploaded the board photo yet. Please wait and try again.',
+            );
+            setState(() => isProcessing = false);
+            await _cameraController!.resumePreview();
+            return;
+          }
+
+          sessionId = session['session_id'].toString();
         }
       }
 
@@ -427,6 +423,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
            final bleResult = await BleMeshService().startStudentScanAnySession(timeout: const Duration(seconds: 15));
            bleHopCount = bleResult['hop_count'];
            bleRssi = bleResult['rssi'];
+           sessionId = bleResult['session_id'];
         } else {
            final bleResult = await BleMeshService().startStudentScanAndRelay(sessionId!, timeout: const Duration(seconds: 15));
            bleHopCount = bleResult['hop_count'];
@@ -444,17 +441,12 @@ class _QRScannerScreenState extends State<QRScannerScreen>
 
       if (isOffline) {
         final timestamp = DateTime.now().toUtc().toIso8601String();
-        
-        // Save image persistently for offline syncing
-        final appDir = await getApplicationDocumentsDirectory();
-        final fileName = 'offline_pattern_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final savedImage = await File(imagePath).copy('${appDir.path}/$fileName');
-        
-        await SyncService().enqueuePatternScan(savedImage.path, timestamp, bleHopCount: bleHopCount, bleRssi: bleRssi);
+        await SyncService().enqueuePatternScan(imagePath, timestamp, sessionId: sessionId, bleHopCount: bleHopCount, bleRssi: bleRssi);
         if (mounted) {
           setState(() => hasScanned = true);
-          _showSuccessDialog(
+          _showResultDialog(
             'Saved offline. Will sync automatically when internet is restored.',
+            false,
           );
         }
         return;
@@ -469,17 +461,13 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       );
 
       if (mounted) {
-        if (result['success']) {
-          if ((result['message'] ?? '').toLowerCase().contains('manual review')) {
-            _showError('Ambiguous pattern detected. Please try scanning again.');
-            setState(() => isProcessing = false);
-            await _cameraController!.resumePreview();
-          } else {
-            setState(() => hasScanned = true);
-            _showSuccessDialog(
-              result['message'] ?? 'Attendance marked successfully',
-            );
-          }
+        if (result['success'] == true) {
+          setState(() => hasScanned = true);
+          final isPending = result['status'] == 'pending_review';
+          _showResultDialog(
+            result['message'] ?? 'Attendance marked successfully',
+            isPending,
+          );
         } else {
           _showError(result['message'] ?? 'Verification failed');
           setState(() => isProcessing = false);
@@ -546,7 +534,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     );
   }
 
-  void _showSuccessDialog(String message) {
+  void _showResultDialog(String message, bool isPending) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -557,19 +545,19 @@ class _QRScannerScreenState extends State<QRScannerScreen>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.green.shade100,
+                color: isPending ? Colors.orange.shade100 : Colors.green.shade100,
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.check_circle,
-                color: Colors.green.shade600,
+                isPending ? Icons.pending : Icons.check_circle,
+                color: isPending ? Colors.orange.shade600 : Colors.green.shade600,
                 size: 60,
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Success!',
-              style: TextStyle(
+            Text(
+              isPending ? 'Pending Review' : 'Success!',
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF1F2937),

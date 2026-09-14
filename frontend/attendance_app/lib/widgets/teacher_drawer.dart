@@ -82,45 +82,13 @@ class _TeacherDrawerState extends State<TeacherDrawer> {
       return; // Do nothing if already on the route
 
     if (title == 'Create Session') {
-      final classService = ClassService();
-      try {
-        final classes = await classService.getMyClasses();
-        if (classes.isEmpty) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('No classes found. Please create a class first.'),
-              ),
-            );
-          }
-          return;
-        }
-
-        final subjects = classes
-            .map(
-              (c) => {
-                'id': c['id'].toString(),
-                'code': c['class_code'] as String,
-                'name': c['class_name'] as String,
-                'semester': c['semester'] as String,
-              },
-            )
-            .toList();
-
-        if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => SessionPage(subjects: subjects),
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error loading classes: $e')));
-        }
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const SessionPage(subjects: []),
+          ),
+        );
       }
       return;
     }

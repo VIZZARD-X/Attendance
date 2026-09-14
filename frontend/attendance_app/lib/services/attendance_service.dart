@@ -249,6 +249,7 @@ class AttendanceService {
 
   /// Sync an offline pattern image that was queued locally
   Future<Map<String, dynamic>> syncOfflinePattern({
+    String? sessionId,
     required String imagePath,
     required String timestamp,
     int? bleHopCount,
@@ -258,6 +259,7 @@ class AttendanceService {
       final token = await _getToken();
 
       final formData = FormData.fromMap({
+        if (sessionId != null) 'session_id': sessionId,
         'timestamp': timestamp,
         'student_image': await MultipartFile.fromFile(imagePath),
         if (bleHopCount != null) 'ble_hop_count': bleHopCount,

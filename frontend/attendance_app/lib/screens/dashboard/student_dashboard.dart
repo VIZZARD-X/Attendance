@@ -14,8 +14,6 @@ import '../student/pattern_sessions_screen.dart';
 import '../../services/class_service.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/offline_indicator.dart';
-import 'dart:convert';
-import '../auth/login_screen.dart';
 
 class StudentDashboardPage extends StatefulWidget {
   const StudentDashboardPage({super.key});
@@ -48,7 +46,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
       'gradientColors': [const Color(0xFF3B82F6), Colors.white],
     },
     {
-      'title': 'Mark Attendance',
+      'title': 'Scan QR',
       'subtitle': 'Start new Attendance Session',
       'icon': Icons.qr_code_scanner_rounded,
       'gradientColors': [const Color(0xFFA6FF39), Colors.white],
@@ -147,85 +145,74 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
     }
   }
 
+  //  UPDATED: Fetch real data from backend
   Future<void> _loadUserData({bool forceRefresh = false}) async {
-    // 1. Try to load from persistent cache first if not refreshing manually
-    if (!forceRefresh && _cachedUserData == null) {
-      final cachedStr = await StorageService.read(key: 'student_dashboard_cache');
-      if (cachedStr != null) {
-        try {
-          final decoded = jsonDecode(cachedStr);
-          if (mounted) {
-            setState(() {
-              _cachedUserData = decoded;
-              studentName = decoded['first_name'] ?? decoded['username'] ?? 'Student';
-              username = decoded['username'] ?? '';
-              totalClasses = decoded['total_classes'] ?? 0;
-              attendanceRate = (decoded['attendance_rate'] ?? 0.0).toDouble();
-              isLoading = false; // We have cache, so we can show UI immediately
-            });
-          }
-        } catch (e) {
-          debugPrint('Error decoding cache: $e');
-        }
-      }
+    // Use cache if available and recent (less than 5 minutes old)
+    if (!forceRefresh &&
+        _cachedUserData != null &&
+        _lastFetch != null &&
+        DateTime.now().difference(_lastFetch!) < const Duration(minutes: 5)) {
+      setState(() {
+        studentName = _cachedUserData!['first_name'] ?? 'Student';
+        username = _cachedUserData!['username'] ?? '';
+        totalClasses = _cachedUserData!['total_classes'] ?? 0;
+        attendanceRate = _cachedUserData!['attendance_rate'] ?? 0.0;
+        isLoading = false;
+      });
+      return;
     }
 
-    // 2. Fetch fresh data from backend
     if (!mounted) return;
-    if (_cachedUserData == null) {
-      setState(() => isLoading = true); // Only show loader if we have NO cache
-    }
+
+    setState(() => isLoading = true);
 
     try {
+      // Fetch user profile data
       final userData = await _authService.getCurrentUser();
+
+      // Fetch student's enrolled classes
       final classes = await _profileService.getStudentClasses();
+
+      // Fetch student's attendance statistics
       final stats = await _profileService.getStudentStats();
 
       if (!mounted) return;
 
-      final rate = double.tryParse(stats['attendance_rate']?.toString() ?? '0.0') ?? 0.0;
-
-      final newData = {
-        ...?userData,
-        'total_classes': classes.length,
-        'attendance_rate': rate,
-      };
+      final rate =
+          double.tryParse(stats['attendance_rate']?.toString() ?? '0.0') ?? 0.0;
 
       setState(() {
-        _cachedUserData = newData;
+        _cachedUserData = {
+          ...?userData,
+          'total_classes': classes.length,
+          'attendance_rate': rate,
+        };
         _lastFetch = DateTime.now();
-        studentName = userData?['first_name'] ?? userData?['username'] ?? 'Student';
+
+        studentName =
+            userData?['first_name'] ?? userData?['username'] ?? 'Student';
         username = userData?['username'] ?? '';
+
+        // Set real data from backend
         totalClasses = classes.length;
         attendanceRate = rate;
+
         isLoading = false;
       });
-      
-      // Save to persistent cache
-      await StorageService.write(key: 'student_dashboard_cache', value: jsonEncode(newData));
 
+      print(
+        '📊 Dashboard Stats: $totalClasses classes, ${attendanceRate.toStringAsFixed(1)}% attendance',
+      );
     } catch (e) {
       if (!mounted) return;
-      if (!await _authService.isLoggedIn()) {
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const LoginPage()),
-          );
-        }
-        return;
-      }
-      
-      // If we failed to fetch but have cache, just use cache and stop loading
-      if (_cachedUserData != null) {
-        setState(() => isLoading = false);
-      } else {
-        setState(() {
-          studentName = 'Offline';
-          username = '';
-          isLoading = false;
-        });
-      }
+      setState(() {
+        studentName = 'Error loading';
+        username = '';
+        totalClasses = 0;
+        attendanceRate = 0.0;
+        isLoading = false;
+      });
+      print('Error loading user data: $e');
     }
   }
 
@@ -242,7 +229,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         });
         break;
 
-      case 'Mark Attendance':
+      case 'Scan QR':
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const QRScannerScreen()),
@@ -354,26 +341,19 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
                         children: [
                           if (isDesktop) _buildTopBar(false),
                           if (isDesktop) const SizedBox(height: 24),
-                          if (isLoading)
-                            const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(40),
-                                child: CircularProgressIndicator(color: Color(0xFF007C91)),
-                              ),
-                            )
-                          else
-                            _buildStatsSection(isMobile),
+                          _buildStatsSection(isMobile),
                           const SizedBox(height: 24),
-                          if (!isLoading) ...[
-                            _buildSectionHeader(isMobile),
-                            const SizedBox(height: 16),
-                            Center(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(maxWidth: 1100),
-                                child: _buildDashboardGrid(crossAxisCount, isMobile),
+                          _buildSectionHeader(isMobile),
+                          const SizedBox(height: 16),
+                          Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 1100),
+                              child: _buildDashboardGrid(
+                                crossAxisCount,
+                                isMobile,
                               ),
                             ),
-                          ],
+                          ),
                         ],
                       ),
                     ),
@@ -382,12 +362,31 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
               ],
             ),
           ),
+
+          // Inline loading indicator
+          if (isLoading)
+            Container(
+              color: Colors.black26,
+              child: const Center(
+                child: Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text('Loading...'),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
-
-
 
   PreferredSizeWidget _buildTopBar(bool isMobile) {
     return AppBar(

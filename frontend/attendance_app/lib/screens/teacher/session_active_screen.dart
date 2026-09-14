@@ -6,8 +6,6 @@ import '../../services/session_service.dart';
 import '../common/custom_camera_screen.dart';
 import '../../widgets/pattern_painter.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 import '../../services/sync_service.dart';
 import '../../widgets/offline_indicator.dart';
 import '../../services/ble_mesh_service.dart';
@@ -791,15 +789,11 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
           connectivityResult.contains(ConnectivityResult.none);
 
       if (isOffline) {
-        final appDir = await getApplicationDocumentsDirectory();
-        final fileName = 'offline_reference_${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final savedImage = await File(imagePath).copy('${appDir.path}/$fileName');
-        
         await SyncService().updateSessionReferenceImage(
           widget.sessionData['session_id'].toString(),
-          savedImage.path,
+          imagePath,
         );
-        setState(() => referenceImagePath = savedImage.path);
+        setState(() => referenceImagePath = imagePath);
         _showSuccessSnackBar(
           'Reference image saved offline. It will sync automatically when internet is restored.',
         );

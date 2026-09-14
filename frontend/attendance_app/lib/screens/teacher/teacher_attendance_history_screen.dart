@@ -6,7 +6,6 @@ import '../../config/api_config.dart';
 import '../../services/attendance_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/class_service.dart';
-import '../../widgets/skeleton_loader.dart';
 import '../../widgets/teacher_web_layout.dart';
 import '../../widgets/teacher_drawer.dart';
 import 'dart:async';
@@ -380,8 +379,29 @@ class _TeacherAttendanceHistoryScreenState
 
   Widget _buildBody(bool isMobile) {
     if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.white),
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 60,
+              height: 60,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Loading attendance data...',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -739,7 +759,29 @@ class _TeacherAttendanceHistoryScreenState
   }
 
   Widget _buildModernAttendanceRow(Map<String, dynamic> record, bool isMobile) {
-    final isPresent = record['status'] == 'present';
+    final status = record['status'] ?? 'unknown';
+    
+    Color statusColor;
+    Color gradientStart;
+    Color gradientEnd;
+    IconData statusIcon;
+    
+    if (status == 'present') {
+      statusColor = Colors.green;
+      gradientStart = Colors.green;
+      gradientEnd = Colors.green.shade700;
+      statusIcon = Icons.check_circle;
+    } else if (status == 'pending_review') {
+      statusColor = Colors.orange;
+      gradientStart = Colors.orange;
+      gradientEnd = Colors.orange.shade700;
+      statusIcon = Icons.pending;
+    } else {
+      statusColor = Colors.red;
+      gradientStart = Colors.red;
+      gradientEnd = Colors.red.shade700;
+      statusIcon = Icons.cancel;
+    }
 
     // ✅ ADD THIS: Convert UTC to local time, preferring session_date
     final markedAt = DateTime.parse(record['session_date'] ?? record['marked_at']).toLocal();
@@ -752,9 +794,7 @@ class _TeacherAttendanceHistoryScreenState
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isPresent
-              ? Colors.green.withOpacity(0.3)
-              : Colors.red.withOpacity(0.3),
+          color: statusColor.withOpacity(0.3),
           width: 1.5,
         ),
         boxShadow: [
@@ -771,25 +811,21 @@ class _TeacherAttendanceHistoryScreenState
             padding: EdgeInsets.all(isMobile ? 8 : 10),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: isPresent
-                    ? [Colors.green, Colors.green.shade700]
-                    : [Colors.red, Colors.red.shade700],
+                colors: [gradientStart, gradientEnd],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
-                  color: (isPresent ? Colors.green : Colors.red).withOpacity(
-                    0.3,
-                  ),
+                  color: statusColor.withOpacity(0.3),
                   blurRadius: 6,
                   offset: const Offset(0, 3),
                 ),
               ],
             ),
             child: Icon(
-              isPresent ? Icons.check_circle : Icons.cancel,
+              statusIcon,
               color: Colors.white,
               size: isMobile ? 20 : 24,
             ),

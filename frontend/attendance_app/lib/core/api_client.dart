@@ -103,7 +103,10 @@ class ApiClient {
             } catch (e) {
               _failedRequestsQueue.clear();
               _isRefreshing = false;
-              _clearTokensAndLogout();
+              // Only log out if it's an explicit API rejection (e.g. refresh token expired)
+              if (e is DioException && e.response != null && (e.response?.statusCode == 401 || e.response?.statusCode == 400)) {
+                await _clearTokensAndLogout();
+              }
               return handler.next(error);
             }
             

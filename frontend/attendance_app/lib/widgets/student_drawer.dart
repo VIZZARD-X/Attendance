@@ -7,7 +7,7 @@ import '../screens/student/pattern_sessions_screen.dart';
 import '../screens/student/attendance_history_screen.dart';
 import '../screens/student/student_profile_screen.dart';
 import '../screens/student/student_analytics_screen.dart';
-import '../screens/common/ble_test_screen.dart';
+import '../screens/common/ble_diagnostics_screen.dart';
 import '../services/auth_service.dart';
 import '../services/auth_service.dart';
 
@@ -103,7 +103,7 @@ class _StudentDrawerState extends State<StudentDrawer> {
         nextScreen = const StudentProfileScreen();
         break;
       case 'BLE Test':
-        nextScreen = const BleTestScreen();
+        nextScreen = const BleDiagnosticsScreen();
         break;
     }
 

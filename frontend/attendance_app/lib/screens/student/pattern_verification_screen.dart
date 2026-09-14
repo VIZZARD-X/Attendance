@@ -54,18 +54,12 @@ class _PatternVerificationScreenState extends State<PatternVerificationScreen> {
       );
 
       if (mounted) {
-        if (result['success']) {
-          if ((result['message'] ?? '').toLowerCase().contains('manual review')) {
-            _showErrorSnackBar('Ambiguous pattern detected. Please try scanning again.');
-            setState(() {
-              _capturedImagePath = null;
-              _isProcessing = false;
-            });
-          } else {
-            _showSuccessDialog(
-              result['message'] ?? 'Attendance marked successfully',
-            );
-          }
+        if (result['success'] == true) {
+          final isPending = result['status'] == 'pending_review';
+          _showResultDialog(
+            result['message'] ?? 'Attendance marked successfully',
+            isPending,
+          );
         } else {
           _showErrorSnackBar(result['message'] ?? 'Verification failed');
           setState(() {
@@ -101,7 +95,7 @@ class _PatternVerificationScreenState extends State<PatternVerificationScreen> {
     );
   }
 
-  void _showSuccessDialog(String message) {
+  void _showResultDialog(String message, bool isPending) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -112,19 +106,19 @@ class _PatternVerificationScreenState extends State<PatternVerificationScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.green.shade100,
+                color: isPending ? Colors.orange.shade100 : Colors.green.shade100,
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.check_circle,
-                color: Colors.green.shade600,
+                isPending ? Icons.pending : Icons.check_circle,
+                color: isPending ? Colors.orange.shade600 : Colors.green.shade600,
                 size: 60,
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Success!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              isPending ? 'Pending Review' : 'Success!',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ],
         ),

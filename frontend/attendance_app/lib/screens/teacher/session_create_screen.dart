@@ -47,6 +47,9 @@ class _SessionPageState extends State<SessionPage>
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
+  List<Map<String, String>> _loadedSubjects = [];
+  bool _isLoadingSubjects = false;
+
   @override
   void initState() {
     super.initState();
@@ -60,12 +63,41 @@ class _SessionPageState extends State<SessionPage>
     );
     _fadeController.forward();
 
-    if (widget.subjects.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showErrorSnackBar(
-          "No classes available. Please create a class first.",
-        );
-      });
+    _loadedSubjects = List.from(widget.subjects);
+
+    if (_loadedSubjects.isEmpty) {
+      _fetchSubjects();
+    }
+  }
+
+  Future<void> _fetchSubjects() async {
+    setState(() => _isLoadingSubjects = true);
+    try {
+      final classService = ClassService();
+      final classes = await classService.getMyClasses();
+      if (mounted) {
+        setState(() {
+          _loadedSubjects = classes.map((c) => {
+            'id': c['id'].toString(),
+            'code': c['class_code'] as String,
+            'name': c['class_name'] as String,
+            'semester': c['semester'] as String,
+          }).toList();
+          _isLoadingSubjects = false;
+        });
+        if (_loadedSubjects.isEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showErrorSnackBar("No classes available. Please create a class first.");
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingSubjects = false);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showErrorSnackBar("Error loading classes: $e");
+        });
+      }
     }
   }
 
@@ -105,8 +137,8 @@ class _SessionPageState extends State<SessionPage>
             : DateTime.now().toUtc();
         final endTime = startTime.add(Duration(minutes: durationMinutes));
 
-        final selectedClass = widget.subjects.firstWhere(
-          (c) => c['id'].toString() == selectedSubjectId,
+        final selectedClass = _loadedSubjects.firstWhere(
+          (c) => c['id'] == selectedSubjectId,
         );
 
         String? shapeDataStr;
@@ -483,7 +515,14 @@ class _SessionPageState extends State<SessionPage>
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
                                   ),
-                                  child: DropdownButtonFormField<String>(
+                                  child: _isLoadingSubjects
+                                      ? const Padding(
+                                          padding: EdgeInsets.symmetric(vertical: 18),
+                                          child: Center(
+                                            child: CircularProgressIndicator(color: Color(0xFF007C91)),
+                                          ),
+                                        )
+                                      : DropdownButtonFormField<String>(
                                     decoration: const InputDecoration(
                                       border: InputBorder.none,
                                       prefixIcon: Icon(
@@ -499,7 +538,7 @@ class _SessionPageState extends State<SessionPage>
                                     value: selectedSubjectId,
                                     itemHeight: null,
                                     menuMaxHeight: 300,
-                                    items: widget.subjects.map((subject) {
+                                    items: _loadedSubjects.map((subject) {
                                       return DropdownMenuItem<String>(
                                         value: subject['id'],
                                         child: Text(
@@ -513,12 +552,12 @@ class _SessionPageState extends State<SessionPage>
                                         ),
                                       );
                                     }).toList(),
-                                    onChanged: widget.subjects.isEmpty
+                                    onChanged: _loadedSubjects.isEmpty
                                         ? null
                                         : (value) {
                                             setState(() {
                                               selectedSubjectId = value;
-                                              final selected = widget.subjects
+                                              final selected = _loadedSubjects
                                                   .firstWhere(
                                                     (s) => s['id'] == value,
                                                   );
@@ -531,11 +570,11 @@ class _SessionPageState extends State<SessionPage>
                                             });
                                           },
                                     hint: Text(
-                                      widget.subjects.isEmpty
+                                      _loadedSubjects.isEmpty
                                           ? "No classes available"
                                           : "Select a class",
                                       style: TextStyle(
-                                        color: widget.subjects.isEmpty
+                                        color: _loadedSubjects.isEmpty
                                             ? Colors.red[400]
                                             : Colors.grey[600],
                                       ),
@@ -1105,7 +1144,7 @@ class _SessionPageState extends State<SessionPage>
                                         gradient: LinearGradient(
                                           colors:
                                               (isCreatingSession ||
-                                                  widget.subjects.isEmpty)
+                                                  _loadedSubjects.isEmpty)
                                               ? [
                                                   Colors.grey[400]!,
                                                   Colors.grey[500]!,
@@ -1118,7 +1157,7 @@ class _SessionPageState extends State<SessionPage>
                                         borderRadius: BorderRadius.circular(16),
                                         boxShadow:
                                             (!isCreatingSession &&
-                                                widget.subjects.isNotEmpty)
+                                                _loadedSubjects.isNotEmpty)
                                             ? [
                                                 BoxShadow(
                                                   color: const Color(
@@ -1133,7 +1172,7 @@ class _SessionPageState extends State<SessionPage>
                                       child: ElevatedButton.icon(
                                         onPressed:
                                             (isCreatingSession ||
-                                                widget.subjects.isEmpty)
+                                                _loadedSubjects.isEmpty)
                                             ? null
                                             : startSession,
                                         icon: isCreatingSession
@@ -1153,7 +1192,7 @@ class _SessionPageState extends State<SessionPage>
                                         label: Text(
                                           isCreatingSession
                                               ? "Creating..."
-                                              : widget.subjects.isEmpty
+                                              : _loadedSubjects.isEmpty
                                               ? "No Classes Available"
                                               : "Start Session",
                                           style: TextStyle(
