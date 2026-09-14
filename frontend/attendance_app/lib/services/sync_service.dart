@@ -209,6 +209,32 @@ class SyncService {
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
+  Future<List<Map<String, dynamic>>> getPendingPatternScans() async {
+    if (kIsWeb) {
+      final list = await _getWebList('offline_queue');
+      return list.where((e) => e['status'] == 'pending').toList();
+    }
+    final db = await database;
+    return await db.query(
+      'offline_queue',
+      where: 'status = ?',
+      whereArgs: ['pending'],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getPendingQRScans() async {
+    if (kIsWeb) {
+      final list = await _getWebList('offline_qr_queue');
+      return list.where((e) => e['status'] == 'pending').toList();
+    }
+    final db = await database;
+    return await db.query(
+      'offline_qr_queue',
+      where: 'status = ?',
+      whereArgs: ['pending'],
+    );
+  }
+
   Future<void> enqueueSession({
     required String id,
     required int classId,

@@ -9,6 +9,8 @@ import '../teacher/teacher_announcements_screen.dart';
 import '../teacher/teacher_analytics_screen.dart';
 import '../../widgets/teacher_web_layout.dart';
 import '../../widgets/offline_indicator.dart';
+import '../../widgets/skeleton_loader.dart';
+import '../auth/login_screen.dart';
 
 // ─── App colour constants ──────────────
 abstract class _AppColors {
@@ -324,6 +326,17 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
       });
     } catch (e) {
       if (!mounted) return;
+      
+      if (!await _authService.isLoggedIn()) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+          );
+        }
+        return;
+      }
+
       setState(() {
         _teacherName = 'Teacher';
         _username = '';
@@ -480,18 +493,20 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildStatsSection(isMobile),
-                      const SizedBox(height: 24),
+                      if (_isLoading) _buildSkeletonStats() else _buildStatsRow(),
+                      const SizedBox(height: 32),
                       _buildSectionHeader(),
                       const SizedBox(height: 16),
-                      _buildDashboardGrid(crossAxisCount, isMobile),
+                      if (_isLoading)
+                        _buildSkeletonGrid(isMobile ? 1 : 2)
+                      else
+                        _buildDashboardGrid(isMobile ? 1 : 2, true),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-          if (_isLoading) _buildLoadingOverlay(),
         ],
       ),
     );
@@ -522,40 +537,103 @@ class _TeacherDashboardWebState extends State<TeacherDashboardWeb> {
                   children: [
                     _buildDesktopHeader(),
                     const SizedBox(height: 32),
-                    _buildStatsRow(),
+                    if (_isLoading) _buildSkeletonStats() else _buildStatsRow(),
                     const SizedBox(height: 48),
                     _buildSectionHeader(),
                     const SizedBox(height: 24),
-                    _buildDashboardGrid(3, false),
+                    if (_isLoading)
+                      _buildSkeletonGrid(3)
+                    else
+                      _buildDashboardGrid(3, false),
                   ],
                 ),
               ),
             ),
           ),
-          if (_isLoading) _buildLoadingOverlay(),
         ],
       ),
     );
   }
 
-  Widget _buildLoadingOverlay() => Container(
-    color: Colors.black26,
-    child: const Center(
-      child: Card(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading...'),
+  Widget _buildSkeletonStats() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final totalCard = Container(
+          height: 130,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(40),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
             ],
           ),
-        ),
+          child: const SkeletonLoader(width: double.infinity, height: double.infinity, borderRadius: 40),
+        );
+        final sessionCard = Container(
+          height: 130,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(40),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const SkeletonLoader(width: double.infinity, height: double.infinity, borderRadius: 40),
+        );
+
+        if (constraints.maxWidth < 700) {
+          return Column(
+            children: [totalCard, const SizedBox(height: 16), sessionCard],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: totalCard),
+            const SizedBox(width: 16),
+            Expanded(child: sessionCard),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSkeletonGrid(int crossAxisCount) {
+    return GridView.builder(
+      itemCount: 6,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: 32,
+        mainAxisSpacing: 32,
+        childAspectRatio: 2.2,
       ),
-    ),
-  );
+      itemBuilder: (context, index) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(43),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const SkeletonLoader(width: double.infinity, height: double.infinity, borderRadius: 43),
+        );
+      },
+    );
+  }
 
   Widget _buildStatsSection(bool isMobile) {
     return LayoutBuilder(

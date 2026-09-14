@@ -174,11 +174,8 @@ class _StudentMyClassesScreenState extends State<StudentMyClassesScreen>
 
   Widget _buildBody(bool isMobile) {
     if (isLoading) {
-      return ListView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        itemCount: 6,
-        itemBuilder: (context, index) => const SkeletonCard(),
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
       );
     }
 

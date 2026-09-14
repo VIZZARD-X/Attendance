@@ -1026,11 +1026,8 @@ class _MyClassesScreenState extends State<MyClassesScreen>
           _buildAppBar(isMobile),
           Expanded(
             child: isLoading
-                ? ListView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    itemCount: 6,
-                    itemBuilder: (context, index) => const SkeletonCard(),
+                ? const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
                   )
                 : classes.isEmpty
                 ? _buildEmptyState()

@@ -400,27 +400,20 @@ class _QRScannerScreenState extends State<QRScannerScreen>
               .toList();
 
           if (patternSessions.isEmpty) {
-            _showError(
-              'No active pattern session found. Ask your teacher to start an pattern session.',
-            );
-            setState(() => isProcessing = false);
-            await _cameraController!.resumePreview();
-            return;
+            // Auto fallback to offline if the teacher hasn't synced the session yet
+            isOffline = true;
+          } else {
+            final session = patternSessions.first;
+
+            // Check if teacher has uploaded the reference image yet
+            if (session['has_reference_image'] == false) {
+              // The teacher might have uploaded it while offline, or is taking time.
+              // We'll also fallback to offline so the student isn't blocked.
+              isOffline = true;
+            } else {
+              sessionId = session['session_id'].toString();
+            }
           }
-
-          final session = patternSessions.first;
-
-          // Check if teacher has uploaded the reference image yet
-          if (session['has_reference_image'] == false) {
-            _showError(
-              'Teacher has not uploaded the board photo yet. Please wait and try again.',
-            );
-            setState(() => isProcessing = false);
-            await _cameraController!.resumePreview();
-            return;
-          }
-
-          sessionId = session['session_id'].toString();
         }
       }
 

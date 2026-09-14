@@ -58,10 +58,37 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
 
     try {
       final records = await _attendanceService.getMyAttendance();
+      
+      // Fetch offline pending records
+      final pendingPatterns = await SyncService().getPendingPatternScans();
+      final pendingQRs = await SyncService().getPendingQRScans();
 
       if (mounted) {
         setState(() {
-          attendanceRecords = records;
+          attendanceRecords = List.from(records);
+          
+          // Prepend pending patterns
+          for (var p in pendingPatterns.reversed) {
+            attendanceRecords.insert(0, {
+               'class_name': 'Pending Sync (Pattern)',
+               'teacher_name': 'Offline Scan',
+               'status': 'pending_sync',
+               'session_date': p['timestamp'],
+               'marked_at': p['timestamp'],
+            });
+          }
+          
+          // Prepend pending QRs
+          for (var q in pendingQRs.reversed) {
+            attendanceRecords.insert(0, {
+               'class_name': 'Pending Sync (QR)',
+               'teacher_name': 'Offline Scan',
+               'status': 'pending_sync',
+               'session_date': q['timestamp'],
+               'marked_at': q['timestamp'],
+            });
+          }
+
           _groupRecordsByClass();
           isLoading = false;
         });
@@ -447,11 +474,8 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
 
   Widget _buildBody(bool isMobile) {
     if (isLoading) {
-      return ListView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        itemCount: 6,
-        itemBuilder: (context, index) => const SkeletonCard(),
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
       );
     }
 
@@ -652,13 +676,24 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
 
   Widget _buildAttendanceCard(Map<String, dynamic> record, bool isMobile) {
     final status = record['status'] ?? 'unknown';
+    final isPendingSync = status == 'pending_sync';
+    
     final statusColor = status == 'present' 
         ? Colors.green 
-        : (status.toString().toLowerCase() == 'pending_review' ? Colors.orange : Colors.red);
+        : (isPendingSync 
+            ? Colors.orange 
+            : (status.toString().toLowerCase() == 'pending_review' ? Colors.orange : Colors.red));
+            
     final statusIcon = status == 'present' 
         ? Icons.check_circle 
-        : (status.toString().toLowerCase() == 'pending_review' ? Icons.hourglass_empty : Icons.cancel);
-    final statusText = status.toString().toLowerCase() == 'pending_review' ? 'PENDING' : status.toUpperCase();
+        : (isPendingSync 
+            ? Icons.sync_rounded 
+            : (status.toString().toLowerCase() == 'pending_review' ? Icons.hourglass_empty : Icons.cancel));
+            
+    final statusText = isPendingSync 
+        ? 'PENDING SYNC' 
+        : (status.toString().toLowerCase() == 'pending_review' ? 'PENDING' : status.toUpperCase());
+        
     final markedAt = DateTime.parse(record['session_date'] ?? record['marked_at']).toLocal();
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -874,11 +909,17 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     final status = record['status'] ?? 'unknown';
     final statusColor = status == 'present' 
         ? Colors.green 
-        : (status.toString().toLowerCase() == 'pending_review' ? Colors.orange : Colors.red);
+        : (status.toString().toLowerCase() == 'pending_sync' 
+            ? Colors.orange 
+            : (status.toString().toLowerCase() == 'pending_review' ? Colors.orange : Colors.red));
     final statusIcon = status == 'present' 
         ? Icons.check_circle 
-        : (status.toString().toLowerCase() == 'pending_review' ? Icons.hourglass_empty : Icons.cancel);
-    final statusText = status.toString().toLowerCase() == 'pending_review' ? 'PENDING' : status.toUpperCase();
+        : (status.toString().toLowerCase() == 'pending_sync' 
+            ? Icons.sync_rounded 
+            : (status.toString().toLowerCase() == 'pending_review' ? Icons.hourglass_empty : Icons.cancel));
+    final statusText = status.toString().toLowerCase() == 'pending_sync' 
+        ? 'PENDING SYNC' 
+        : (status.toString().toLowerCase() == 'pending_review' ? 'PENDING' : status.toUpperCase());
 
     // ✅ ADD THIS: Convert UTC to local time
     final markedAt = DateTime.parse(record['session_date'] ?? record['marked_at']).toLocal();

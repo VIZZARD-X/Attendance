@@ -3,6 +3,7 @@ import '../../services/auth_service.dart';
 import '../../services/class_service.dart';
 import '../../widgets/teacher_drawer.dart';
 import '../../widgets/enhanced_dashboard_card.dart';
+import '../auth/login_screen.dart';
 import '../teacher/my_classes_screen.dart';
 import '../teacher/session_create_screen.dart';
 import '../teacher/teacher_attendance_history_screen.dart';
@@ -10,6 +11,8 @@ import '../teacher/teacher_profile_screen.dart';
 import '../teacher/teacher_announcements_screen.dart';
 import '../teacher/teacher_analytics_screen.dart';
 import '../../widgets/offline_indicator.dart';
+import '../../services/storage_service.dart';
+import 'dart:convert';
 
 class TeacherDashboardMobile extends StatefulWidget {
   const TeacherDashboardMobile({super.key});
@@ -89,22 +92,33 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
   }
 
   Future<void> _loadUserData({bool forceRefresh = false}) async {
-    // Use cache if available and recent (less than 5 minutes old)
-    if (!forceRefresh &&
-        _cachedUserData != null &&
-        _lastFetch != null &&
-        DateTime.now().difference(_lastFetch!) < const Duration(minutes: 5)) {
-      setState(() {
-        teacherName = _cachedUserData!['first_name'] ?? 'Teacher';
-        username = _cachedUserData!['username'] ?? '';
-        isLoading = false;
-      });
-      return;
+    // 1. Try to load from persistent cache first if not refreshing manually
+    if (!forceRefresh && _cachedUserData == null) {
+      final cachedStr = await StorageService.read(key: 'teacher_dashboard_cache');
+      if (cachedStr != null) {
+        try {
+          final decoded = jsonDecode(cachedStr);
+          if (mounted) {
+            setState(() {
+              _cachedUserData = decoded;
+              teacherName = decoded['first_name'] ?? 'Teacher';
+              username = decoded['username'] ?? '';
+              totalClasses = decoded['total_classes'] ?? 0;
+              activeSessions = decoded['active_sessions'] ?? 0;
+              isLoading = false; // We have cache, so we can show UI immediately
+            });
+          }
+        } catch (e) {
+          debugPrint('Error decoding cache: $e');
+        }
+      }
     }
 
+    // 2. Fetch fresh data from backend
     if (!mounted) return;
-
-    setState(() => isLoading = true);
+    if (_cachedUserData == null) {
+      setState(() => isLoading = true); // Only show loader if we have NO cache
+    }
 
     try {
       final userData = await _authService.getCurrentUser();
@@ -112,8 +126,14 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
 
       if (!mounted) return;
 
+      final newData = {
+        ...?userData,
+        'total_classes': classes.length,
+        'active_sessions': 0, // TODO: Fetch from backend
+      };
+
       setState(() {
-        _cachedUserData = userData;
+        _cachedUserData = newData;
         _lastFetch = DateTime.now();
 
         teacherName = userData?['first_name'] ?? 'Teacher';
@@ -122,14 +142,33 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
         activeSessions = 0; // TODO: Fetch from backend
         isLoading = false;
       });
+      
+      // Save to persistent cache
+      await StorageService.write(key: 'teacher_dashboard_cache', value: jsonEncode(newData));
+
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        teacherName = 'Error loading';
-        username = '';
-        isLoading = false;
-      });
-      print('Error loading user data: $e');
+      
+      if (!await _authService.isLoggedIn()) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginPage()),
+          );
+        }
+        return;
+      }
+
+      // If we failed to fetch but have cache, just use cache and stop loading
+      if (_cachedUserData != null) {
+        setState(() => isLoading = false);
+      } else {
+        setState(() {
+          teacherName = 'Offline';
+          username = '';
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -319,19 +358,26 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
                         children: [
                           if (isDesktop) _buildTopBar(false),
                           if (isDesktop) const SizedBox(height: 24),
-                          _buildStatsSection(isMobile),
+                          if (isLoading)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(40),
+                                child: CircularProgressIndicator(color: Color(0xFF007C91)),
+                              ),
+                            )
+                          else
+                            _buildStatsSection(isMobile),
                           const SizedBox(height: 24),
-                          _buildSectionHeader(isMobile),
-                          const SizedBox(height: 16),
-                          Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 1100),
-                              child: _buildDashboardGrid(
-                                crossAxisCount,
-                                isMobile,
+                          if (!isLoading) ...[
+                            _buildSectionHeader(isMobile),
+                            const SizedBox(height: 16),
+                            Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 1100),
+                                child: _buildDashboardGrid(crossAxisCount, isMobile),
                               ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),
@@ -340,31 +386,12 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
               ],
             ),
           ),
-
-          // Inline loading indicator
-          if (isLoading)
-            Container(
-              color: Colors.black26,
-              child: const Center(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text('Loading...'),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
   }
+
+
 
   PreferredSizeWidget _buildTopBar(bool isMobile) {
     return AppBar(
