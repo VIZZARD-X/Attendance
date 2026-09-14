@@ -307,8 +307,9 @@ class _QRScannerScreenState extends State<QRScannerScreen>
           isProcessing = false;
         });
 
-        _showSuccessDialog(
+        _showResultDialog(
           'Offline Mode: QR scan saved locally. It will sync automatically when internet is restored.',
+          false,
         );
         return;
       }
@@ -322,7 +323,8 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       if (mounted) {
         if (result['success']) {
           setState(() => hasScanned = true);
-          _showSuccessDialog(result['message']);
+          final isPending = result['status'] == 'pending_review';
+          _showResultDialog(result['message'], isPending);
         } else {
           _showError(result['message']);
           setState(() => isProcessing = false);
