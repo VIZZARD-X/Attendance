@@ -55,9 +55,17 @@ class _PatternVerificationScreenState extends State<PatternVerificationScreen> {
 
       if (mounted) {
         if (result['success']) {
-          _showSuccessDialog(
-            result['message'] ?? 'Attendance marked successfully',
-          );
+          if ((result['message'] ?? '').toLowerCase().contains('manual review')) {
+            _showErrorSnackBar('Ambiguous pattern detected. Please try scanning again.');
+            setState(() {
+              _capturedImagePath = null;
+              _isProcessing = false;
+            });
+          } else {
+            _showSuccessDialog(
+              result['message'] ?? 'Attendance marked successfully',
+            );
+          }
         } else {
           _showErrorSnackBar(result['message'] ?? 'Verification failed');
           setState(() {

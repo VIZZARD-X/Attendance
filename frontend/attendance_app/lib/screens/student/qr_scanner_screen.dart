@@ -7,6 +7,8 @@ import 'package:camera/camera.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import '../../services/attendance_service.dart';
 import '../../services/session_service.dart';
 import '../../services/sync_service.dart';
@@ -69,13 +71,17 @@ class _QRScannerScreenState extends State<QRScannerScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
+    if (state == AppLifecycleState.inactive) return; // Prevent stutter/reset when pulling down control center
+
     if (state == AppLifecycleState.resumed) {
       if (!isPatternMode) {
         _scannerController.start();
       } else {
-        _initializePatternCamera();
+        if (_cameraController == null || !_cameraController!.value.isInitialized) {
+          _initializePatternCamera();
+        }
       }
-    } else {
+    } else if (state == AppLifecycleState.paused) {
       if (!isPatternMode) {
         _scannerController.stop();
       } else if (_cameraController != null) {
@@ -321,8 +327,13 @@ class _QRScannerScreenState extends State<QRScannerScreen>
 
       if (mounted) {
         if (result['success']) {
-          setState(() => hasScanned = true);
-          _showSuccessDialog(result['message']);
+          if ((result['message'] ?? '').toLowerCase().contains('manual review')) {
+            _showError('Ambiguous scan detected. Please try scanning again.');
+            setState(() => isProcessing = false);
+          } else {
+            setState(() => hasScanned = true);
+            _showSuccessDialog(result['message'] ?? 'Attendance marked successfully');
+          }
         } else {
           _showError(result['message']);
           setState(() => isProcessing = false);
@@ -440,7 +451,13 @@ class _QRScannerScreenState extends State<QRScannerScreen>
 
       if (isOffline) {
         final timestamp = DateTime.now().toUtc().toIso8601String();
-        await SyncService().enqueuePatternScan(imagePath, timestamp, bleHopCount: bleHopCount, bleRssi: bleRssi);
+        
+        // Save image persistently for offline syncing
+        final appDir = await getApplicationDocumentsDirectory();
+        final fileName = 'offline_pattern_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final savedImage = await File(imagePath).copy('${appDir.path}/$fileName');
+        
+        await SyncService().enqueuePatternScan(savedImage.path, timestamp, bleHopCount: bleHopCount, bleRssi: bleRssi);
         if (mounted) {
           setState(() => hasScanned = true);
           _showSuccessDialog(
@@ -460,10 +477,16 @@ class _QRScannerScreenState extends State<QRScannerScreen>
 
       if (mounted) {
         if (result['success']) {
-          setState(() => hasScanned = true);
-          _showSuccessDialog(
-            result['message'] ?? 'Attendance marked successfully',
-          );
+          if ((result['message'] ?? '').toLowerCase().contains('manual review')) {
+            _showError('Ambiguous pattern detected. Please try scanning again.');
+            setState(() => isProcessing = false);
+            await _cameraController!.resumePreview();
+          } else {
+            setState(() => hasScanned = true);
+            _showSuccessDialog(
+              result['message'] ?? 'Attendance marked successfully',
+            );
+          }
         } else {
           _showError(result['message'] ?? 'Verification failed');
           setState(() => isProcessing = false);

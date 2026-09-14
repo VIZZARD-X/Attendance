@@ -312,6 +312,16 @@ class SyncService {
             );
 
             if (result['success']) {
+              if (!kIsWeb && referenceImagePath != null) {
+                try {
+                  final refFile = File(referenceImagePath);
+                  if (await refFile.exists()) {
+                    await refFile.delete();
+                  }
+                } catch (e) {
+                  debugPrint('Error deleting synced reference image file: $e');
+                }
+              }
               if (kIsWeb) {
                 final list = await _getWebList('offline_sessions');
                 list.removeWhere((e) => e['id'] == id);
@@ -365,6 +375,16 @@ class SyncService {
           final scanTime = DateTime.parse(timestamp);
           if (DateTime.now().toUtc().difference(scanTime.toUtc()).inHours >= 24) {
             debugPrint('Discarding expired pattern scan $id (older than 24 hours)');
+            if (!kIsWeb) {
+              try {
+                final file = File(imagePath);
+                if (await file.exists()) {
+                  await file.delete();
+                }
+              } catch (e) {
+                debugPrint('Error deleting expired image file: $e');
+              }
+            }
             if (kIsWeb) {
               final list = await _getWebList('offline_queue');
               list.removeWhere((e) => e['id'] == id);
@@ -406,6 +426,16 @@ class SyncService {
             );
 
             if (result['success']) {
+              if (!kIsWeb) {
+                try {
+                  final file = File(imagePath);
+                  if (await file.exists()) {
+                    await file.delete();
+                  }
+                } catch (e) {
+                  debugPrint('Error deleting synced image file: $e');
+                }
+              }
               if (kIsWeb) {
                 final list = await _getWebList('offline_queue');
                 list.removeWhere((e) => e['id'] == id);

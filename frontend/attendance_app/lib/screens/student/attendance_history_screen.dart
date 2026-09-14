@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../services/attendance_service.dart';
 import '../../services/profile_service.dart';
 import '../../widgets/student_drawer.dart';
+import '../../widgets/skeleton_loader.dart';
 
 import 'dart:async';
 import '../../services/sync_service.dart';
@@ -446,8 +447,11 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
 
   Widget _buildBody(bool isMobile) {
     if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.white),
+      return ListView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        itemCount: 6,
+        itemBuilder: (context, index) => const SkeletonCard(),
       );
     }
 
@@ -648,7 +652,13 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
 
   Widget _buildAttendanceCard(Map<String, dynamic> record, bool isMobile) {
     final status = record['status'] ?? 'unknown';
-    final statusColor = status == 'present' ? Colors.green : Colors.red;
+    final statusColor = status == 'present' 
+        ? Colors.green 
+        : (status.toString().toLowerCase() == 'pending_review' ? Colors.orange : Colors.red);
+    final statusIcon = status == 'present' 
+        ? Icons.check_circle 
+        : (status.toString().toLowerCase() == 'pending_review' ? Icons.hourglass_empty : Icons.cancel);
+    final statusText = status.toString().toLowerCase() == 'pending_review' ? 'PENDING' : status.toUpperCase();
     final markedAt = DateTime.parse(record['session_date'] ?? record['marked_at']).toLocal();
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -687,7 +697,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                         ),
                       ),
                       child: Icon(
-                        status == 'present' ? Icons.check_circle : Icons.cancel,
+                        statusIcon,
                         color: statusColor,
                         size: 28,
                       ),
@@ -735,7 +745,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                         ],
                       ),
                       child: Text(
-                        status.toUpperCase(),
+                        statusText,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
@@ -862,7 +872,13 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     bool isMobile,
   ) {
     final status = record['status'] ?? 'unknown';
-    final statusColor = status == 'present' ? Colors.green : Colors.red;
+    final statusColor = status == 'present' 
+        ? Colors.green 
+        : (status.toString().toLowerCase() == 'pending_review' ? Colors.orange : Colors.red);
+    final statusIcon = status == 'present' 
+        ? Icons.check_circle 
+        : (status.toString().toLowerCase() == 'pending_review' ? Icons.hourglass_empty : Icons.cancel);
+    final statusText = status.toString().toLowerCase() == 'pending_review' ? 'PENDING' : status.toUpperCase();
 
     // ✅ ADD THIS: Convert UTC to local time
     final markedAt = DateTime.parse(record['session_date'] ?? record['marked_at']).toLocal();
@@ -878,7 +894,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
       child: Row(
         children: [
           Icon(
-            status == 'present' ? Icons.check_circle : Icons.cancel,
+            statusIcon,
             color: statusColor,
             size: 20,
           ),
@@ -898,7 +914,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              status.toUpperCase(),
+              statusText,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 10,

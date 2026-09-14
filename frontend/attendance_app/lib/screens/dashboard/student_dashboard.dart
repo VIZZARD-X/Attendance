@@ -46,7 +46,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
       'gradientColors': [const Color(0xFF3B82F6), Colors.white],
     },
     {
-      'title': 'Scan QR',
+      'title': 'Mark Attendance',
       'subtitle': 'Start new Attendance Session',
       'icon': Icons.qr_code_scanner_rounded,
       'gradientColors': [const Color(0xFFA6FF39), Colors.white],
@@ -229,7 +229,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         });
         break;
 
-      case 'Scan QR':
+      case 'Mark Attendance':
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const QRScannerScreen()),

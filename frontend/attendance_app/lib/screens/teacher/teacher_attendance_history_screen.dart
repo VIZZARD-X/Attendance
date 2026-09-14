@@ -6,6 +6,7 @@ import '../../config/api_config.dart';
 import '../../services/attendance_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/class_service.dart';
+import '../../widgets/skeleton_loader.dart';
 import '../../widgets/teacher_web_layout.dart';
 import '../../widgets/teacher_drawer.dart';
 import 'dart:async';
@@ -379,29 +380,11 @@ class _TeacherAttendanceHistoryScreenState
 
   Widget _buildBody(bool isMobile) {
     if (isLoading) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 60,
-              height: 60,
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Loading attendance data...',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
+      return ListView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        itemCount: 6,
+        itemBuilder: (context, index) => const SkeletonCard(),
       );
     }
 
