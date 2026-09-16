@@ -37,6 +37,44 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
 
+
+def ensure_class_enrollments(class_obj):
+    """
+    Ensure all students whose StudentProfile.semester matches class_obj.semester
+    are enrolled in class_obj (creating Enrollment records if missing).
+    """
+    if not class_obj or not class_obj.semester:
+        return
+    
+    sem = class_obj.semester.strip()
+    if not sem:
+        return
+
+    try:
+        # Find all student users with matching profile semester
+        matching_students = User.objects.filter(
+            role='student',
+            student_profile__semester__iexact=sem
+        )
+
+        # Existing enrolled student IDs for this class
+        existing_enrolled_ids = set(
+            Enrollment.objects.filter(class_obj=class_obj).values_list('student_id', flat=True)
+        )
+
+        # Create missing enrollments
+        new_enrollments = [
+            Enrollment(class_obj=class_obj, student=student)
+            for student in matching_students
+            if student.id not in existing_enrolled_ids
+        ]
+
+        if new_enrollments:
+            Enrollment.objects.bulk_create(new_enrollments, ignore_conflicts=True)
+    except Exception as e:
+        print(f"Error in ensure_class_enrollments for class {class_obj.id}: {e}")
+
+
 class RegisterView(generics.CreateAPIView):
     """Public endpoint for new user registration"""
     permission_classes = (permissions.AllowAny,)
@@ -200,6 +238,7 @@ def get_class_students(request, class_id):
     
     try:
         class_obj = Class.objects.get(id=class_id, teacher=user)
+        ensure_class_enrollments(class_obj)
         # test query to see if student_profile is missing
         list(StudentProfile.objects.all()[:1])
     except Class.DoesNotExist:
@@ -453,6 +492,7 @@ def create_session(request):
     
     try:
         class_obj = Class.objects.get(id=class_id, teacher=user)
+        ensure_class_enrollments(class_obj)
     except Class.DoesNotExist:
         return Response(
             {'error': 'Class not found'},
@@ -560,6 +600,16 @@ def get_student_active_sessions(request):
             status=status.HTTP_403_FORBIDDEN
         )
     
+    # Auto-enroll student in matching semester classes
+    try:
+        profile = getattr(user, 'student_profile', None)
+        if profile and profile.semester:
+            matching_classes = Class.objects.filter(semester__iexact=profile.semester.strip())
+            for class_obj in matching_classes:
+                ensure_class_enrollments(class_obj)
+    except Exception as e:
+        print("Error auto-enrolling student for active sessions:", e)
+
     # Get enrolled classes
     enrolled_classes = Enrollment.objects.filter(student=user).values_list('class_obj_id', flat=True)
     
@@ -1902,6 +1952,9 @@ def get_session_attendance_details(request, session_id):
             status=status.HTTP_404_NOT_FOUND
         )
     
+    # Auto-ensure all students of this class's semester are enrolled
+    ensure_class_enrollments(session.class_obj)
+
     # Get all enrolled students
     enrollments = Enrollment.objects.filter(
         class_obj=session.class_obj
@@ -1916,9 +1969,11 @@ def get_session_attendance_details(request, session_id):
     attendance_map = {record.student_id: record for record in attendance_records}
     
     # Build student list with attendance status
+    processed_student_ids = set()
     students_data = []
     for enrollment in enrollments:
         student = enrollment.student
+        processed_student_ids.add(student.id)
         record = attendance_map.get(student.id)
         
         students_data.append({
@@ -1930,6 +1985,21 @@ def get_session_attendance_details(request, session_id):
             'record_id': record.id if record else None,
             'has_record': record is not None
         })
+    
+    # Include any student who has an attendance record but wasn't in enrollments
+    for record in attendance_records:
+        if record.student_id not in processed_student_ids:
+            student = record.student
+            processed_student_ids.add(student.id)
+            students_data.append({
+                'id': student.id,
+                'username': student.username,
+                'email': student.email,
+                'status': record.status,
+                'marked_at': record.marked_at.isoformat() if record.marked_at else None,
+                'record_id': record.id,
+                'has_record': True
+            })
     
     # Calculate statistics
     total_students = len(students_data)

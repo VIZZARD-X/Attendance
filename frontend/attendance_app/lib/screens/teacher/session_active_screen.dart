@@ -151,9 +151,13 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
     }
 
     try {
-      final result = await _sessionService.getSessionAttendance(
-        widget.sessionData['session_id'].toString(),
-      );
+      final sessionId = (widget.sessionData['session_id'] ?? widget.sessionData['id'])?.toString();
+      if (sessionId == null || sessionId.isEmpty || sessionId == 'null') {
+        if (mounted) setState(() => isLoading = false);
+        return;
+      }
+
+      final result = await _sessionService.getSessionAttendance(sessionId);
 
       if (!mounted) return;
       
