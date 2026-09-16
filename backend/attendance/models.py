@@ -223,6 +223,7 @@ class AttendanceRecord(models.Model):
     
     verification_score = models.FloatField(null=True, blank=True)
     verification_reasons = models.TextField(null=True, blank=True)  # Store JSON string of reasons
+    student_image = models.ImageField(upload_to='student_patterns/%Y/%m/%d/', blank=True, null=True)
     
     class Meta:
         db_table = 'attendance_records'
@@ -249,6 +250,32 @@ class AttendanceRecord(models.Model):
             return None
         delta = (self.marked_at - self.session.start_time).total_seconds()
         return max(0.0, delta)
+
+
+class PendingStudentSubmission(models.Model):
+    """
+    Queue for student submissions when the teacher is offline and the session or 
+    reference image does not exist on the server yet.
+    """
+    session_id_uuid = models.UUIDField()
+    student = models.ForeignKey(User, on_delete=models.CASCADE)
+    student_image = models.ImageField(upload_to='pending_patterns/%Y/%m/%d/')
+    focal_distance = models.FloatField(null=True, blank=True)
+    flash_fired = models.BooleanField(default=False)
+    ble_hop_count = models.IntegerField(null=True, blank=True)
+    ble_rssi = models.IntegerField(null=True, blank=True)
+    marked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'pending_student_submissions'
+        ordering = ['marked_at']
+        indexes = [
+            models.Index(fields=['session_id_uuid']),
+            models.Index(fields=['marked_at']),
+        ]
+
+    def __str__(self):
+        return f"Pending: {self.student.username} for session {self.session_id_uuid}"
 
 
 

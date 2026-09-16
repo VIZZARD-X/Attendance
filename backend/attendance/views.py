@@ -833,50 +833,47 @@ def verify_image(request):
     try:
         session = AttendanceSession.objects.get(session_id=session_id)
     except AttendanceSession.DoesNotExist:
-        return Response(
-            {'error': 'Session not found'},
-            status=status.HTTP_404_NOT_FOUND
-        )
-
-    if session.status != 'active':
-        return Response({'error': 'This session has ended'}, status=status.HTTP_400_BAD_REQUEST)
-
-    if not session.is_active:
-        return Response(
-            {'error': f'Session expired at {session.end_time.strftime("%I:%M %p")}'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    if not Enrollment.objects.filter(class_obj=session.class_obj, student=user).exists():
-        return Response(
-            {'error': f'You are not enrolled in {session.class_obj.class_code}'},
-            status=status.HTTP_403_FORBIDDEN
-        )
+        session = None
 
     try:
-        if session.class_type == 'pattern':
-            if not session.pattern_code:
+        missing_reference = False
+        if session is not None:
+            if session.status != 'active':
+                return Response({'error': 'This session has ended'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if not session.is_active:
                 return Response(
-                    {'error': 'Session has no pattern code for verification'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            if not session.reference_image:
-                return Response(
-                    {'error': 'Teacher has not uploaded the reference image yet'},
+                    {'error': f'Session expired at {session.end_time.strftime("%I:%M %p")}'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-        existing_record = AttendanceRecord.objects.filter(session=session, student=user).first()
-        if existing_record:
-            if existing_record.status == 'pending_review':
-                # Allow the student to retry scanning if their previous attempt failed verification
-                existing_record.delete()
-            else:
-                return Response({
-                    'error': 'Attendance already marked',
-                    'marked_at': existing_record.marked_at,
-                    'status': existing_record.status
-                }, status=status.HTTP_400_BAD_REQUEST)
+            if not Enrollment.objects.filter(class_obj=session.class_obj, student=user).exists():
+                return Response(
+                    {'error': f'You are not enrolled in {session.class_obj.class_code}'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            if session.class_type == 'pattern':
+                if not session.pattern_code:
+                    return Response(
+                        {'error': 'Session has no pattern code for verification'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                if not session.reference_image:
+                    missing_reference = True
+
+            existing_record = AttendanceRecord.objects.filter(session=session, student=user).first()
+            if existing_record:
+                if existing_record.status == 'pending_review':
+                    existing_record.delete()
+                else:
+                    return Response({
+                        'error': 'Attendance already marked',
+                        'marked_at': existing_record.marked_at,
+                        'status': existing_record.status
+                    }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            missing_reference = True
 
         from attendance.verification import verify_offline_code, validate_focal_distance
         
@@ -902,46 +899,71 @@ def verify_image(request):
                 'status': 'proxy_detected'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        matched, final_score, reasons = verify_offline_code(
-            session.pattern_code, session.reference_image, student_image, flash_fired
-        )
-        
-        if matched:
-            verification_reasons_dict['ai_verified'] = True
-            verification_reasons_dict['ai_score'] = final_score
-        
-        verification_reasons_dict['reasons'] = reasons
+        if missing_reference:
+            from attendance.models import PendingStudentSubmission
+            
+            ble_hop = None
+            ble_rss = None
+            if 'ble_hop_count' in verification_reasons_dict:
+                ble_hop = verification_reasons_dict['ble_hop_count']
+                ble_rss = verification_reasons_dict['ble_rssi']
 
-        # Penalize score slightly for higher hop counts (further from teacher)
-        if 'ble_hop_count' in verification_reasons_dict:
-            score_penalty = verification_reasons_dict['ble_hop_count'] * 0.05
-            final_score = max(0.0, final_score - score_penalty)
-
-        status_val = 'present' if matched else 'pending_review'
-
-        record = AttendanceRecord.objects.create(
-            session=session,
-            student=user,
-            status=status_val,
-            verification_score=final_score,
-            verification_reasons=json.dumps(verification_reasons_dict)
-        )
-
-        if not matched:
+            PendingStudentSubmission.objects.filter(session_id_uuid=session_id, student=user).delete()
+            PendingStudentSubmission.objects.create(
+                session_id_uuid=session_id,
+                student=user,
+                student_image=student_image,
+                focal_distance=float(focal_distance) if focal_distance else None,
+                flash_fired=flash_fired,
+                ble_hop_count=ble_hop,
+                ble_rssi=ble_rss
+            )
+            
             return Response({
-                'status': 'pending_review',
-                'score': final_score,
-                'reasons': reasons,
-                'message': f'Verification failed. Marked for manual review. Reasons: {", ".join(reasons)}'
-            }, status=status.HTTP_200_OK)
+                'status': 'pending_teacher',
+                'score': 0.0,
+                'message': 'Pattern received. Waiting for teacher to sync session.'
+            }, status=status.HTTP_201_CREATED)
+        else:
+            matched, final_score, reasons = verify_offline_code(
+                session.pattern_code, session.reference_image, student_image, flash_fired
+            )
+        
+            if matched:
+                verification_reasons_dict['ai_verified'] = True
+                verification_reasons_dict['ai_score'] = final_score
+            
+            verification_reasons_dict['reasons'] = reasons
 
-        return Response({
-            'status': 'pass',
-            'score': final_score,
-            'message': f'Attendance verified for {session.class_obj.class_code}',
-            'focal_distance': distance_result,
-            'marked_at': record.marked_at,
-        }, status=status.HTTP_201_CREATED)
+            if 'ble_hop_count' in verification_reasons_dict:
+                score_penalty = verification_reasons_dict['ble_hop_count'] * 0.05
+                final_score = max(0.0, final_score - score_penalty)
+
+            status_val = 'present' if matched else 'pending_review'
+
+            record = AttendanceRecord.objects.create(
+                session=session,
+                student=user,
+                status=status_val,
+                verification_score=final_score,
+                verification_reasons=json.dumps(verification_reasons_dict)
+            )
+
+            if not matched:
+                return Response({
+                    'status': 'pending_review',
+                    'score': final_score,
+                    'reasons': reasons,
+                    'message': f'Verification failed. Marked for manual review. Reasons: {", ".join(reasons)}'
+                }, status=status.HTTP_200_OK)
+
+            return Response({
+                'status': 'pass',
+                'score': final_score,
+                'message': f'Attendance verified for {session.class_obj.class_code}',
+                'focal_distance': distance_result,
+                'marked_at': record.marked_at,
+            }, status=status.HTTP_201_CREATED)
     except Exception as e:
         import traceback
         return Response({'error': f"Backend Error: {str(e)}", 'trace': traceback.format_exc()}, status=status.HTTP_400_BAD_REQUEST)
@@ -968,9 +990,18 @@ def sync_offline_session(request):
             return Response({'error': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
 
         from django.utils.dateparse import parse_datetime
+        from django.utils import timezone
         start_time = parse_datetime(start_time_str)
         end_time = parse_datetime(end_time_str)
         
+        # 24-hour rule check for teacher sync
+        time_diff = timezone.now() - start_time
+        if time_diff.total_seconds() > (24 * 3600):
+            return Response(
+                {'error': 'Offline session expired. Session must be synced within 24 hours. The session has been discarded.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
         class_obj = Class.objects.get(id=class_id)
         
         session_uuid_str = request.data.get('session_id')
@@ -986,6 +1017,7 @@ def sync_offline_session(request):
             if reference_image and not existing_session.reference_image:
                 existing_session.reference_image = reference_image
                 existing_session.save()
+                _process_pending_student_submissions(existing_session)
             return Response({'message': 'Session already synced'}, status=status.HTTP_201_CREATED)
 
         shape_data = None
@@ -1029,7 +1061,7 @@ def sync_offline_session(request):
             instruction_card=instruction_card,
             shape_data=shape_data,
             qr_code_data=json.dumps(qr_data),
-            status='completed' # Offline sessions are synced after they finish usually
+            status='active' if end_time > timezone.now() else 'completed'
         )
         # Override start_time and end_time, which might be auto_now_add
         session.start_time = start_time
@@ -1037,6 +1069,16 @@ def sync_offline_session(request):
         
         if reference_image:
             session.reference_image = reference_image
+            if class_type == 'pattern':
+                from attendance.verification import verify_teacher_reference
+                try:
+                    ref_bytes = reference_image.read()
+                    reference_image.seek(0)
+                    success, message = verify_teacher_reference(ref_bytes, session.pattern_code, session.shape_data)
+                    if not success:
+                        session.instruction_card = (session.instruction_card or "") + f"\n\n[WARNING: AI Verification Failed on Sync: {message}]"
+                except Exception as e:
+                    pass
             
         session.save()
 
@@ -1062,18 +1104,13 @@ def sync_offline_session(request):
             student_id__in=already_marked
         )
         
-        # 24-hour rule check
-        time_diff = timezone.now() - session.start_time
-        is_expired = time_diff.total_seconds() > (24 * 3600)
-        default_status = 'present' if is_expired else 'absent'
-        
         absent_records = []
         for enrollment in absent_students:
             absent_records.append(
                 AttendanceRecord(
                     session=session,
                     student=enrollment.student,
-                    status=default_status
+                    status='absent'
                 )
             )
         
@@ -1098,6 +1135,7 @@ def sync_offline_pattern(request):
 
     timestamp_str = request.data.get('timestamp')
     student_image = request.FILES.get('student_image')
+    session_id_str = request.data.get('session_id')
 
     if not timestamp_str or not student_image:
         return Response({'error': 'timestamp and student_image are required'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1106,15 +1144,23 @@ def sync_offline_pattern(request):
     if not scan_time:
         return Response({'error': 'Invalid timestamp format'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Find the session active at that time for this student
-    enrolled_class_ids = Enrollment.objects.filter(student=user).values_list('class_obj_id', flat=True)
-    
-    session = AttendanceSession.objects.filter(
-        class_obj_id__in=enrolled_class_ids,
-        class_type='pattern',
-        start_time__lte=scan_time,
-        end_time__gte=scan_time
-    ).order_by('-start_time').first()
+    session = None
+    if session_id_str:
+        try:
+            session = AttendanceSession.objects.get(session_id=session_id_str)
+        except AttendanceSession.DoesNotExist:
+            pass
+
+    if not session:
+        # Find the session active at that time for this student
+        enrolled_class_ids = Enrollment.objects.filter(student=user).values_list('class_obj_id', flat=True)
+        
+        session = AttendanceSession.objects.filter(
+            class_obj_id__in=enrolled_class_ids,
+            class_type='pattern',
+            start_time__lte=scan_time,
+            end_time__gte=scan_time
+        ).order_by('-start_time').first()
 
     if not session:
         return Response({'error': f'No active pattern session found for you at {scan_time.strftime("%I:%M %p")}'}, status=status.HTTP_404_NOT_FOUND)
@@ -1132,15 +1178,8 @@ def sync_offline_pattern(request):
             return Response({'error': 'Teacher has not uploaded the reference image yet'}, status=status.HTTP_400_BAD_REQUEST)
 
         existing_record = AttendanceRecord.objects.filter(session=session, student=user).first()
-        if existing_record:
-            if existing_record.status == 'absent':
-                existing_record.status = 'pending_review'
-                existing_record.save()
-                if scan_time:
-                    AttendanceRecord.objects.filter(id=existing_record.id).update(marked_at=scan_time)
-                    existing_record.refresh_from_db()
-            else:
-                return Response({'error': 'Attendance already marked', 'marked_at': existing_record.marked_at, 'status': existing_record.status}, status=status.HTTP_400_BAD_REQUEST)
+        if existing_record and existing_record.status not in ['absent', 'pending_review']:
+            return Response({'error': 'Attendance already marked', 'marked_at': existing_record.marked_at, 'status': existing_record.status}, status=status.HTTP_400_BAD_REQUEST)
 
         # Extract BLE Mesh Proofs
         ble_hop_count = request.data.get('ble_hop_count')
@@ -1180,13 +1219,20 @@ def sync_offline_pattern(request):
 
         status_val = 'present' if matched else 'pending_review'
 
-        record = AttendanceRecord.objects.create(
-            session=session,
-            student=user,
-            status=status_val,
-            verification_score=final_score,
-            verification_reasons=json.dumps(verification_reasons_dict)
-        )
+        if existing_record:
+            existing_record.status = status_val
+            existing_record.verification_score = final_score
+            existing_record.verification_reasons = json.dumps(verification_reasons_dict)
+            existing_record.save()
+            record = existing_record
+        else:
+            record = AttendanceRecord.objects.create(
+                session=session,
+                student=user,
+                status=status_val,
+                verification_score=final_score,
+                verification_reasons=json.dumps(verification_reasons_dict)
+            )
 
         if scan_time:
             AttendanceRecord.objects.filter(id=record.id).update(marked_at=scan_time)
@@ -1459,6 +1505,26 @@ def get_student_attendance_history(request):
             'status': record.status,
             'marked_at': record.marked_at,
         })
+        
+    from attendance.models import PendingStudentSubmission
+    pendings = PendingStudentSubmission.objects.filter(student=user).order_by('-marked_at')
+    for p in pendings:
+        # Since we don't have full session info, we use generic placeholders
+        attendance_data.append({
+            'id': f"pending_{p.id}",
+            'class_code': 'Pending Sync',
+            'class_name': 'Waiting for Teacher',
+            'teacher_name': 'Unknown',
+            'semester': 1,
+            'date': p.marked_at.date(),
+            'time': p.marked_at.time(),
+            'session_date': p.marked_at,
+            'status': 'pending_review',  # Map it to pending_review for frontend
+            'marked_at': p.marked_at,
+        })
+        
+    # Re-sort combined list by marked_at descending
+    attendance_data.sort(key=lambda x: x['marked_at'], reverse=True)
     
     return Response({
         'attendance': attendance_data,

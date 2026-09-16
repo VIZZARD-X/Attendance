@@ -42,7 +42,7 @@ class SyncService {
 
     return await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute('''
@@ -94,6 +94,11 @@ class SyncService {
           }
         }
         if (oldVersion < 7) {
+          try {
+            await db.execute('ALTER TABLE offline_queue ADD COLUMN session_id TEXT');
+          } catch (e) {}
+        }
+        if (oldVersion < 8) {
           try {
             await db.execute('ALTER TABLE offline_queue ADD COLUMN session_id TEXT');
           } catch (e) {}

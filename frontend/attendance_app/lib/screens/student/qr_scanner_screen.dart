@@ -369,6 +369,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
 
       // Fetch active sessions if online
       String? sessionId;
+      bool sessionFoundFromApi = false;
       if (!isOffline) {
         List<Map<String, dynamic>> sessions = [];
         try {
@@ -390,28 +391,22 @@ class _QRScannerScreenState extends State<QRScannerScreen>
               .where((s) => s['class_type'] == 'pattern')
               .toList();
 
-          if (patternSessions.isEmpty) {
-            _showError(
-              'No active pattern session found. Ask your teacher to start an pattern session.',
-            );
-            setState(() => isProcessing = false);
-            await _cameraController!.resumePreview();
-            return;
+          if (patternSessions.isNotEmpty) {
+            final session = patternSessions.first;
+
+            // Check if teacher has uploaded the reference image yet
+            if (session['has_reference_image'] == false) {
+              _showError(
+                'Teacher has not uploaded the board photo yet. Please wait and try again.',
+              );
+              setState(() => isProcessing = false);
+              await _cameraController!.resumePreview();
+              return;
+            }
+
+            sessionId = session['session_id'].toString();
+            sessionFoundFromApi = true;
           }
-
-          final session = patternSessions.first;
-
-          // Check if teacher has uploaded the reference image yet
-          if (session['has_reference_image'] == false) {
-            _showError(
-              'Teacher has not uploaded the board photo yet. Please wait and try again.',
-            );
-            setState(() => isProcessing = false);
-            await _cameraController!.resumePreview();
-            return;
-          }
-
-          sessionId = session['session_id'].toString();
         }
       }
 
@@ -421,7 +416,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       
       try {
         _showBleVerificationDialog();
-        if (isOffline) {
+        if (isOffline || !sessionFoundFromApi) {
            final bleResult = await BleMeshService().startStudentScanAnySession(timeout: const Duration(seconds: 15));
            bleHopCount = bleResult['hop_count'];
            bleRssi = bleResult['rssi'];
@@ -471,9 +466,22 @@ class _QRScannerScreenState extends State<QRScannerScreen>
             isPending,
           );
         } else {
-          _showError(result['message'] ?? 'Verification failed');
-          setState(() => isProcessing = false);
-          await _cameraController!.resumePreview();
+          final errMsg = result['message']?.toString() ?? 'Verification failed';
+          if (errMsg == 'Session not found' || errMsg == 'Teacher has not uploaded the reference image yet') {
+             final timestamp = DateTime.now().toUtc().toIso8601String();
+             await SyncService().enqueuePatternScan(imagePath, timestamp, sessionId: sessionId, bleHopCount: bleHopCount, bleRssi: bleRssi);
+             if (mounted) {
+               setState(() => hasScanned = true);
+               _showResultDialog(
+                 'Teacher is offline or syncing. Saved locally and will sync automatically when teacher connects.',
+                 false,
+               );
+             }
+          } else {
+            _showError(errMsg);
+            setState(() => isProcessing = false);
+            await _cameraController!.resumePreview();
+          }
         }
       }
     } catch (e) {

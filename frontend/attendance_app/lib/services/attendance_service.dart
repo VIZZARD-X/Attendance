@@ -206,6 +206,7 @@ class AttendanceService {
     bool flashFired = false,
     int? bleHopCount,
     int? bleRssi,
+    String? qrData,
   }) async {
     try {
       final token = await _getToken();
@@ -217,6 +218,7 @@ class AttendanceService {
         'student_image': await MultipartFile.fromFile(imagePath),
         if (bleHopCount != null) 'ble_hop_count': bleHopCount,
         if (bleRssi != null) 'ble_rssi': bleRssi,
+        if (qrData != null) 'qr_data': qrData,
       });
 
       final response = await _dio.post(

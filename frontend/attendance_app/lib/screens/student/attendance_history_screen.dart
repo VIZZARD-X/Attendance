@@ -655,8 +655,8 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
       statusColor = Colors.green;
       statusIcon = Icons.check_circle;
     } else if (status == 'pending_review') {
-      statusColor = Colors.orange;
-      statusIcon = Icons.pending;
+      statusColor = Colors.blueGrey;
+      statusIcon = Icons.access_time;
     } else {
       statusColor = Colors.red;
       statusIcon = Icons.cancel;
@@ -748,7 +748,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                         ],
                       ),
                       child: Text(
-                        status.toUpperCase(),
+                        status == 'pending_review' ? 'PENDING' : status.toUpperCase(),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
@@ -882,8 +882,8 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
       statusColor = Colors.green;
       statusIcon = Icons.check_circle;
     } else if (status == 'pending_review') {
-      statusColor = Colors.orange;
-      statusIcon = Icons.pending;
+      statusColor = Colors.blueGrey;
+      statusIcon = Icons.access_time;
     } else {
       statusColor = Colors.red;
       statusIcon = Icons.cancel;
@@ -923,7 +923,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              status.toUpperCase(),
+              status == 'pending_review' ? 'PENDING' : status.toUpperCase(),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 10,
