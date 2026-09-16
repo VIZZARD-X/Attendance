@@ -802,6 +802,8 @@ def upload_reference_image(request, session_id):
     session.reference_image = ref_file
     session.save()
     
+    _process_pending_student_submissions(session)
+    
     return Response({
         'message': 'Reference image verified and uploaded successfully'
     })
@@ -969,6 +971,53 @@ def verify_image(request):
         return Response({'error': f"Backend Error: {str(e)}", 'trace': traceback.format_exc()}, status=status.HTTP_400_BAD_REQUEST)
 
 
+def _process_pending_student_submissions(session):
+    """Evaluate any pending student submissions queued for this session once reference image/session is available."""
+    from attendance.models import PendingStudentSubmission
+    from attendance.verification import verify_offline_code
+    
+    pendings = PendingStudentSubmission.objects.filter(session_id_uuid=session.session_id)
+    if not pendings.exists():
+        return
+        
+    for pending in pendings:
+        try:
+            if not session.reference_image or not pending.student_image:
+                continue
+
+            matched, final_score, reasons = verify_offline_code(
+                session.pattern_code, session.reference_image, pending.student_image, pending.flash_fired
+            )
+
+            verification_reasons_dict = {'reasons': reasons}
+            if matched:
+                verification_reasons_dict['ai_verified'] = True
+                verification_reasons_dict['ai_score'] = final_score
+
+            if pending.ble_hop_count is not None:
+                verification_reasons_dict['ble_verified'] = True
+                verification_reasons_dict['ble_hop_count'] = pending.ble_hop_count
+                verification_reasons_dict['ble_rssi'] = pending.ble_rssi
+                score_penalty = pending.ble_hop_count * 0.05
+                final_score = max(0.0, final_score - score_penalty)
+
+            status_val = 'present' if matched else 'pending_review'
+
+            record, created = AttendanceRecord.objects.update_or_create(
+                session=session,
+                student=pending.student,
+                defaults={
+                    'status': status_val,
+                    'verification_score': final_score,
+                    'verification_reasons': json.dumps(verification_reasons_dict),
+                    'marked_at': pending.marked_at,
+                }
+            )
+            # Remove processed pending submission
+            pending.delete()
+        except Exception as e:
+            print(f"Error processing pending submission for student {pending.student_id}: {e}")
+
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def sync_offline_session(request):
@@ -1091,7 +1140,10 @@ def sync_offline_session(request):
         # Reload session to have correct times
         session = AttendanceSession.objects.get(session_id=session_uuid)
 
-        # Bulk mark absent students (or present if > 24 hours)
+        # Process queued student submissions that were scanned online before teacher sync
+        _process_pending_student_submissions(session)
+
+        # Bulk mark absent students
         enrolled_students = Enrollment.objects.filter(
             class_obj=class_obj
         ).select_related('student')
