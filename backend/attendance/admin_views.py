@@ -1,6 +1,7 @@
 import json
 import uuid
 import re
+from collections import OrderedDict
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -174,6 +175,7 @@ def admin_semester_students(request, semester):
                     'id': student.id,
                     'username': student.username,
                     'email': student.email,
+                    'is_active': student.is_active,
                     'classes': [],
                 }
             students_map[student.id]['classes'].append({
@@ -218,11 +220,32 @@ def admin_unassigned_students(request):
             'id': profile.student.id,
             'username': profile.student.username,
             'email': profile.student.email,
+            'is_active': profile.student.is_active,
             'semester': profile.semester,
+        })
+
+    # Also surface students that no other admin flow can reach: those with a
+    # blank/missing profile semester, or no StudentProfile row at all. Without
+    # this they are invisible in the Manage Students flow.
+    reachable_ids = {s['id'] for s in result}
+    unreachable = []
+    enrolled_ids = set(
+        Enrollment.objects.values_list('student_id', flat=True).distinct()
+    )
+    for u in User.objects.filter(role='student').order_by('username'):
+        if u.id in enrolled_ids or u.id in reachable_ids:
+            continue
+        unreachable.append({
+            'id': u.id,
+            'username': u.username,
+            'email': u.email,
+            'is_active': u.is_active,
+            'semester': '',
         })
 
     return Response({
         'students': result,
+        'unreachable': unreachable,
         'total': len(result),
     })
 
@@ -264,6 +287,7 @@ def admin_teachers_list(request):
             'id': teacher.id,
             'username': teacher.username,
             'email': teacher.email,
+            'is_active': teacher.is_active,
             'date_joined': teacher.date_joined,
             'class_count': teacher.class_count,
             'classes': classes_list,
@@ -403,6 +427,19 @@ def admin_toggle_user_access(request, user_id):
         target = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Guards: an admin must not be able to lock themselves out, and
+    # superuser accounts are protected from casual blocking.
+    if target.id == user.id:
+        return Response(
+            {'error': 'You cannot block or unblock your own account'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    if target.is_superuser:
+        return Response(
+            {'error': 'Superuser accounts cannot be blocked here'},
+            status=status.HTTP_403_FORBIDDEN
+        )
 
     target.is_active = not target.is_active
     target.save(update_fields=['is_active'])
@@ -830,12 +867,126 @@ def admin_delete_all_students(request, semester):
         'message': f'Deleted {deleted} students from {semester}',
     })
 
-@api_view(['POST'])
+@api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
-def admin_reset_user_password(request, user_id):
-    return Response({'message': 'Not implemented'}, status=status.HTTP_501_NOT_IMPLEMENTED)
+def admin_attendance_semesters(request):
+    """
+    Admin: Attendance Management - list every semester that has attendance
+    sessions, with aggregate session/record stats per semester.
+    """
+    if request.user.role != 'admin':
+        return Response(
+            {'error': 'Only admins can access this endpoint'},
+            status=status.HTTP_403_FORBIDDEN
+        )
 
-@api_view(['POST'])
+    from django.db.models import Count, Q
+
+    # One aggregated row per semester (not per class).
+    rows = (
+        AttendanceSession.objects
+        .values('class_obj__semester')
+        .annotate(
+            session_count=Count('id', distinct=True),
+            record_count=Count('records', distinct=True),
+            present_count=Count(
+                'records',
+                filter=Q(records__status='present'),
+                distinct=True,
+            ),
+            class_count=Count('class_obj__id', distinct=True),
+        )
+        .order_by('class_obj__semester')
+    )
+
+    semesters = [
+        {
+            'semester': row['class_obj__semester'],
+            'class_count': row['class_count'],
+            'session_count': row['session_count'],
+            'record_count': row['record_count'],
+            'present_count': row['present_count'],
+        }
+        for row in rows
+    ]
+
+    return Response({
+        'semesters': semesters,
+        'total_semesters': len(semesters),
+    })
+
+
+@api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
-def admin_create_class(request):
-    return Response({'message': 'Not implemented'}, status=status.HTTP_501_NOT_IMPLEMENTED)
+def admin_attendance_by_semester(request, semester):
+    """
+    Admin: Attendance Management - every attendance session of a semester,
+    grouped by class (each class carries its sessions and their records).
+    """
+    if request.user.role != 'admin':
+        return Response(
+            {'error': 'Only admins can access this endpoint'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    sessions = (
+        AttendanceSession.objects
+        .filter(class_obj__semester=semester)
+        .select_related('class_obj', 'teacher')
+        .prefetch_related('records__student')
+        .order_by('-start_time')
+    )
+
+    classes = OrderedDict()
+    for session in sessions:
+        records = []
+        for record in session.records.all():
+            student = record.student
+            records.append({
+                'id': record.id,
+                'student_id': student.id,
+                'username': student.username,
+                'email': student.email,
+                'status': record.status,
+                'marked_at': record.marked_at,
+                'verification_score': record.verification_score,
+            })
+
+        class_obj = session.class_obj
+        session_data = {
+            'session_uuid': str(session.session_id),
+            'status': session.status,
+            'class_type': session.class_type,
+            'teacher': session.teacher.username,
+            'start_time': session.start_time,
+            'end_time': session.end_time,
+            'duration_minutes': session.duration_minutes,
+            'record_count': len(records),
+            'present_count': sum(1 for r in records if r['status'] == 'present'),
+            'records': records,
+        }
+
+        cls = classes.setdefault(class_obj.id, {
+            'class_id': class_obj.id,
+            'class_code': class_obj.class_code,
+            'class_name': class_obj.class_name,
+            'teacher': class_obj.teacher.username,
+            'sessions': [],
+        })
+        cls['sessions'].append(session_data)
+
+    by_class = []
+    for cls in classes.values():
+        cls['session_count'] = len(cls['sessions'])
+        cls['record_count'] = sum(s['record_count'] for s in cls['sessions'])
+        cls['present_count'] = sum(s['present_count'] for s in cls['sessions'])
+        by_class.append(cls)
+
+    by_class.sort(key=lambda c: c['class_code'])
+
+    return Response({
+        'semester': semester,
+        'total_sessions': sessions.count(),
+        'total_records': sum(c['record_count'] for c in by_class),
+        'classes': by_class,
+    })

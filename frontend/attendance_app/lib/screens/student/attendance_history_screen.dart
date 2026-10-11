@@ -648,21 +648,8 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
 
   Widget _buildAttendanceCard(Map<String, dynamic> record, bool isMobile) {
     final status = record['status'] ?? 'unknown';
-    
-    Color statusColor;
-    IconData statusIcon;
-    if (status == 'present') {
-      statusColor = Colors.green;
-      statusIcon = Icons.check_circle;
-    } else if (status == 'pending_review') {
-      statusColor = Colors.blueGrey;
-      statusIcon = Icons.access_time;
-    } else {
-      statusColor = Colors.red;
-      statusIcon = Icons.cancel;
-    }
-
-    final markedAt = DateTime.parse(record['session_date'] ?? record['marked_at']).toLocal();
+    final statusColor = status == 'present' ? Colors.green : Colors.red;
+    final markedAt = DateTime.parse(record['marked_at']).toLocal();
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -700,7 +687,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                         ),
                       ),
                       child: Icon(
-                        statusIcon,
+                        status == 'present' ? Icons.check_circle : Icons.cancel,
                         color: statusColor,
                         size: 28,
                       ),
@@ -748,7 +735,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
                         ],
                       ),
                       child: Text(
-                        status == 'pending_review' ? 'PENDING' : status.toUpperCase(),
+                        status.toUpperCase(),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
@@ -875,22 +862,10 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
     bool isMobile,
   ) {
     final status = record['status'] ?? 'unknown';
-
-    Color statusColor;
-    IconData statusIcon;
-    if (status == 'present') {
-      statusColor = Colors.green;
-      statusIcon = Icons.check_circle;
-    } else if (status == 'pending_review') {
-      statusColor = Colors.blueGrey;
-      statusIcon = Icons.access_time;
-    } else {
-      statusColor = Colors.red;
-      statusIcon = Icons.cancel;
-    }
+    final statusColor = status == 'present' ? Colors.green : Colors.red;
 
     // ✅ ADD THIS: Convert UTC to local time
-    final markedAt = DateTime.parse(record['session_date'] ?? record['marked_at']).toLocal();
+    final markedAt = DateTime.parse(record['marked_at']).toLocal();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -903,7 +878,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
       child: Row(
         children: [
           Icon(
-            statusIcon,
+            status == 'present' ? Icons.check_circle : Icons.cancel,
             color: statusColor,
             size: 20,
           ),
@@ -923,7 +898,7 @@ class _AttendanceHistoryScreenState extends State<AttendanceHistoryScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              status == 'pending_review' ? 'PENDING' : status.toUpperCase(),
+              status.toUpperCase(),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 10,

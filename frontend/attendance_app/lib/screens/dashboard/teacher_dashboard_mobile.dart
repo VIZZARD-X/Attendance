@@ -8,7 +8,6 @@ import '../teacher/session_create_screen.dart';
 import '../teacher/teacher_attendance_history_screen.dart';
 import '../teacher/teacher_profile_screen.dart';
 import '../teacher/teacher_announcements_screen.dart';
-import '../teacher/teacher_analytics_screen.dart';
 import '../../widgets/offline_indicator.dart';
 
 class TeacherDashboardMobile extends StatefulWidget {
@@ -216,13 +215,6 @@ class _TeacherDashboardMobileState extends State<TeacherDashboardMobile>
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const TeacherAnnouncementsScreen()),
-        );
-        break;
-
-      case 'Analytics':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const TeacherAnalyticsScreen()),
         );
         break;
 

@@ -81,6 +81,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       gradient: [Color(0xFF9C8BFF), Colors.white],
     ),
     _DashboardCard(
+      title: 'Attendance Management',
+      subtitle: 'Session-wise attendance by class',
+      icon: Icons.analytics_rounded,
+      color: Color(0xFF2F80ED),
+      gradient: [Color(0xFF5B9DF9), Colors.white],
+    ),
+    _DashboardCard(
       title: 'Profile',
       subtitle: 'View your Profile',
       icon: Icons.person_outline_rounded,
@@ -88,6 +95,15 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       gradient: [Color(0xFFACACB4), Colors.white],
     ),
   ];
+
+  /// Display name with robust fallback: first_name -> username -> 'Admin'.
+  /// Treats empty strings as missing (unlike a bare ?? operator).
+  String displayName(Map<String, dynamic>? data) {
+    final first = (data?['first_name'] ?? '').toString().trim();
+    if (first.isNotEmpty) return first;
+    final username = (data?['username'] ?? '').toString().trim();
+    return username.isNotEmpty ? username : 'Admin';
+  }
 
   Future<void> _loadUserData({bool forceRefresh = false}) async {
     final cacheValid =
@@ -98,7 +114,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     if (!forceRefresh && cacheValid) {
       if (!mounted) return;
       setState(() {
-        _adminName = _cachedUserData!['first_name'] ?? 'Admin';
+        _adminName = displayName(_cachedUserData!);
         _username = _cachedUserData!['username'] ?? '';
         _isLoading = false;
       });
@@ -114,6 +130,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         _classService.getAdminStats(),
       ]);
 
+
       if (!mounted) return;
       final userData = results[0];
       final stats = results[1]!;
@@ -121,7 +138,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       setState(() {
         _cachedUserData = userData;
         _lastFetch = DateTime.now();
-        _adminName = userData?['first_name'] ?? 'Admin';
+        _adminName = displayName(userData);
         _username = userData?['username'] ?? '';
         _studentCount =
             int.tryParse(stats['students_count']?.toString() ?? '') ?? 0;
@@ -293,9 +310,35 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   Widget _buildDashboardGrid(int crossAxisCount, bool isMobile) {
     final isCompact = isMobile || crossAxisCount == 2;
-    final childAspectRatio = isMobile
-        ? 0.96
-        : (crossAxisCount == 2 ? 1.22 : 1.6);
+
+    // Phone: plain column of full-width horizontal cards — natural height,
+    // no oversized near-square grid cells.
+    if (crossAxisCount == 1) {
+      return Column(
+        children: [
+          for (final card in _cards)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: AdminAnimatedCard(
+                title: card.title,
+                subtitle: card.subtitle,
+                icon: card.icon,
+                color: card.color,
+                gradient: card.gradient,
+                compact: true,
+                onTap: () => _handleCardTap(card.title),
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: card.color,
+                  size: 24,
+                ),
+              ),
+            ),
+        ],
+      );
+    }
+
+    final childAspectRatio = crossAxisCount == 2 ? 3.0 : 1.6;
 
     return GridView.builder(
       itemCount: _cards.length,
@@ -303,13 +346,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       shrinkWrap: true,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        mainAxisSpacing: isCompact ? 18 : 42,
+        mainAxisSpacing: isCompact ? 14 : 42,
         crossAxisSpacing: isCompact ? 18 : 55,
         childAspectRatio: childAspectRatio,
       ),
       itemBuilder: (context, idx) {
         final card = _cards[idx];
-        final animated = AdminAnimatedCard(
+        return AdminAnimatedCard(
           title: card.title,
           subtitle: card.subtitle,
           icon: card.icon,
@@ -317,16 +360,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           gradient: card.gradient,
           compact: isCompact,
           onTap: () => _handleCardTap(card.title),
+          trailing: isCompact
+              ? Icon(Icons.chevron_right_rounded, color: card.color, size: 24)
+              : null,
         );
-        if (isCompact) {
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: animated,
-            ),
-          );
-        }
-        return animated;
       },
     );
   }
@@ -375,7 +412,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Welcome, $_username',
+                      'Welcome, ${_username.isEmpty ? _adminName : _username}',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

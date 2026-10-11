@@ -412,15 +412,6 @@ class _MyClassesScreenState extends State<MyClassesScreen>
                   isStudentsLoading = false;
                 });
               }
-            }).catchError((error) {
-              if (mounted) {
-                setModalState(() {
-                  isStudentsLoading = false;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error fetching students: $error')),
-                );
-              }
             });
           }
 

@@ -72,10 +72,10 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     if (state == AppLifecycleState.resumed) {
       if (!isPatternMode) {
         _scannerController.start();
-      } else if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      } else {
         _initializePatternCamera();
       }
-    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+    } else {
       if (!isPatternMode) {
         _scannerController.stop();
       } else if (_cameraController != null) {
@@ -251,7 +251,9 @@ class _QRScannerScreenState extends State<QRScannerScreen>
 
       if (decoded is! Map<String, dynamic>) {
         _showError('Invalid QR code format. Not an attendance code.');
-        setState(() => isProcessing = false);
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) setState(() => isProcessing = false);
+        });
         return;
       }
 
@@ -260,7 +262,9 @@ class _QRScannerScreenState extends State<QRScannerScreen>
 
       if (sessionId == null) {
         _showError('Invalid QR code');
-        setState(() => isProcessing = false);
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) setState(() => isProcessing = false);
+        });
         return;
       }
 
@@ -273,7 +277,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       final isNetworkOffline =
           connectivityResults.isEmpty ||
           connectivityResults.contains(ConnectivityResult.none);
-      
+
       final isOfflineSession = data['is_offline'] == true;
       final isOffline = isNetworkOffline || isOfflineSession;
 
@@ -283,8 +287,9 @@ class _QRScannerScreenState extends State<QRScannerScreen>
         // STRICT BLE ENFORCEMENT: Verify presence via BLE Mesh FIRST
         _showBleVerificationDialog();
         final bleResult = await BleMeshService().startStudentScanAndRelay(
-            sessionId,
-            timeout: const Duration(seconds: 15));
+          sessionId,
+          timeout: const Duration(seconds: 15),
+        );
         bleHopCount = bleResult['hop_count'];
         bleRssi = bleResult['rssi'];
         // pop the verifying dialog
@@ -293,47 +298,102 @@ class _QRScannerScreenState extends State<QRScannerScreen>
         print("BLE mesh verification failed: $e");
         // Pop the verifying dialog
         Navigator.of(context, rootNavigator: true).pop();
-        _showError('BLE Verification failed. Ensure Bluetooth is on and you are near the teacher.');
-        setState(() => isProcessing = false);
-        return;
-      }
-
-      if (isOffline) {
-        final timestamp = DateTime.now().toUtc().toIso8601String();
-        await SyncService().enqueueQRScan(sessionId, timestamp, bleHopCount: bleHopCount, bleRssi: bleRssi);
-
-        setState(() {
-          hasScanned = true;
-          isProcessing = false;
-        });
-
-        _showResultDialog(
-          'Offline Mode: QR scan saved locally. It will sync automatically when internet is restored.',
-          false,
+        _showError(
+          'BLE Verification failed. Ensure Bluetooth is on and you are near the teacher.',
         );
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) setState(() => isProcessing = false);
+        });
         return;
       }
 
-      final result = await _attendanceService.markAttendance(
+      final token = data['token'];
+
+      if (token != null) {
+        if (mounted) {
+
+
+          if (isOffline) {
+            final timestamp = DateTime.now().toUtc().toIso8601String();
+            await SyncService().enqueueQRScan(
+              sessionId,
+              timestamp,
+              qrToken: token,
+              bleHopCount: bleHopCount,
+              bleRssi: bleRssi,
+            );
+            setState(() {
+              hasScanned = true;
+              isProcessing = false;
+            });
+            _showSuccessDialog(
+              'Offline Mode: QR scan saved locally. It will sync automatically when internet is restored.',
+            );
+            return;
+          }
+
+          final result = await _attendanceService.markAttendance(
+            sessionId,
+            qrToken: token,
+            bleHopCount: bleHopCount,
+            bleRssi: bleRssi,
+          );
+
+          if (mounted) {
+            if (result['success']) {
+              setState(() => hasScanned = true);
+              _showSuccessDialog(result['message']);
+            } else {
+              _showError(result['message']);
+              Future.delayed(const Duration(seconds: 3), () {
+                if (mounted) setState(() => isProcessing = false);
+              });
+            }
+          }
+        }
+      } else {
+        if (isOffline) {
+          final timestamp = DateTime.now().toUtc().toIso8601String();
+          await SyncService().enqueueQRScan(
+            sessionId,
+            timestamp,
+            bleHopCount: bleHopCount,
+            bleRssi: bleRssi,
+          );
+          setState(() {
+            hasScanned = true;
+            isProcessing = false;
+          });
+          _showSuccessDialog(
+            'Offline Mode: QR scan saved locally. It will sync automatically when internet is restored.',
+          );
+          return;
+        }
+
+        final result = await _attendanceService.markAttendance(
           sessionId,
           bleHopCount: bleHopCount,
-          bleRssi: bleRssi
-      );
+          bleRssi: bleRssi,
+        );
 
-      if (mounted) {
-        if (result['success']) {
-          setState(() => hasScanned = true);
-          final isPending = result['status'] == 'pending_review';
-          _showResultDialog(result['message'], isPending);
-        } else {
-          _showError(result['message']);
-          setState(() => isProcessing = false);
+        if (mounted) {
+          if (result['success']) {
+            setState(() => hasScanned = true);
+            _showSuccessDialog(result['message']);
+          } else {
+            _showError(result['message']);
+            Future.delayed(const Duration(seconds: 3), () {
+              if (mounted) setState(() => isProcessing = false);
+            });
+          }
         }
       }
     } catch (e) {
       if (mounted) {
         _showError('Invalid QR code format: $e');
-        setState(() => isProcessing = false);
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) setState(() => isProcessing = false);
+        });
       }
     }
   }
@@ -369,14 +429,16 @@ class _QRScannerScreenState extends State<QRScannerScreen>
 
       // Fetch active sessions if online
       String? sessionId;
-      bool sessionFoundFromApi = false;
       if (!isOffline) {
         List<Map<String, dynamic>> sessions = [];
         try {
           sessions = await _sessionService.getStudentActiveSessions();
         } catch (e) {
           final errorStr = e.toString().toLowerCase();
-          if (errorStr.contains('dioexception') || errorStr.contains('socketexception') || errorStr.contains('failed host lookup') || errorStr.contains('connection error')) {
+          if (errorStr.contains('dioexception') ||
+              errorStr.contains('socketexception') ||
+              errorStr.contains('failed host lookup') ||
+              errorStr.contains('connection error')) {
             isOffline = true;
           } else {
             _showError('Network/API Error: $e');
@@ -391,7 +453,9 @@ class _QRScannerScreenState extends State<QRScannerScreen>
               .where((s) => s['class_type'] == 'pattern')
               .toList();
 
-          if (patternSessions.isNotEmpty) {
+          if (patternSessions.isEmpty) {
+            isOffline = true;
+          } else {
             final session = patternSessions.first;
 
             // Check if teacher has uploaded the reference image yet
@@ -399,13 +463,14 @@ class _QRScannerScreenState extends State<QRScannerScreen>
               _showError(
                 'Teacher has not uploaded the board photo yet. Please wait and try again.',
               );
-              setState(() => isProcessing = false);
+              Future.delayed(const Duration(seconds: 3), () {
+                if (mounted) setState(() => isProcessing = false);
+              });
               await _cameraController!.resumePreview();
               return;
             }
 
             sessionId = session['session_id'].toString();
-            sessionFoundFromApi = true;
           }
         }
       }
@@ -413,24 +478,30 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       // BLE MESH VERIFICATION (Enforced for Pattern mode too)
       int bleHopCount;
       int bleRssi;
-      
+
       try {
         _showBleVerificationDialog();
-        if (isOffline || !sessionFoundFromApi) {
-           final bleResult = await BleMeshService().startStudentScanAnySession(timeout: const Duration(seconds: 15));
-           bleHopCount = bleResult['hop_count'];
-           bleRssi = bleResult['rssi'];
-           sessionId = bleResult['session_id'];
+        if (isOffline) {
+          final bleResult = await BleMeshService().startStudentScanAnySession(
+            timeout: const Duration(seconds: 15),
+          );
+          bleHopCount = bleResult['hop_count'];
+          bleRssi = bleResult['rssi'];
         } else {
-           final bleResult = await BleMeshService().startStudentScanAndRelay(sessionId!, timeout: const Duration(seconds: 15));
-           bleHopCount = bleResult['hop_count'];
-           bleRssi = bleResult['rssi'];
+          final bleResult = await BleMeshService().startStudentScanAndRelay(
+            sessionId!,
+            timeout: const Duration(seconds: 15),
+          );
+          bleHopCount = bleResult['hop_count'];
+          bleRssi = bleResult['rssi'];
         }
         Navigator.of(context, rootNavigator: true).pop();
       } catch (e) {
         print("BLE mesh verification failed for pattern: $e");
         Navigator.of(context, rootNavigator: true).pop();
-        _showError('BLE Verification failed. Ensure Bluetooth is on and you are near the teacher.');
+        _showError(
+          'BLE Verification failed. Ensure Bluetooth is on and you are near the teacher.',
+        );
         setState(() => isProcessing = false);
         await _cameraController!.resumePreview();
         return;
@@ -438,12 +509,16 @@ class _QRScannerScreenState extends State<QRScannerScreen>
 
       if (isOffline) {
         final timestamp = DateTime.now().toUtc().toIso8601String();
-        await SyncService().enqueuePatternScan(imagePath, timestamp, sessionId: sessionId, bleHopCount: bleHopCount, bleRssi: bleRssi);
+        await SyncService().enqueuePatternScan(
+          imagePath,
+          timestamp,
+          bleHopCount: bleHopCount,
+          bleRssi: bleRssi,
+        );
         if (mounted) {
           setState(() => hasScanned = true);
-          _showResultDialog(
+          _showSuccessDialog(
             'Saved offline. Will sync automatically when internet is restored.',
-            false,
           );
         }
         return;
@@ -458,30 +533,15 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       );
 
       if (mounted) {
-        if (result['success'] == true) {
+        if (result['success']) {
           setState(() => hasScanned = true);
-          final isPending = result['status'] == 'pending_review';
-          _showResultDialog(
+          _showSuccessDialog(
             result['message'] ?? 'Attendance marked successfully',
-            isPending,
           );
         } else {
-          final errMsg = result['message']?.toString() ?? 'Verification failed';
-          if (errMsg == 'Session not found' || errMsg == 'Teacher has not uploaded the reference image yet') {
-             final timestamp = DateTime.now().toUtc().toIso8601String();
-             await SyncService().enqueuePatternScan(imagePath, timestamp, sessionId: sessionId, bleHopCount: bleHopCount, bleRssi: bleRssi);
-             if (mounted) {
-               setState(() => hasScanned = true);
-               _showResultDialog(
-                 'Teacher is offline or syncing. Saved locally and will sync automatically when teacher connects.',
-                 false,
-               );
-             }
-          } else {
-            _showError(errMsg);
-            setState(() => isProcessing = false);
-            await _cameraController!.resumePreview();
-          }
+          _showError(result['message'] ?? 'Verification failed');
+          setState(() => isProcessing = false);
+          await _cameraController!.resumePreview();
         }
       }
     } catch (e) {
@@ -544,7 +604,7 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     );
   }
 
-  void _showResultDialog(String message, bool isPending) {
+  void _showSuccessDialog(String message) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -555,19 +615,19 @@ class _QRScannerScreenState extends State<QRScannerScreen>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isPending ? Colors.orange.shade100 : Colors.green.shade100,
+                color: Colors.green.shade100,
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                isPending ? Icons.pending : Icons.check_circle,
-                color: isPending ? Colors.orange.shade600 : Colors.green.shade600,
+                Icons.check_circle,
+                color: Colors.green.shade600,
                 size: 60,
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              isPending ? 'Pending Review' : 'Success!',
-              style: const TextStyle(
+            const Text(
+              'Success!',
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF1F2937),
@@ -925,4 +985,6 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       ),
     );
   }
+
+
 }

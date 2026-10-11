@@ -21,8 +21,10 @@ class _PatternVerificationScreenState extends State<PatternVerificationScreen> {
   final AttendanceService _attendanceService = AttendanceService();
   bool _isProcessing = false;
   String? _capturedImagePath;
+  bool _offlineMode = false;
 
   static const _channel = MethodChannel('attendance_app/camera');
+  static const _offlineChannel = MethodChannel('attendance_app/offline');
 
   Future<void> _captureImage() async {
     String? imagePath;
@@ -54,11 +56,9 @@ class _PatternVerificationScreenState extends State<PatternVerificationScreen> {
       );
 
       if (mounted) {
-        if (result['success'] == true) {
-          final isPending = result['status'] == 'pending_review';
-          _showResultDialog(
+        if (result['success']) {
+          _showSuccessDialog(
             result['message'] ?? 'Attendance marked successfully',
-            isPending,
           );
         } else {
           _showErrorSnackBar(result['message'] ?? 'Verification failed');
@@ -95,7 +95,7 @@ class _PatternVerificationScreenState extends State<PatternVerificationScreen> {
     );
   }
 
-  void _showResultDialog(String message, bool isPending) {
+  void _showSuccessDialog(String message) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -106,19 +106,19 @@ class _PatternVerificationScreenState extends State<PatternVerificationScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isPending ? Colors.orange.shade100 : Colors.green.shade100,
+                color: Colors.green.shade100,
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                isPending ? Icons.pending : Icons.check_circle,
-                color: isPending ? Colors.orange.shade600 : Colors.green.shade600,
+                Icons.check_circle,
+                color: Colors.green.shade600,
                 size: 60,
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              isPending ? 'Pending Review' : 'Success!',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            const Text(
+              'Success!',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ],
         ),

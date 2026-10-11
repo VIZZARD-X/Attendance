@@ -42,6 +42,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
   String? _errorMessage;
   final ClassService _classService = ClassService();
   List<_SemesterCard> _semesters = [];
+  int? _unreachableCount;
 
   @override
   void initState() {
@@ -57,6 +58,9 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
 
     try {
       final summary = await _classService.getAdminClassesSummary();
+      final unassignedData = await _classService.getAdminUnassignedStudents();
+      final unreachableCount =
+          (unassignedData['unreachable'] as List?)?.length ?? 0;
 
       if (mounted) {
         const colorPalette = [
@@ -93,6 +97,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
               gradient: gradientPalette[index % gradientPalette.length],
             );
           }).toList();
+          _unreachableCount = unreachableCount;
           _isLoading = false;
         });
       }
@@ -142,9 +147,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                     const SizedBox(height: 24),
                     _errorMessage != null
                         ? _buildErrorState()
-                        : _semesters.isEmpty
-                            ? _buildEmptyState()
-                            : _buildSemesterGrid(crossAxisCount, isMobile),
+                        : _buildStudentsContent(crossAxisCount, isMobile),
                   ],
                 ),
               ),
@@ -171,9 +174,7 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
                   const SizedBox(height: 24),
                   _errorMessage != null
                       ? _buildErrorState()
-                      : _semesters.isEmpty
-                          ? _buildEmptyState()
-                          : _buildSemesterGrid(3, false),
+                      : _buildStudentsContent(3, false),
                 ],
               ),
             ),
@@ -182,6 +183,107 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
         if (_isLoading) _buildLoadingOverlay(),
       ],
     );
+  }
+
+  Widget _buildStudentsContent(int crossAxisCount, bool isMobile) {
+    final unassigned = _unreachableCount ?? 0;
+    return Column(
+      children: [
+        if (unassigned > 0) ...[
+          _buildUnassignedCard(unassigned),
+          const SizedBox(height: 24),
+        ],
+        if (_semesters.isEmpty)
+          _buildEmptyState()
+        else
+          _buildSemesterGrid(crossAxisCount, isMobile),
+      ],
+    );
+  }
+
+  Widget _buildUnassignedCard(int count) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 340),
+        child: Card(
+          color: const Color(0xFFFFFBEB),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: Color(0xFFFCD34D)),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: _openUnassigned,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF59E0B),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.person_search_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Unassigned',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            color: _AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$count student${count == 1 ? '' : 's'} without a semester \u2014 tap to review',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: _AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: Color(0xFFF59E0B),
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openUnassigned() async {
+    final count = _unreachableCount ?? 0;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SemesterClassesScreen(
+          semesterLabel: 'unassigned',
+          semesterDisplay: 'Unassigned',
+          totalEnrollments: count,
+          showUnassignedOnly: true,
+        ),
+      ),
+    );
+    _loadSemesters();
   }
 
   Widget _buildLoadingOverlay() => Container(
@@ -306,9 +408,38 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
 
   Widget _buildSemesterGrid(int crossAxisCount, bool isMobile) {
     final isCompact = isMobile || crossAxisCount == 2;
-    final childAspectRatio = isMobile
-        ? 0.96
-        : (crossAxisCount == 2 ? 1.22 : 1.6);
+
+    Widget card(_SemesterCard semester) {
+      return AdminAnimatedCard(
+        title: semester.semesterDisplay,
+        subtitle: '${semester.studentCount} Students',
+        icon: Icons.school_rounded,
+        color: semester.color,
+        gradient: semester.gradient,
+        compact: isCompact,
+        onTap: () => _openSemester(semester),
+        trailing: Icon(
+          isCompact
+              ? Icons.chevron_right_rounded
+              : Icons.arrow_forward_ios_rounded,
+          color: semester.color,
+          size: isCompact ? 24 : 20,
+        ),
+      );
+    }
+
+    // Phone: column of full-width horizontal cards at natural height.
+    if (crossAxisCount == 1) {
+      return Column(
+        children: [
+          for (final semester in _semesters)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: card(semester),
+            ),
+        ],
+      );
+    }
 
     return GridView.builder(
       itemCount: _semesters.length,
@@ -316,35 +447,11 @@ class _ManageStudentsScreenState extends State<ManageStudentsScreen> {
       shrinkWrap: true,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount,
-        mainAxisSpacing: isMobile ? 18 : 42,
-        crossAxisSpacing: isMobile ? 18 : 55,
-        childAspectRatio: childAspectRatio,
+        mainAxisSpacing: isCompact ? 14 : 42,
+        crossAxisSpacing: isCompact ? 18 : 55,
+        childAspectRatio: isCompact ? 3.0 : 1.6,
       ),
-      itemBuilder: (context, idx) {
-        final semester = _semesters[idx];
-        final animated = AdminAnimatedCard(
-          title: semester.semesterDisplay,
-          subtitle: '${semester.studentCount} Students',
-          icon: Icons.school_rounded,
-          color: semester.color,
-          gradient: semester.gradient,
-          onTap: () => _openSemester(semester),
-          trailing: Icon(
-            Icons.arrow_forward_ios_rounded,
-            color: semester.color,
-            size: 20,
-          ),
-        );
-        if (isCompact) {
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 340),
-              child: animated,
-            ),
-          );
-        }
-        return animated;
-      },
+      itemBuilder: (context, idx) => card(_semesters[idx]),
     );
   }
 

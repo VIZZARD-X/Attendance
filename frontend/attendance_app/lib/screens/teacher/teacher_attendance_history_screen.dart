@@ -150,7 +150,7 @@ class _TeacherAttendanceHistoryScreenState
       // Parse with fallback
       DateTime markedAt;
       try {
-        markedAt = DateTime.parse(record['session_date'] ?? record['marked_at']).toLocal();
+        markedAt = DateTime.parse(record['marked_at']).toLocal();
       } catch (e) {
         markedAt = DateTime.now();
       }
@@ -186,12 +186,12 @@ class _TeacherAttendanceHistoryScreenState
           DateTime dateA;
           DateTime dateB;
           try {
-            dateA = DateTime.parse(a.value.first['session_date'] ?? a.value.first['marked_at']).toLocal();
+            dateA = DateTime.parse(a.value.first['marked_at']).toLocal();
           } catch (_) {
             dateA = DateTime.now();
           }
           try {
-            dateB = DateTime.parse(b.value.first['session_date'] ?? b.value.first['marked_at']).toLocal();
+            dateB = DateTime.parse(b.value.first['marked_at']).toLocal();
           } catch (_) {
             dateB = DateTime.now();
           }
@@ -431,9 +431,7 @@ class _TeacherAttendanceHistoryScreenState
 
     return ListView.builder(
       padding: EdgeInsets.all(isMobile ? 16 : 20),
-      physics: const AlwaysScrollableScrollPhysics(
-        parent: BouncingScrollPhysics(),
-      ),
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       itemCount: groupedData.length,
       itemBuilder: (context, index) {
         return FadeTransition(
@@ -581,9 +579,9 @@ class _TeacherAttendanceHistoryScreenState
     List<Map<String, dynamic>> records,
     bool isMobile,
   ) {
-    // ✅ CHANGED: Convert to local time, preferring session_date
+    // ✅ CHANGED: Convert to local time
     final sessionDateTime = records.isNotEmpty
-        ? DateTime.parse(records.first['session_date'] ?? records.first['marked_at']).toLocal()
+        ? DateTime.parse(records.first['marked_at']).toLocal()
         : DateTime.now();
 
     final presentCount = records.where((r) => r['status'] == 'present').length;
@@ -759,33 +757,10 @@ class _TeacherAttendanceHistoryScreenState
   }
 
   Widget _buildModernAttendanceRow(Map<String, dynamic> record, bool isMobile) {
-    final status = record['status'] ?? 'unknown';
-    final isPresent = status == 'present';
-    
-    Color statusColor;
-    Color gradientStart;
-    Color gradientEnd;
-    IconData statusIcon;
-    
-    if (status == 'present') {
-      statusColor = Colors.green;
-      gradientStart = Colors.green;
-      gradientEnd = Colors.green.shade700;
-      statusIcon = Icons.check_circle;
-    } else if (status == 'pending_review') {
-      statusColor = Colors.orange;
-      gradientStart = Colors.orange;
-      gradientEnd = Colors.orange.shade700;
-      statusIcon = Icons.pending;
-    } else {
-      statusColor = Colors.red;
-      gradientStart = Colors.red;
-      gradientEnd = Colors.red.shade700;
-      statusIcon = Icons.cancel;
-    }
+    final isPresent = record['status'] == 'present';
 
-    // ✅ ADD THIS: Convert UTC to local time, preferring session_date
-    final markedAt = DateTime.parse(record['session_date'] ?? record['marked_at']).toLocal();
+    // ✅ ADD THIS: Convert UTC to local time
+    final markedAt = DateTime.parse(record['marked_at']).toLocal();
 
     return HoverWrapper(
       child: Container(
@@ -795,7 +770,9 @@ class _TeacherAttendanceHistoryScreenState
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: statusColor.withOpacity(0.3),
+          color: isPresent
+              ? Colors.green.withOpacity(0.3)
+              : Colors.red.withOpacity(0.3),
           width: 1.5,
         ),
         boxShadow: [
@@ -812,21 +789,25 @@ class _TeacherAttendanceHistoryScreenState
             padding: EdgeInsets.all(isMobile ? 8 : 10),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [gradientStart, gradientEnd],
+                colors: isPresent
+                    ? [Colors.green, Colors.green.shade700]
+                    : [Colors.red, Colors.red.shade700],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
-                  color: statusColor.withOpacity(0.3),
+                  color: (isPresent ? Colors.green : Colors.red).withOpacity(
+                    0.3,
+                  ),
                   blurRadius: 6,
                   offset: const Offset(0, 3),
                 ),
               ],
             ),
             child: Icon(
-              statusIcon,
+              isPresent ? Icons.check_circle : Icons.cancel,
               color: Colors.white,
               size: isMobile ? 20 : 24,
             ),

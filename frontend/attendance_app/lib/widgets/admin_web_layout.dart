@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
 import '../screens/admin/admin_navigation.dart';
-import '../widgets/admin_drawer.dart';
 
 class _AppColors {
   static const darkBg = Color(0xFF1E1E2C);
@@ -121,7 +120,75 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
     await navigateToAdminScreen(context, title);
   }
 
-
+  Widget _buildMobileDrawer() {
+    return Drawer(
+      child: Container(
+        decoration: const BoxDecoration(color: _AppColors.darkBg),
+        child: ListView(
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [_AppColors.tealDark, Color(0xFF0097A7)],
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.white,
+                    child: Icon(
+                      Icons.admin_panel_settings_rounded,
+                      size: 35,
+                      color: _AppColors.tealDark,
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    'Admin Panel',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ...kAdminNavItems.map((item) {
+              final isActive = widget.currentRoute == item.title;
+              return ListTile(
+                leading: Icon(item.icon, color: Colors.white70, size: 22),
+                title: Text(
+                  item.title,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+                selected: isActive,
+                selectedTileColor: Colors.white24,
+                onTap: () async {
+                  Navigator.pop(context);
+                  if (isActive) return;
+                  await navigateToAdminScreen(context, item.title);
+                },
+              );
+            }),
+            const Divider(color: Colors.white24),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.white70, size: 22),
+              title: const Text('Logout',
+                  style: TextStyle(color: Colors.white, fontSize: 14)),
+              onTap: () {
+                Navigator.pop(context);
+                _logout();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildDesktopSidebar() {
     return GestureDetector(
@@ -215,7 +282,7 @@ class _AdminWebLayoutState extends State<AdminWebLayout> {
               ),
             )
           : null,
-      drawer: AdminDrawer(currentRoute: widget.currentRoute),
+      drawer: _buildMobileDrawer(),
       body: widget.mobileChild,
     );
   }

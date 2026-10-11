@@ -4,10 +4,11 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../utils/web_utils_stub.dart' if (dart.library.js_interop) '../../../utils/web_utils.dart';
+
 import '../../../services/bulk_students_service.dart';
 import '../../../services/class_service.dart';
 import 'dialog_colors.dart';
-import 'web_helpers.dart' if (dart.library.js_interop) 'web_helpers_web.dart';
 
 enum _BulkPhase { setup, review }
 
@@ -402,7 +403,7 @@ class _BulkStudentsTabState extends State<BulkStudentsTab> {
       final data = await rootBundle.load('assets/templates/student_add_template.xlsx');
       final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
       if (kIsWeb) {
-        downloadExcelWeb(bytes, 'student_add_template.xlsx');
+        downloadWeb(bytes, 'student_add_template.xlsx');
       } else {
         await FilePicker.platform.saveFile(
           fileName: 'student_add_template.xlsx',
@@ -430,25 +431,6 @@ class _BulkStudentsTabState extends State<BulkStudentsTab> {
   }
 
   Future<void> _pickFile() async {
-    if (kIsWeb) {
-      try {
-        final result = await pickExcelWeb();
-        if (result == null || !mounted) return;
-        setState(() {
-          _fileName = result['name'] as String;
-          _fileBytes = result['bytes'] as Uint8List;
-          _batchError = null;
-        });
-      } catch (_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not open that file'), backgroundColor: Colors.red),
-          );
-        }
-      }
-      return;
-    }
-
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,

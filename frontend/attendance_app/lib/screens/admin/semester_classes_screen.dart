@@ -6,11 +6,17 @@ class SemesterClassesScreen extends StatefulWidget {
   final String semesterDisplay;
   final int totalEnrollments;
 
+  /// When true, the screen lists students that no other admin flow can reach
+  /// (blank or missing profile semester, or no StudentProfile row) instead of
+  /// the students of a concrete semester. Deletion is disabled in this mode.
+  final bool showUnassignedOnly;
+
   const SemesterClassesScreen({
     super.key,
     required this.semesterLabel,
     required this.semesterDisplay,
     required this.totalEnrollments,
+    this.showUnassignedOnly = false,
   });
 
   @override
@@ -67,6 +73,19 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
       ]);
       final data = results[0];
       final unassignedData = results[1];
+
+      if (widget.showUnassignedOnly) {
+        final reachable = List<Map<String, dynamic>>.from(
+          unassignedData['unreachable'] ?? [],
+        );
+        if (mounted) {
+          setState(() {
+            _students = reachable;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
 
       final unassigned = List<Map<String, dynamic>>.from(
         unassignedData['students'] ?? [],
@@ -156,7 +175,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
           ],
         ),
         actions: [
-          if (_students.isNotEmpty)
+          if (_students.isNotEmpty && !widget.showUnassignedOnly)
             IconButton(
               icon: const Icon(Icons.delete_sweep_outlined, color: Colors.red, size: 22),
               onPressed: _showDeleteAllDialog,
@@ -246,7 +265,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
           controller: _searchController,
           onChanged: (v) => setState(() => _searchQuery = v),
           decoration: InputDecoration(
-            hintText: 'Search by name, email or roll no',
+            hintText: 'Search by name or email',
             hintStyle: TextStyle(color: Colors.black.withValues(alpha: 0.3), fontSize: 14),
             prefixIcon: const Icon(Icons.search, color: Color(0xFF007C91)),
             filled: true,
@@ -289,6 +308,7 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
 
   Widget _buildStudentCard(Map<String, dynamic> student) {
     final classes = List<Map<String, dynamic>>.from(student['classes'] ?? []);
+    final isActive = student['is_active'] != false;
 
     return Container(
       decoration: BoxDecoration(
@@ -331,6 +351,27 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
                       fontSize: 15,
                     ),
                   ),
+                  if (!isActive) ...[
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFDE8E8),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Text(
+                        'Blocked \u2014 cannot log in',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFC62828),
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 2),
                   Row(
                     children: [
@@ -369,6 +410,15 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
       ),
             const SizedBox(width: 4),
             IconButton(
+              icon: Icon(
+                isActive ? Icons.lock_open_rounded : Icons.block_rounded,
+                color: isActive ? const Color(0xFF007C91) : Colors.red,
+                size: 20,
+              ),
+              tooltip: isActive ? 'Block login' : 'Unblock login',
+              onPressed: () => _showBlockToggleDialog(student),
+            ),
+            IconButton(
               icon: const Icon(Icons.edit_outlined, color: Color(0xFF007C91), size: 20),
               onPressed: () => _showEditDialog(student),
             ),
@@ -379,6 +429,76 @@ class _SemesterClassesScreenState extends State<SemesterClassesScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showBlockToggleDialog(Map<String, dynamic> student) {
+    final studentId = student['id'];
+    if (studentId == null) return;
+    final id = studentId is int ? studentId : int.tryParse('$studentId');
+    if (id == null) return;
+
+    final name = student['username'] ?? 'Unknown';
+    final isBlocking = student['is_active'] != false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          isBlocking ? 'Block Student' : 'Unblock Student',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          isBlocking
+              ? 'Block $name from logging in?\n\n'
+                  'Their login will be rejected immediately and any active '
+                  'session will stop working. Their data is not deleted \u2014 '
+                  'you can unblock them at any time.'
+              : 'Allow $name to log in again?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                final result = await _classService.toggleUserAccess(id);
+                if (!mounted) return;
+                final nowBlocked = result['is_active'] == false;
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      nowBlocked
+                          ? '$name blocked \u2014 they can no longer log in'
+                          : '$name unblocked \u2014 they can log in again',
+                    ),
+                    backgroundColor: const Color(0xFF007C91),
+                  ),
+                );
+                _loadStudents();
+              } catch (_) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(this.context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Could not update user access'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  isBlocking ? Colors.red : const Color(0xFF007C91),
+              foregroundColor: Colors.white,
+            ),
+            child: Text(isBlocking ? 'Block' : 'Unblock'),
+          ),
+        ],
       ),
     );
   }

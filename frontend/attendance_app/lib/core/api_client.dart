@@ -28,7 +28,7 @@ class ApiClient {
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
           }
-          options.headers['Bypass-Tunnel-Reminder'] = 'true';
+          // options.headers['Bypass-Tunnel-Reminder'] = 'true'; change this
           return handler.next(options);
         },
         onError: (DioException error, handler) async {
@@ -103,10 +103,7 @@ class ApiClient {
             } catch (e) {
               _failedRequestsQueue.clear();
               _isRefreshing = false;
-              // Only log out if it's an explicit API rejection (e.g. refresh token expired)
-              if (e is DioException && e.response != null && (e.response?.statusCode == 401 || e.response?.statusCode == 400)) {
-                await _clearTokensAndLogout();
-              }
+              _clearTokensAndLogout();
               return handler.next(error);
             }
             

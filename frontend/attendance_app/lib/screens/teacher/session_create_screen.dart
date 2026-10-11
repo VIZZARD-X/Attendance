@@ -32,6 +32,7 @@ class _SessionPageState extends State<SessionPage>
   String selectedClassType = 'qr'; // Default to qr
 
   final TextEditingController durationController = TextEditingController();
+  final TextEditingController rotationIntervalController = TextEditingController(text: '10');
 
   Timer? countdownTimer;
   int remainingSeconds = 0;
@@ -47,9 +48,6 @@ class _SessionPageState extends State<SessionPage>
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
-  List<Map<String, String>> _loadedSubjects = [];
-  bool _isLoadingSubjects = false;
-
   @override
   void initState() {
     super.initState();
@@ -63,41 +61,12 @@ class _SessionPageState extends State<SessionPage>
     );
     _fadeController.forward();
 
-    _loadedSubjects = List.from(widget.subjects);
-
-    if (_loadedSubjects.isEmpty) {
-      _fetchSubjects();
-    }
-  }
-
-  Future<void> _fetchSubjects() async {
-    setState(() => _isLoadingSubjects = true);
-    try {
-      final classService = ClassService();
-      final classes = await classService.getMyClasses();
-      if (mounted) {
-        setState(() {
-          _loadedSubjects = classes.map((c) => {
-            'id': c['id'].toString(),
-            'code': c['class_code'] as String,
-            'name': c['class_name'] as String,
-            'semester': c['semester'] as String,
-          }).toList();
-          _isLoadingSubjects = false;
-        });
-        if (_loadedSubjects.isEmpty) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _showErrorSnackBar("No classes available. Please create a class first.");
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoadingSubjects = false);
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _showErrorSnackBar("Error loading classes: $e");
-        });
-      }
+    if (widget.subjects.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showErrorSnackBar(
+          "No classes available. Please create a class first.",
+        );
+      });
     }
   }
 
@@ -105,6 +74,7 @@ class _SessionPageState extends State<SessionPage>
   void dispose() {
     countdownTimer?.cancel();
     durationController.dispose();
+    rotationIntervalController.dispose();
     _fadeController.dispose();
     super.dispose();
   }
@@ -137,8 +107,8 @@ class _SessionPageState extends State<SessionPage>
             : DateTime.now().toUtc();
         final endTime = startTime.add(Duration(minutes: durationMinutes));
 
-        final selectedClass = _loadedSubjects.firstWhere(
-          (c) => c['id'] == selectedSubjectId,
+        final selectedClass = widget.subjects.firstWhere(
+          (c) => c['id'].toString() == selectedSubjectId,
         );
 
         String? shapeDataStr;
@@ -181,6 +151,10 @@ class _SessionPageState extends State<SessionPage>
           patternCode = freshnessTag;
         }
 
+        final rotationInterval = int.tryParse(rotationIntervalController.text) ?? 10;
+        final rand = Random();
+        final totpSecret = List.generate(16, (index) => rand.nextInt(16).toRadixString(16)).join('');
+
         await SyncService().enqueueSession(
           id: sessionId,
           classId: int.parse(selectedSubjectId!),
@@ -189,6 +163,8 @@ class _SessionPageState extends State<SessionPage>
           startTime: startTime.toIso8601String(),
           endTime: endTime.toIso8601String(),
           shapeData: shapeDataStr,
+          totpSecret: totpSecret,
+          rotationInterval: rotationInterval,
         );
 
         final qrDataMap = {
@@ -223,6 +199,8 @@ class _SessionPageState extends State<SessionPage>
           'class_type': selectedClassType,
           'pattern_code': patternCode,
           'instruction_card': instructionCard,
+          'totp_secret': totpSecret,
+          'rotation_interval': rotationInterval,
           'shape_data': shapeDataStr != null ? jsonDecode(shapeDataStr) : null,
         };
 
@@ -249,10 +227,11 @@ class _SessionPageState extends State<SessionPage>
       final result = await _sessionService.createSession(
         classId: int.parse(selectedSubjectId!),
         durationMinutes: durationMinutes,
-        classType: selectedClassType, // Pass class type
+        classType: selectedClassType,
         startTime: isPastSession && selectedStartTime != null
             ? selectedStartTime!.toUtc().toIso8601String()
             : null,
+        rotationInterval: int.tryParse(rotationIntervalController.text) ?? 10,
       );
 
       if (!mounted) return;
@@ -515,14 +494,7 @@ class _SessionPageState extends State<SessionPage>
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
                                   ),
-                                  child: _isLoadingSubjects
-                                      ? const Padding(
-                                          padding: EdgeInsets.symmetric(vertical: 18),
-                                          child: Center(
-                                            child: CircularProgressIndicator(color: Color(0xFF007C91)),
-                                          ),
-                                        )
-                                      : DropdownButtonFormField<String>(
+                                  child: DropdownButtonFormField<String>(
                                     decoration: const InputDecoration(
                                       border: InputBorder.none,
                                       prefixIcon: Icon(
@@ -538,7 +510,7 @@ class _SessionPageState extends State<SessionPage>
                                     value: selectedSubjectId,
                                     itemHeight: null,
                                     menuMaxHeight: 300,
-                                    items: _loadedSubjects.map((subject) {
+                                    items: widget.subjects.map((subject) {
                                       return DropdownMenuItem<String>(
                                         value: subject['id'],
                                         child: Text(
@@ -552,12 +524,12 @@ class _SessionPageState extends State<SessionPage>
                                         ),
                                       );
                                     }).toList(),
-                                    onChanged: _loadedSubjects.isEmpty
+                                    onChanged: widget.subjects.isEmpty
                                         ? null
                                         : (value) {
                                             setState(() {
                                               selectedSubjectId = value;
-                                              final selected = _loadedSubjects
+                                              final selected = widget.subjects
                                                   .firstWhere(
                                                     (s) => s['id'] == value,
                                                   );
@@ -570,11 +542,11 @@ class _SessionPageState extends State<SessionPage>
                                             });
                                           },
                                     hint: Text(
-                                      _loadedSubjects.isEmpty
+                                      widget.subjects.isEmpty
                                           ? "No classes available"
                                           : "Select a class",
                                       style: TextStyle(
-                                        color: _loadedSubjects.isEmpty
+                                        color: widget.subjects.isEmpty
                                             ? Colors.red[400]
                                             : Colors.grey[600],
                                       ),
@@ -695,6 +667,61 @@ class _SessionPageState extends State<SessionPage>
                                   ),
                                 ),
                                 SizedBox(height: isMobile ? 16 : 24),
+
+                                // QR Rotation Interval (Only show if class type is QR)
+                                if (selectedClassType == 'qr') ...[
+                                  Text(
+                                    "QR Rotation Interval (seconds)",
+                                    style: TextStyle(
+                                      fontSize: isMobile ? 14 : 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.05),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: TextField(
+                                      controller: rotationIntervalController,
+                                      keyboardType: TextInputType.number,
+                                      style: TextStyle(
+                                        fontSize: isMobile ? 14 : 16,
+                                      ),
+                                      decoration: InputDecoration(
+                                        prefixIcon: const Icon(
+                                          Icons.autorenew_outlined,
+                                          color: Color(0xFF007C91),
+                                        ),
+                                        hintText: "e.g. 10",
+                                        hintStyle: TextStyle(
+                                          color: Colors.grey[400],
+                                        ),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(16),
+                                          borderSide: BorderSide.none,
+                                        ),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 20,
+                                              vertical: 18,
+                                            ),
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(height: isMobile ? 16 : 24),
+                                ],
 
                                 // Past Session Toggle
                                 Container(
@@ -1144,7 +1171,7 @@ class _SessionPageState extends State<SessionPage>
                                         gradient: LinearGradient(
                                           colors:
                                               (isCreatingSession ||
-                                                  _loadedSubjects.isEmpty)
+                                                  widget.subjects.isEmpty)
                                               ? [
                                                   Colors.grey[400]!,
                                                   Colors.grey[500]!,
@@ -1157,7 +1184,7 @@ class _SessionPageState extends State<SessionPage>
                                         borderRadius: BorderRadius.circular(16),
                                         boxShadow:
                                             (!isCreatingSession &&
-                                                _loadedSubjects.isNotEmpty)
+                                                widget.subjects.isNotEmpty)
                                             ? [
                                                 BoxShadow(
                                                   color: const Color(
@@ -1172,7 +1199,7 @@ class _SessionPageState extends State<SessionPage>
                                       child: ElevatedButton.icon(
                                         onPressed:
                                             (isCreatingSession ||
-                                                _loadedSubjects.isEmpty)
+                                                widget.subjects.isEmpty)
                                             ? null
                                             : startSession,
                                         icon: isCreatingSession
@@ -1192,7 +1219,7 @@ class _SessionPageState extends State<SessionPage>
                                         label: Text(
                                           isCreatingSession
                                               ? "Creating..."
-                                              : _loadedSubjects.isEmpty
+                                              : widget.subjects.isEmpty
                                               ? "No Classes Available"
                                               : "Start Session",
                                           style: TextStyle(

@@ -5,15 +5,15 @@ import '../../widgets/student_drawer.dart';
 import '../../widgets/enhanced_dashboard_card.dart';
 import '../student/my_classes_screen.dart';
 import '../student/qr_scanner_screen.dart';
-import '../student/qr_scanner_screen.dart';
 import '../student/attendance_history_screen.dart';
 import '../student/student_profile_screen.dart';
 import '../student/student_announcements_screen.dart';
-import '../student/student_analytics_screen.dart';
 import '../student/pattern_sessions_screen.dart';
 import '../../services/class_service.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/offline_indicator.dart';
+import '../../services/face_auth_service.dart';
+import '../student/face_verification_screen.dart';
 
 class StudentDashboardPage extends StatefulWidget {
   const StudentDashboardPage({super.key});
@@ -46,7 +46,7 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
       'gradientColors': [const Color(0xFF3B82F6), Colors.white],
     },
     {
-      'title': 'Scan QR',
+      'title': 'Mark Attendance',
       'subtitle': 'Start new Attendance Session',
       'icon': Icons.qr_code_scanner_rounded,
       'gradientColors': [const Color(0xFFA6FF39), Colors.white],
@@ -68,12 +68,6 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
       'subtitle': 'View notices and updates',
       'icon': Icons.campaign_rounded,
       'gradientColors': [const Color(0xFFEF8AF6), Colors.white],
-    },
-    {
-      'title': 'Analytics',
-      'subtitle': 'Personal metrics & recovery',
-      'icon': Icons.insights_rounded,
-      'gradientColors': [const Color(0xFF14DCCA), Colors.white],
     },
   ];
 
@@ -229,13 +223,9 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         });
         break;
 
+      case 'Mark Attendance':
       case 'Scan QR':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const QRScannerScreen()),
-        ).then((_) {
-          _loadUserData(forceRefresh: true);
-        });
+        _handleMarkAttendance();
         break;
 
       case 'Attendance History':
@@ -263,17 +253,46 @@ class _StudentDashboardPageState extends State<StudentDashboardPage> {
         );
         break;
 
-      case 'Analytics':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const StudentAnalyticsScreen()),
-        );
-        break;
-
       default:
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('$title - Coming soon!')));
+    }
+  }
+
+  Future<void> _handleMarkAttendance() async {
+    if (!mounted) return;
+
+    final faceService = FaceAuthService();
+    final hasFace = await faceService.hasSavedFace();
+
+    if (!mounted) return;
+
+    // Step 1: Face Scan (placed directly on top of the stack)
+    final verified = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FaceVerificationScreen(
+          isRegistration: !hasFace,
+        ),
+      ),
+    );
+
+    // Step 2 (QR/Pattern Scan) & Step 3 (BLE Verification)
+    if (verified == true && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const QRScannerScreen()),
+      ).then((_) {
+        _loadUserData(forceRefresh: true);
+      });
+    } else if (mounted && verified == false) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Face verification required to mark attendance.'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 

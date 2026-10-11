@@ -5,7 +5,6 @@ import '../screens/teacher/my_classes_screen.dart';
 import '../screens/teacher/session_create_screen.dart';
 import '../screens/teacher/teacher_attendance_history_screen.dart';
 import '../screens/teacher/teacher_profile_screen.dart';
-import '../screens/teacher/teacher_analytics_screen.dart';
 import '../screens/common/ble_test_screen.dart';
 import '../services/auth_service.dart';
 import '../services/class_service.dart';
@@ -82,13 +81,45 @@ class _TeacherDrawerState extends State<TeacherDrawer> {
       return; // Do nothing if already on the route
 
     if (title == 'Create Session') {
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const SessionPage(subjects: []),
-          ),
-        );
+      final classService = ClassService();
+      try {
+        final classes = await classService.getMyClasses();
+        if (classes.isEmpty) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No classes found. Please create a class first.'),
+              ),
+            );
+          }
+          return;
+        }
+
+        final subjects = classes
+            .map(
+              (c) => {
+                'id': c['id'].toString(),
+                'code': c['class_code'] as String,
+                'name': c['class_name'] as String,
+                'semester': c['semester'] as String,
+              },
+            )
+            .toList();
+
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SessionPage(subjects: subjects),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error loading classes: $e')));
+        }
       }
       return;
     }
@@ -97,9 +128,6 @@ class _TeacherDrawerState extends State<TeacherDrawer> {
     switch (title) {
       case 'Dashboard':
         nextScreen = const TeacherDashboardMobile();
-        break;
-      case 'Analytics':
-        nextScreen = const TeacherAnalyticsScreen();
         break;
       case 'My Classes':
         nextScreen = const MyClassesScreen();
@@ -127,7 +155,6 @@ class _TeacherDrawerState extends State<TeacherDrawer> {
   Widget build(BuildContext context) {
     final dashboardCards = [
       {'title': 'Dashboard', 'icon': Icons.dashboard},
-      {'title': 'Analytics', 'icon': Icons.insights_rounded},
       {'title': 'My Classes', 'icon': Icons.people},
       {'title': 'Create Session', 'icon': Icons.timer},
       {'title': 'Attendance History', 'icon': Icons.history},

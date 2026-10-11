@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:crypto/crypto.dart';
 import '../../services/session_service.dart';
 import '../common/custom_camera_screen.dart';
 import '../../widgets/pattern_painter.dart';
@@ -37,6 +39,11 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
   bool isUploadingReference = false;
   String? referenceImagePath;
 
+  String currentQrData = '';
+  String currentCaptcha = '';
+  double rotationProgress = 0.0;
+  Timer? _totpTimer;
+
   static const _channel = MethodChannel('attendance_app/camera');
   StreamSubscription? _syncSubscription;
   StreamSubscription? _connectivitySubscription;
@@ -45,12 +52,12 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
   void initState() {
     super.initState();
     _initializeSession();
+    _startTotpCalculation();
     _startAutoRefresh();
     
-    // Start BLE Mesh Broadcast as Teacher
-    if (widget.sessionData['session_id'] != null) {
-      BleMeshService().startTeacherBroadcast(widget.sessionData['session_id']);
-    }
+    // Start BLE Broadcasting for this session
+    BleMeshService().startTeacherBroadcast(widget.sessionData['session_id'].toString());
+
     _syncSubscription = SyncService().onSyncComplete.listen((_) {
       if (mounted) {
         setState(() {
@@ -74,11 +81,12 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
 
   @override
   void dispose() {
+    BleMeshService().stopAll();
     _syncSubscription?.cancel();
     _connectivitySubscription?.cancel();
     _countdownTimer?.cancel();
     _refreshTimer?.cancel();
-    BleMeshService().stopAll();
+    _totpTimer?.cancel();
     super.dispose();
   }
 
@@ -145,19 +153,71 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
     });
   }
 
+  void _startTotpCalculation() {
+    final sessionType = widget.sessionData['class_type'] ?? 'qr';
+    if (sessionType != 'qr') {
+      currentQrData = widget.qrCodeData;
+      return;
+    }
+
+    final sessionId = widget.sessionData['session_id'].toString();
+    final totpSecret = widget.sessionData['totp_secret']?.toString() ?? '';
+    final rotationInterval = widget.sessionData['rotation_interval'] as int? ?? 10;
+
+    _updateTotpAndCaptcha(sessionId, totpSecret, rotationInterval);
+
+    _totpTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        _updateTotpAndCaptcha(sessionId, totpSecret, rotationInterval);
+      }
+    });
+  }
+
+  void _updateTotpAndCaptcha(String sessionId, String totpSecret, int rotationInterval) {
+    final startStr = widget.sessionData['start_time'];
+    final startTime = startStr != null ? DateTime.parse(startStr).toLocal() : DateTime.now();
+    final int startTimestamp = startTime.millisecondsSinceEpoch ~/ 1000;
+    final int timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    
+    // Ensure elapsed is at least 0
+    final int elapsed = (timestamp - startTimestamp) >= 0 ? (timestamp - startTimestamp) : 0;
+    final int window = elapsed ~/ rotationInterval;
+    
+    // Progress calculation
+    final int secondsInWindow = elapsed % rotationInterval;
+    rotationProgress = (rotationInterval - secondsInWindow) / rotationInterval;
+
+    // Token
+    final tokenInput = "$sessionId-$totpSecret-$window";
+    final tokenBytes = utf8.encode(tokenInput);
+    final tokenHash = sha256.convert(tokenBytes).toString();
+    final token = tokenHash.substring(0, 16);
+
+    final newQrData = jsonEncode({
+      'session_id': sessionId,
+      'token': token,
+      if (widget.sessionData['is_offline'] == true) 'is_offline': true,
+    });
+
+    if (newQrData != currentQrData) {
+      setState(() {
+        currentQrData = newQrData;
+      });
+    } else {
+      // Just update progress bar
+      setState(() {});
+    }
+  }
+
   Future<void> _fetchAttendanceData({bool showLoading = true}) async {
     if (showLoading) {
       setState(() => isLoading = true);
     }
 
     try {
-      final sessionId = (widget.sessionData['session_id'] ?? widget.sessionData['id'])?.toString();
-      if (sessionId == null || sessionId.isEmpty || sessionId == 'null') {
-        if (mounted) setState(() => isLoading = false);
-        return;
-      }
-
-      final result = await _sessionService.getSessionAttendance(sessionId);
+      final result = await _sessionService.getSessionAttendance(
+        widget.sessionData['session_id'].toString(),
+      );
 
       if (!mounted) return;
       
@@ -194,6 +254,8 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
   }
 
   Future<void> _endSession() async {
+    BleMeshService().stopAll(); // Stop BLE broadcasting
+    
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -585,15 +647,6 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
         actions: [
           const OfflineIndicator(),
           IconButton(
-            icon: const Icon(Icons.bluetooth_connected, color: Colors.blueAccent),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('BLE Mesh Broadcast is Active and verifiable by students.')),
-              );
-            },
-            tooltip: 'BLE Broadcast Active',
-          ),
-          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => _fetchAttendanceData(),
             tooltip: 'Refresh',
@@ -939,21 +992,47 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
             ),
           ] else ...[
             QrImageView(
-              data: widget.qrCodeData,
+              data: currentQrData.isNotEmpty ? currentQrData : widget.qrCodeData,
               version: QrVersions.auto,
               size: size,
               backgroundColor: Colors.white,
               foregroundColor: const Color(0xFF00838f),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              "Scan to Mark Attendance",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1F2937),
+            if (widget.sessionData['class_type'] == 'qr') ...[
+              const SizedBox(height: 16),
+
+              SizedBox(
+                width: size * 0.8,
+                child: Column(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: rotationProgress,
+                        backgroundColor: Colors.grey[200],
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF00838f)),
+                        minHeight: 6,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Rotating QR code...',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ] else ...[
+              const SizedBox(height: 16),
+              const Text(
+                "Scan to Mark Attendance",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+            ],
           ],
           const SizedBox(height: 8),
           Text(

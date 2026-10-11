@@ -18,18 +18,29 @@ class AttendanceService {
   }
 
   /// Mark attendance by scanning QR code
-  Future<Map<String, dynamic>> markAttendance(String sessionId, {bool isOfflineSync = false, String? timestamp, int? bleHopCount, int? bleRssi}) async {
+  Future<Map<String, dynamic>> markAttendance(
+    String sessionId, {
+    String? qrToken,
+    bool isOfflineSync = false,
+    String? timestamp,
+    int? bleHopCount,
+    int? bleRssi,
+  }) async {
     try {
       final token = await _getToken();
-      
+
       final data = <String, dynamic>{};
+      if (qrToken != null) {
+        data['token'] = qrToken;
+      }
+
       if (isOfflineSync) {
         data['is_offline_sync'] = true;
         if (timestamp != null) {
           data['timestamp'] = timestamp;
         }
       }
-      
+
       if (bleHopCount != null) {
         data['ble_hop_count'] = bleHopCount;
       }
@@ -49,6 +60,7 @@ class AttendanceService {
           'message':
               response.data['message'] ?? 'Attendance marked successfully',
           'data': response.data,
+          'status': response.data['status'],
         };
       }
 
@@ -206,7 +218,6 @@ class AttendanceService {
     bool flashFired = false,
     int? bleHopCount,
     int? bleRssi,
-    String? qrData,
   }) async {
     try {
       final token = await _getToken();
@@ -218,7 +229,6 @@ class AttendanceService {
         'student_image': await MultipartFile.fromFile(imagePath),
         if (bleHopCount != null) 'ble_hop_count': bleHopCount,
         if (bleRssi != null) 'ble_rssi': bleRssi,
-        if (qrData != null) 'qr_data': qrData,
       });
 
       final response = await _dio.post(
@@ -251,7 +261,6 @@ class AttendanceService {
 
   /// Sync an offline pattern image that was queued locally
   Future<Map<String, dynamic>> syncOfflinePattern({
-    String? sessionId,
     required String imagePath,
     required String timestamp,
     int? bleHopCount,
@@ -261,7 +270,6 @@ class AttendanceService {
       final token = await _getToken();
 
       final formData = FormData.fromMap({
-        if (sessionId != null) 'session_id': sessionId,
         'timestamp': timestamp,
         'student_image': await MultipartFile.fromFile(imagePath),
         if (bleHopCount != null) 'ble_hop_count': bleHopCount,
@@ -278,6 +286,7 @@ class AttendanceService {
         return {
           'success': true,
           'message': response.data['message'] ?? 'Successfully synced',
+          'status': response.data['status'],
         };
       }
 
@@ -303,6 +312,8 @@ class AttendanceService {
     required String endTime,
     String? shapeData,
     String? referenceImagePath,
+    String? totpSecret,
+    int? rotationInterval,
   }) async {
     try {
       final token = await _getToken();
@@ -318,6 +329,13 @@ class AttendanceService {
 
       if (shapeData != null) {
         mapData['shape_data'] = shapeData;
+      }
+      
+      if (totpSecret != null) {
+        mapData['totp_secret'] = totpSecret;
+      }
+      if (rotationInterval != null) {
+        mapData['rotation_interval'] = rotationInterval.toString();
       }
 
       if (referenceImagePath != null) {

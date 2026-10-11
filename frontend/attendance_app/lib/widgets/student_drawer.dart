@@ -6,10 +6,10 @@ import '../screens/student/qr_scanner_screen.dart';
 import '../screens/student/pattern_sessions_screen.dart';
 import '../screens/student/attendance_history_screen.dart';
 import '../screens/student/student_profile_screen.dart';
-import '../screens/student/student_analytics_screen.dart';
-import '../screens/common/ble_diagnostics_screen.dart';
+import '../screens/common/ble_test_screen.dart';
 import '../services/auth_service.dart';
-import '../services/auth_service.dart';
+import '../services/face_auth_service.dart';
+import '../screens/student/face_verification_screen.dart';
 
 class StudentDrawer extends StatefulWidget {
   final String currentRoute;
@@ -87,15 +87,13 @@ class _StudentDrawerState extends State<StudentDrawer> {
       case 'Dashboard':
         nextScreen = const StudentDashboardPage();
         break;
-      case 'Analytics':
-        nextScreen = const StudentAnalyticsScreen();
-        break;
       case 'My Classes':
         nextScreen = const StudentMyClassesScreen();
         break;
+      case 'Mark Attendance':
       case 'Scan QR':
-        nextScreen = const QRScannerScreen();
-        break;
+        _handleScanQR(context);
+        return;
       case 'Attendance History':
         nextScreen = const AttendanceHistoryScreen();
         break;
@@ -103,7 +101,7 @@ class _StudentDrawerState extends State<StudentDrawer> {
         nextScreen = const StudentProfileScreen();
         break;
       case 'BLE Test':
-        nextScreen = const BleDiagnosticsScreen();
+        nextScreen = const BleTestScreen();
         break;
     }
 
@@ -125,13 +123,36 @@ class _StudentDrawerState extends State<StudentDrawer> {
     }
   }
 
+  Future<void> _handleScanQR(BuildContext context) async {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    final faceService = FaceAuthService();
+    final hasFace = await faceService.hasSavedFace();
+
+    if (!context.mounted) return;
+
+    final verified = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (ctx) => FaceVerificationScreen(
+          isRegistration: !hasFace,
+        ),
+      ),
+    );
+
+    if (verified == true && context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (ctx) => const QRScannerScreen()),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dashboardCards = [
       {'title': 'Dashboard', 'icon': Icons.dashboard},
-      {'title': 'Analytics', 'icon': Icons.insights_rounded},
       {'title': 'My Classes', 'icon': Icons.class_rounded},
-      {'title': 'Scan QR', 'icon': Icons.qr_code_scanner_rounded},
+      {'title': 'Mark Attendance', 'icon': Icons.qr_code_scanner_rounded},
       {'title': 'Attendance History', 'icon': Icons.history_rounded},
       {'title': 'Profile', 'icon': Icons.person_rounded},
       {'title': 'BLE Test', 'icon': Icons.bluetooth_audio},
