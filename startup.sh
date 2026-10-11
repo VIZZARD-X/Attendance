@@ -5,8 +5,12 @@ elif [ -f "../antenv/bin/activate" ]; then
     source ../antenv/bin/activate
 fi
 
-# In case opencv-python GUI was installed, uninstall it so headless cv2 is strictly used
-pip uninstall -y opencv-python > /dev/null 2>&1 || true
+# Ensure clean, fully-functional opencv-python-headless is installed with all C extensions
+python -c "import cv2; cv2.warpAffine" > /dev/null 2>&1 || {
+    echo "Fixing opencv installation..."
+    pip uninstall -y opencv-python opencv-python-headless > /dev/null 2>&1 || true
+    pip install --no-cache-dir opencv-python-headless==4.12.0.88
+}
 
 cd backend
 echo "Running database migrations..."

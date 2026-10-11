@@ -378,6 +378,24 @@ def sync_offline_pattern(request):
             return Response({'error': f"AI Service Temporarily Unavailable: {error_msg}", 'trace': traceback.format_exc()}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response({'error': f"Backend Error: {error_msg}", 'trace': traceback.format_exc()}, status=status.HTTP_400_BAD_REQUEST)
 
+def _decode_image_bgr(base64_img):
+    """
+    Decodes a base64 image into a numpy uint8 array formatted as BGR (for InsightFace).
+    Uses PIL (Pillow) first for universal stability, with cv2 fallback.
+    """
+    img_data = base64.b64decode(base64_img)
+    try:
+        from PIL import Image
+        import io
+        pil_img = Image.open(io.BytesIO(img_data)).convert('RGB')
+        # Convert RGB to BGR in pure NumPy
+        return np.array(pil_img)[:, :, ::-1]
+    except Exception:
+        np_arr = np.frombuffer(img_data, np.uint8)
+        if hasattr(cv2, 'imdecode'):
+            return cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        raise ValueError("Could not decode image.")
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def register_face(request):
@@ -386,10 +404,8 @@ def register_face(request):
         if not base64_img:
             return Response({'error': 'No image provided'}, status=400)
             
-        # Decode base64
-        img_data = base64.b64decode(base64_img)
-        np_arr = np.frombuffer(img_data, np.uint8)
-        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        # Decode base64 to numpy BGR image
+        img = _decode_image_bgr(base64_img)
         
         if face_app is None:
             return Response({'error': 'InsightFace AI model failed to load on the server. Please restart Django.'}, status=500)
@@ -417,10 +433,8 @@ def verify_face_auth(request):
         if not base64_img:
             return Response({'error': 'No image provided'}, status=400)
             
-        # Decode base64
-        img_data = base64.b64decode(base64_img)
-        np_arr = np.frombuffer(img_data, np.uint8)
-        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        # Decode base64 to numpy BGR image
+        img = _decode_image_bgr(base64_img)
         
         if face_app is None:
             return Response({'error': 'InsightFace AI model failed to load on the server. Please restart Django.'}, status=500)
