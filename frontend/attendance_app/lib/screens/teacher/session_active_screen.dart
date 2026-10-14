@@ -11,6 +11,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../services/sync_service.dart';
 import '../../widgets/offline_indicator.dart';
 import '../../services/ble_mesh_service.dart';
+import 'package:intl/intl.dart';
 
 class SessionActiveScreen extends StatefulWidget {
   final Map<String, dynamic> sessionData;
@@ -122,14 +123,26 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
     print('End Time: $endTime'); // Debug
     print('Current Time: ${DateTime.now()}'); // Debug
 
-    final duration = endTime.difference(DateTime.now());
+    int secondsLeft = endTime.difference(DateTime.now()).inSeconds;
+
+    // If session is for a past date or expired on load, use the session's duration so teacher has time to take attendance
+    if (secondsLeft <= 0) {
+      final rawDuration = widget.sessionData['duration_minutes'] ??
+          widget.sessionData['duration'] ??
+          45;
+      final int durationMins = rawDuration is int
+          ? rawDuration
+          : (int.tryParse(rawDuration.toString()) ?? 45);
+      secondsLeft = durationMins * 60;
+    }
 
     setState(() {
-      remainingSeconds = duration.inSeconds > 0 ? duration.inSeconds : 0;
+      remainingSeconds = secondsLeft;
     });
 
-    // Start countdown only if there is time remaining
+    // Start countdown timer
     if (remainingSeconds > 0) {
+      _countdownTimer?.cancel();
       _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
         if (remainingSeconds > 0) {
           setState(() => remainingSeconds--);
@@ -779,6 +792,15 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
   }
 
   Widget _buildTimerCard() {
+    final startStr = widget.sessionData['start_time'];
+    DateTime? sessionDate;
+    if (startStr != null) {
+      try {
+        sessionDate = DateTime.parse(startStr).toLocal();
+      } catch (_) {}
+    }
+    final isPast = sessionDate != null && sessionDate.isBefore(DateTime.now().subtract(const Duration(hours: 1)));
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       decoration: BoxDecoration(
@@ -812,6 +834,24 @@ class _SessionActiveScreenState extends State<SessionActiveScreen> {
               letterSpacing: 1,
             ),
           ),
+          if (isPast && sessionDate != null) ...[
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.25),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                DateFormat('MMM dd').format(sessionDate),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

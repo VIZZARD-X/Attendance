@@ -49,6 +49,7 @@ def create_session(request):
     class_type = serializer.validated_data.get('class_type', 'qr')
     start_time = serializer.validated_data.get('start_time') or timezone.now()
     rotation_interval = serializer.validated_data.get('rotation_interval', 10)
+    is_past_session = serializer.validated_data.get('is_past_session', False)
     
     try:
         class_obj = Class.objects.get(id=class_id, teacher=user)
@@ -58,13 +59,15 @@ def create_session(request):
             status=status.HTTP_404_NOT_FOUND
         )
     
-    # Calculate end time
-    end_time = start_time + timedelta(minutes=duration_minutes)
+    # Calculate end time:
+    # If start_time is in the past, the historical date is preserved in start_time,
+    # but the live session window is set from now until now + duration_minutes so the teacher can run attendance.
+    if is_past_session or start_time < timezone.now():
+        end_time = timezone.now() + timedelta(minutes=duration_minutes)
+    else:
+        end_time = start_time + timedelta(minutes=duration_minutes)
     
-    # If the session end time is already in the past, mark it as completed
     session_status = 'active'
-    if end_time < timezone.now():
-        session_status = 'completed'
 
     
     # Generate session UUID
@@ -119,7 +122,21 @@ def create_session(request):
         status=session_status
     )
 
-    
+    # For past sessions, automatically populate attendance records for enrolled students so they appear in roster immediately
+    if is_past_session or start_time < timezone.now():
+        enrollments = Enrollment.objects.filter(class_obj=class_obj).select_related('student')
+        records_to_create = [
+            AttendanceRecord(
+                session=session,
+                student=enrollment.student,
+                status='absent'
+            )
+            for enrollment in enrollments
+        ]
+        if records_to_create:
+            AttendanceRecord.objects.bulk_create(records_to_create, ignore_conflicts=True)
+            AttendanceRecord.objects.filter(session=session).update(marked_at=start_time)
+
     response_serializer = SessionSerializer(session)
     return Response({
         'message': 'Session created successfully',
@@ -640,7 +657,11 @@ def end_session(request, session_id):
         
         # Update session status
         session.status = 'completed'
-        session.end_time = timezone.now()
+        if session.start_time < timezone.now() - timedelta(hours=1):
+            session.end_time = session.start_time + timedelta(minutes=session.duration_minutes)
+            AttendanceRecord.objects.filter(session=session).update(marked_at=session.start_time)
+        else:
+            session.end_time = timezone.now()
         session.save()
     
     # Get final statistics

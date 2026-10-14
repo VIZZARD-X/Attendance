@@ -22,7 +22,7 @@ class ApiConfig {
     if (_apiBaseUrl.isNotEmpty) return _apiBaseUrl; // CLI --dart-define wins
     if (kIsWeb) {
       final origin = Uri.base.origin;
-      if (origin.isNotEmpty && !origin.contains('localhost') && !origin.contains('127.0.0.1')) {
+      if (origin.isNotEmpty) {
         return '$origin/api/v1';
       }
     }
