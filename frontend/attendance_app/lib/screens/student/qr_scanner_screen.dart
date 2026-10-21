@@ -530,37 +530,52 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     // Suspend image stream while handling verification
     await _stopImageStreamSafely();
 
+    final dynamic decoded;
     try {
-      final dynamic decoded = jsonDecode(qrData);
-
-      if (decoded is! Map<String, dynamic>) {
+      decoded = jsonDecode(qrData);
+    } catch (_) {
+      if (mounted) {
         _showError('Invalid QR code format. Not an attendance code.');
         _resumeQRScanningAfterDelay();
-        return;
       }
+      return;
+    }
 
-      final data = decoded;
-      final sessionId = data['session_id'];
-
-      if (sessionId == null) {
-        _showError('Invalid QR code');
+    if (decoded is! Map<String, dynamic>) {
+      if (mounted) {
+        _showError('Invalid QR code format. Not an attendance code.');
         _resumeQRScanningAfterDelay();
-        return;
       }
+      return;
+    }
 
-      final token = data['token'];
-      if (token == null) {
-        // Until the first rotation tick, the teacher's screen falls back to
-        // metadata QR data that carries no token. It can never validate
-        // server-side, so reject it immediately instead of spending 15s in a
-        // BLE scan first.
+    final data = decoded;
+    final sessionId = data['session_id']?.toString();
+
+    if (sessionId == null || sessionId.isEmpty) {
+      if (mounted) {
+        _showError('Invalid QR code: missing session ID');
+        _resumeQRScanningAfterDelay();
+      }
+      return;
+    }
+
+    final token = data['token']?.toString();
+    if (token == null || token.isEmpty) {
+      // Until the first rotation tick, the teacher's screen falls back to
+      // metadata QR data that carries no token. It can never validate
+      // server-side, so reject it immediately instead of spending 15s in a
+      // BLE scan first.
+      if (mounted) {
         _showError(
           'QR code not ready yet. Wait for the "Rotating QR code" countdown, then scan again.',
         );
         _resumeQRScanningAfterDelay();
-        return;
       }
+      return;
+    }
 
+    try {
       List<ConnectivityResult> connectivityResults = [];
       try {
         connectivityResults = await Connectivity().checkConnectivity();
@@ -602,48 +617,46 @@ class _QRScannerScreenState extends State<QRScannerScreen>
         return;
       }
 
-      if (token != null) {
-        if (mounted) {
-          if (isOffline) {
-            final timestamp = DateTime.now().toUtc().toIso8601String();
-            await SyncService().enqueueQRScan(
-              sessionId,
-              timestamp,
-              qrToken: token,
-              bleHopCount: bleHopCount,
-              bleRssi: bleRssi,
-            );
-            setState(() {
-              hasScanned = true;
-              isProcessing = false;
-            });
-            _showSuccessDialog(
-              'Offline Mode: QR scan saved locally. It will sync automatically when internet is restored.',
-            );
-            return;
-          }
-
-          final result = await _attendanceService.markAttendance(
+      if (mounted) {
+        if (isOffline) {
+          final timestamp = DateTime.now().toUtc().toIso8601String();
+          await SyncService().enqueueQRScan(
             sessionId,
+            timestamp,
             qrToken: token,
             bleHopCount: bleHopCount,
             bleRssi: bleRssi,
           );
+          setState(() {
+            hasScanned = true;
+            isProcessing = false;
+          });
+          _showSuccessDialog(
+            'Offline Mode: QR scan saved locally. It will sync automatically when internet is restored.',
+          );
+          return;
+        }
 
-          if (mounted) {
-            if (result['success']) {
-              setState(() => hasScanned = true);
-              _showSuccessDialog(result['message']);
-            } else {
-              _showError(result['message']);
-              _resumeQRScanningAfterDelay();
-            }
+        final result = await _attendanceService.markAttendance(
+          sessionId,
+          qrToken: token,
+          bleHopCount: bleHopCount,
+          bleRssi: bleRssi,
+        );
+
+        if (mounted) {
+          if (result['success']) {
+            setState(() => hasScanned = true);
+            _showSuccessDialog(result['message']);
+          } else {
+            _showError(result['message']);
+            _resumeQRScanningAfterDelay();
           }
         }
       }
     } catch (e) {
       if (mounted) {
-        _showError('Invalid QR code format: $e');
+        _showError('Attendance failed: $e');
         _resumeQRScanningAfterDelay();
       }
     }
