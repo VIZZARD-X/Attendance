@@ -448,6 +448,10 @@ class _QRScannerScreenState extends State<QRScannerScreen>
     }
 
     final Plane plane = image.planes.first;
+    if (plane.bytes.isEmpty) {
+      _recordInputImageError('Camera frame plane bytes are empty');
+      return null;
+    }
     return InputImage.fromBytes(
       bytes: plane.bytes,
       metadata: InputImageMetadata(
