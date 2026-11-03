@@ -75,7 +75,7 @@ class ApiConfig {
 //   static const String _productionUrl =
 //       'https://your-backend.example.com/api/v1';
 
-//   static const bool isProduction = false;
+//   static const bool isProduction = true;
 
 //   // static String get baseUrl {
 //   //   if (_apiBaseUrl.isNotEmpty) {

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
@@ -420,45 +421,49 @@ class _QRScannerScreenState extends State<QRScannerScreen>
       return null;
     }
 
-    // camera_android_camerax packs the requested NV21 stream into exactly one
-    // plane. A multi-plane (YUV_420_888) frame cannot be handed to ML Kit by
-    // concatenating the planes: the chroma planes are subsampled and carry
-    // their own row strides, so the resulting buffer is corrupt and decoding
-    // fails on every frame with no visible symptom. Reject it loudly instead.
-    if (image.planes.length != 1) {
-      _recordInputImageError(
-        'Expected a single-plane frame but received ${image.planes.length} planes',
-      );
-      return null;
+    final Uint8List bytes;
+    final int bytesPerRow;
+    if (image.planes.length == 1) {
+      bytes = image.planes.first.bytes;
+      bytesPerRow = image.planes.first.bytesPerRow;
+    } else {
+      final WriteBuffer allBytes = WriteBuffer();
+      for (final Plane plane in image.planes) {
+        allBytes.putUint8List(plane.bytes);
+      }
+      bytes = allBytes.done().buffer.asUint8List();
+      bytesPerRow = image.planes.first.bytesPerRow;
     }
 
-    final InputImageFormat? format =
-        InputImageFormatValue.fromRawValue(image.format.raw);
-    if (format == null) {
-      _recordInputImageError(
-        'Unrecognised camera image format (raw=${image.format.raw})',
-      );
-      return null;
-    }
-    if (Platform.isAndroid && format != InputImageFormat.nv21) {
-      _recordInputImageError(
-        'Expected NV21 frames on Android but got ${image.format.raw}',
-      );
-      return null;
-    }
-
-    final Plane plane = image.planes.first;
-    if (plane.bytes.isEmpty) {
+    if (bytes.isEmpty) {
       _recordInputImageError('Camera frame plane bytes are empty');
       return null;
     }
+
+    InputImageFormat? format =
+        InputImageFormatValue.fromRawValue(image.format.raw);
+    if (format == null) {
+      if (Platform.isAndroid) {
+        format = image.planes.length == 1
+            ? InputImageFormat.nv21
+            : InputImageFormat.yuv_420_888;
+      } else if (Platform.isIOS) {
+        format = InputImageFormat.bgra8888;
+      } else {
+        _recordInputImageError(
+          'Unrecognised camera image format (raw=${image.format.raw})',
+        );
+        return null;
+      }
+    }
+
     return InputImage.fromBytes(
-      bytes: plane.bytes,
+      bytes: bytes,
       metadata: InputImageMetadata(
         size: Size(image.width.toDouble(), image.height.toDouble()),
         rotation: rotation,
         format: format,
-        bytesPerRow: plane.bytesPerRow,
+        bytesPerRow: bytesPerRow,
       ),
     );
   }
